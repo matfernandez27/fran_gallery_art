@@ -38,6 +38,7 @@
     <div id="status" class="text-center text-gray-500 mt-6"></div>
   </main>
 
+  <!-- Modal de detalle -->
   <div id="modal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-60 z-50">
     <div class="bg-white max-w-4xl w-full rounded-lg overflow-hidden">
       <div class="flex justify-end p-2">
@@ -47,34 +48,34 @@
     </div>
   </div>
 
-  <!-- ✅ Script movido al final del body -->
   <script>
-    const supabase = supabase.createClient(
-      'https://railkoprsjevdyrxalfu.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhaWxrb3Byc2pldmR5cnhhbGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NjU2ODEsImV4cCI6MjA3NDM0MTY4MX0.cXlcz00HmgBAzsTmqQl7lKZPWR9f3STsLFBFBTiucR0'
+    // ✅ Evitamos colisión con la variable global
+    const client = supabase.createClient(
+      "https://railkoprsjevdyrxalfu.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhaWxrb3Byc2pldmR5cnhhbGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NjU2ODEsImV4cCI6MjA3NDM0MTY4MX0.cXlcz00HmgBAzsTmqQl7lKZPWR9f3STsLFBFBTiucR0"
     );
 
-    const gallery = document.getElementById('gallery');
-    const modal = document.getElementById('modal');
-    const modalBody = document.getElementById('modal-body');
-    const modalClose = document.getElementById('modal-close');
-    const searchInput = document.getElementById('search');
-    const filterYear = document.getElementById('filter-year');
-    const status = document.getElementById('status');
+    const gallery = document.getElementById("gallery");
+    const modal = document.getElementById("modal");
+    const modalBody = document.getElementById("modal-body");
+    const modalClose = document.getElementById("modal-close");
+    const searchInput = document.getElementById("search");
+    const filterYear = document.getElementById("filter-year");
+    const status = document.getElementById("status");
 
     let artworks = [];
 
     function initGallery() {
       filterYear.innerHTML = '<option value="">Todos los años</option>';
-      const years = [...new Set(artworks.map(a => a.year))].sort((a,b)=>b-a);
+      const years = [...new Set(artworks.map(a => a.year))].sort((a, b) => b - a);
       years.forEach(y => {
-        const opt = document.createElement('option');
+        const opt = document.createElement("option");
         opt.value = y;
         opt.textContent = y;
         filterYear.appendChild(opt);
       });
       renderGallery(artworks);
-      status.textContent = '';
+      status.textContent = "";
     }
 
     function renderGallery(items) {
@@ -84,9 +85,9 @@
       }
 
       gallery.innerHTML = items.map((a, i) => {
-        const imgSrc = a.imgUrl && typeof a.imgUrl === 'string'
-          ? a.imgUrl.trim().replace(/\s/g, '').replace(/"/g, '')
-          : '';
+        const imgSrc = a.imgUrl && typeof a.imgUrl === "string"
+          ? a.imgUrl.trim().replace(/\s/g, "").replace(/"/g, "")
+          : "";
         const isValidImageLink = imgSrc.startsWith("https://");
 
         return `
@@ -94,19 +95,19 @@
             <button data-id="${i}" class="w-full text-left group">
               <div class="h-56 w-full overflow-hidden bg-gray-100">
                 <img src="${isValidImageLink ? imgSrc : 'https://placehold.co/800x600?text=Link+inválido'}"
-                    alt="${a.title}"
-                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    onerror="this.onerror=null;this.src='https://placehold.co/800x600?text=Error+de+imagen';">
+                  alt="${a.title}"
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  onerror="this.onerror=null;this.src='https://placehold.co/800x600?text=Error+de+imagen';">
               </div>
               <div class="p-4">
-                <h3 class="font-semibold text-lg">${a.title || ''}</h3>
-                <p class="text-sm text-gray-500">${a.technique || ''} · ${a.year || ''}</p>
-                <p class="text-sm text-gray-400 mt-2">${a.size || ''}</p>
+                <h3 class="font-semibold text-lg">${a.title || ""}</h3>
+                <p class="text-sm text-gray-500">${a.technique || ""} · ${a.year || ""}</p>
+                <p class="text-sm text-gray-400 mt-2">${a.size || ""}</p>
               </div>
             </button>
           </article>
         `;
-      }).join('');
+      }).join("");
     }
 
     function openModal(id) {
@@ -118,32 +119,32 @@
             <img src="${a.imgUrl || 'https://picsum.photos/1200/800?random=' + id}" alt="${a.title}" class="w-full h-auto object-contain rounded">
           </div>
           <div>
-            <h2 class="text-2xl font-bold mb-2">${a.title || ''}</h2>
-            <p class="text-gray-600 mb-1"><strong>Año:</strong> ${a.year || ''}</p>
-            <p class="text-gray-600 mb-1"><strong>Técnica:</strong> ${a.technique || ''}</p>
-            <p class="text-gray-600 mb-4"><strong>Medidas:</strong> ${a.size || ''}</p>
-            <p class="text-gray-500">${a.description || ''}</p>
+            <h2 class="text-2xl font-bold mb-2">${a.title || ""}</h2>
+            <p class="text-gray-600 mb-1"><strong>Año:</strong> ${a.year || ""}</p>
+            <p class="text-gray-600 mb-1"><strong>Técnica:</strong> ${a.technique || ""}</p>
+            <p class="text-gray-600 mb-4"><strong>Medidas:</strong> ${a.size || ""}</p>
+            <p class="text-gray-500">${a.description || ""}</p>
           </div>
         </div>
       `;
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
     }
 
     function closeModal() {
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-      modalBody.innerHTML = '';
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+      modalBody.innerHTML = "";
     }
 
-    gallery.addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-id]');
+    gallery.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-id]");
       if (!btn) return;
-      const id = btn.getAttribute('data-id');
+      const id = btn.getAttribute("data-id");
       openModal(id);
     });
-    modalClose.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
+    modalClose.addEventListener("click", closeModal);
+    modal.addEventListener("click", (e) => {
       if (e.target === modal) closeModal();
     });
 
@@ -151,26 +152,27 @@
       const q = searchInput.value.trim().toLowerCase();
       const y = filterYear.value;
       let filtered = artworks.filter(a => {
-        const hay = `${a.title || ''} ${a.technique || ''} ${a.year || ''}`.toLowerCase();
+        const hay = `${a.title || ""} ${a.technique || ""} ${a.year || ""}`.toLowerCase();
         return hay.includes(q);
       });
       if (y) filtered = filtered.filter(a => String(a.year) === y);
       renderGallery(filtered);
     }
-    searchInput.addEventListener('input', applyFilters);
-    filterYear.addEventListener('change', applyFilters);
 
-    status.textContent = 'Cargando obras desde Supabase...';
+    searchInput.addEventListener("input", applyFilters);
+    filterYear.addEventListener("change", applyFilters);
+
+    status.textContent = "Cargando obras desde Supabase...";
 
     async function fetchArtworks() {
-      const { data, error } = await supabase
-        .from('obras')
-        .select('*')
-        .order('createdAt', { ascending: false });
+      const { data, error } = await client
+        .from("obras")
+        .select("*")
+        .order("createdAt", { ascending: false });
 
       if (error) {
-        console.error('Error cargando obras:', error);
-        status.textContent = 'Error cargando obras desde Supabase.';
+        console.error("Error cargando obras:", error);
+        status.textContent = "Error cargando obras desde Supabase.";
         return;
       }
 

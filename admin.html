@@ -145,6 +145,8 @@
       }
 
       const imgUrl = `${SUPABASE_URL}/storage/v1/object/public/obras/${fileName}`;
+      const { data: userData } = await supabase.auth.getUser();
+      const user_id = userData?.user?.id;
 
       const { error: dbError } = await supabase
         .from("obras")
@@ -155,7 +157,8 @@
           size,
           description,
           imgUrl,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          user_id
         }]);
 
       if (dbError) {

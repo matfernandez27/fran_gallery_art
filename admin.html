@@ -9,7 +9,7 @@
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
 
-  <!-- 🔹 Contenedor Login -->
+  <!-- 🔹 Login -->
   <div id="login-container" class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
     <h1 class="text-2xl font-bold mb-6 text-center">Acceso</h1>
     <form id="login-form" class="space-y-4">
@@ -97,7 +97,7 @@
 
     fileInput.addEventListener("change", () => {
       const file = fileInput.files[0];
-      if (file) {
+      if (file && file.type.startsWith("image/")) {
         const reader = new FileReader();
         reader.onload = e => {
           preview.src = e.target.result;
@@ -106,6 +106,8 @@
         reader.readAsDataURL(file);
       } else {
         preview.classList.add("hidden");
+        uploadStatus.textContent = "❌ El archivo no es una imagen válida.";
+        uploadStatus.className = "text-red-500 text-center";
       }
     });
 
@@ -125,16 +127,19 @@
         return;
       }
 
-      const fileName = `${Date.now()}_${file.name}`;
+      const fileName = `${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
       uploadStatus.textContent = "Subiendo imagen...";
       uploadStatus.className = "text-gray-500 text-center";
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("obras")
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: "3600",
+          upsert: false
+        });
 
       if (uploadError) {
-        uploadStatus.textContent = "❌ Error al subir imagen.";
+        uploadStatus.textContent = "❌ Error al subir imagen: " + uploadError.message;
         uploadStatus.className = "text-red-500 text-center";
         return;
       }
@@ -154,7 +159,7 @@
         }]);
 
       if (dbError) {
-        uploadStatus.textContent = "❌ Error al guardar datos.";
+        uploadStatus.textContent = "❌ Error al guardar datos: " + dbError.message;
         uploadStatus.className = "text-red-500 text-center";
       } else {
         uploadStatus.textContent = "✅ Obra registrada correctamente.";

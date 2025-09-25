@@ -60,7 +60,7 @@
                     <label class="block text-gray-700 font-semibold pt-2">Seleccionar Imágenes (Múltiples)</label>
                     <input id="image-files" type="file" accept="image/*" multiple required class="w-full p-3 border rounded-lg bg-gray-50" />
                     
-                    <button type="submit" id="save-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 w-full disabled:opacity-50">
+                    <button type="submit" id="save-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 w-full">
                         Guardar obra
                     </button>
                 </form>
@@ -68,7 +68,9 @@
 
             <div class="bg-white p-6 rounded-lg shadow-lg">
                 <h3 class="text-lg font-bold mb-4 border-b pb-2">Obras existentes (Gestión)</h3>
-                <p class="text-gray-500">Esta sección requiere lógica adicional para mostrar, editar y reordenar las obras.</p>
+                <div id="obra-list" class="space-y-4">
+                    <p class="text-gray-500">Cargando lista de obras...</p>
+                    </div>
             </div>
         </div>
     </main>
@@ -88,6 +90,7 @@
         const logoutButton = document.getElementById("logout-button");
         const imageFilesInput = document.getElementById("image-files");
         const alertDiv = document.getElementById("alert");
+        const obraListDiv = document.getElementById("obra-list"); // Nuevo elemento para la lista
         
         // --- CONFIGURACIÓN ---
         const BUCKET_NAME = 'imagenes';
@@ -113,6 +116,7 @@
                 loginSection.classList.add('hidden');
                 adminSection.classList.remove('hidden');
                 adminHeader.classList.remove('hidden');
+                loadObraList(); // Cargar la lista al iniciar sesión
             } else {
                 loginSection.classList.remove('hidden');
                 adminSection.classList.add('hidden');
@@ -141,7 +145,6 @@
             if (error) {
                 showAlert(`Error de acceso: ${error.message}`, 'error');
             } else {
-                // Redirige o simplemente actualiza la vista
                 showAlert("¡Acceso exitoso!", 'success');
                 checkAuth();
             }
@@ -153,7 +156,7 @@
             const { error } = await client.auth.signOut();
             if (!error) {
                 showAlert("Sesión cerrada.", 'success');
-                checkAuth(); // Vuelve a la vista de login
+                checkAuth();
             } else {
                 showAlert("Error al cerrar sesión.", 'error');
             }
@@ -169,10 +172,7 @@
 
                 const { data, error } = await client.storage
                     .from(BUCKET_NAME)
-                    .upload(filePath, file, {
-                        cacheControl: '3600',
-                        upsert: false
-                    });
+                    .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
                 if (error) {
                     throw new Error(`Error subiendo imagen: ${error.message}`);
@@ -182,16 +182,12 @@
                     .from(BUCKET_NAME)
                     .getPublicUrl(filePath);
 
-                uploadedImages.push({
-                    url: publicUrl.publicUrl,
-                    path: filePath,
-                    originalName: file.name
-                });
+                uploadedImages.push({ url: publicUrl.publicUrl, path: filePath, originalName: file.name });
             }
             return uploadedImages;
         }
 
-        // --- GESTIÓN DE FORMULARIO DE OBRA (MODIFICADO) ---
+        // --- GESTIÓN DE FORMULARIO DE OBRA ---
         obraForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             
@@ -201,8 +197,6 @@
             const size = document.getElementById("size").value.trim();
             const description = document.getElementById("description").value.trim();
             const files = imageFilesInput.files;
-
-            // NUEVOS CAMPOS
             const category = document.getElementById("category").value; 
             const serie = document.getElementById("serie").value.trim(); 
             
@@ -217,14 +211,7 @@
 
             try {
                 // 1. Obtener el siguiente valor de 'orden'
-                const { data: maxOrder, error: orderError } = await client
-                    .from('productos')
-                    .select('orden')
-                    .order('orden', { ascending: false })
-                    .limit(1);
-
-                if (orderError) throw new Error("Error al obtener orden: " + orderError.message);
-
+                const { data: maxOrder } = await client.from('productos').select('orden').order('orden', { ascending: false }).limit(1);
                 const newOrder = (maxOrder && maxOrder.length > 0) ? maxOrder[0].orden + 1 : 1;
 
                 // 2. Subir archivos a Storage
@@ -234,25 +221,15 @@
                 const { error: insertError } = await client
                     .from("productos")
                     .insert([{
-                        titulo: title,
-                        anio: year,
-                        tecnica: technique,
-                        medidas: size,
-                        descripcion: description,
-                        imagenes: uploadedImages, 
-                        orden: newOrder,
-                        
-                        // CAMPOS NUEVOS EN LA BASE DE DATOS
-                        categoria: category, 
-                        serie: serie
+                        titulo: title, anio: year, tecnica: technique, medidas: size, descripcion: description, 
+                        imagenes: uploadedImages, orden: newOrder, categoria: category, serie: serie
                     }]);
 
-                if (insertError) {
-                    throw new Error("Error al insertar en DB: " + insertError.message);
-                }
+                if (insertError) throw new Error("Error al insertar en DB: " + insertError.message);
 
                 showAlert("Obra guardada exitosamente!", 'success');
                 obraForm.reset();
+                loadObraList(); // Recargar la lista de obras
             } catch (error) {
                 console.error(error);
                 showAlert(error.message, 'error');
@@ -261,7 +238,85 @@
                 saveButton.disabled = false;
             }
         });
+
+        // --- GESTIÓN DE LISTA DE OBRAS (NUEVAS FUNCIONES) ---
+
+        async function loadObraList() {
+            obraListDiv.innerHTML = '<p class="text-gray-500">Cargando lista de obras...</p>';
+            
+            const { data, error } = await client
+                .from('productos')
+                .select('id, titulo, anio, tecnica, imagenes, created_at')
+                .order('created_at', { ascending: false }); // Ordenar por fecha de creación
+
+            if (error) {
+                obraListDiv.innerHTML = `<p class="text-red-500">Error al cargar obras: ${error.message}</p>`;
+                return;
+            }
+
+            if (data.length === 0) {
+                obraListDiv.innerHTML = '<p class="text-gray-500">No hay obras subidas aún.</p>';
+                return;
+            }
+
+            obraListDiv.innerHTML = ''; // Limpiar
+            
+            data.forEach(obra => {
+                const item = document.createElement('div');
+                const mainImage = obra.imagenes && obra.imagenes.length > 0 ? obra.imagenes[0].url : '';
+                
+                item.className = 'flex items-center space-x-4 p-3 border-b hover:bg-gray-50 rounded-lg transition duration-150';
+                item.innerHTML = `
+                    <img src="${mainImage}" alt="${obra.titulo}" class="w-16 h-16 object-cover rounded-md" onerror="this.style.display='none'" />
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-gray-800">${obra.titulo} (${obra.anio})</h4>
+                        <p class="text-sm text-gray-500">${obra.tecnica}</p>
+                    </div>
+                    <div>
+                        <button onclick="deleteObra(${obra.id}, ${JSON.stringify(obra.imagenes)})" class="bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-3 rounded-lg transition duration-300">
+                            Eliminar
+                        </button>
+                    </div>
+                `;
+                obraListDiv.appendChild(item);
+            });
+        }
         
+        async function deleteObra(id, images) {
+            if (!confirm(`¿Está seguro de eliminar la obra con ID ${id} y todas sus imágenes? Esta acción es irreversible.`)) {
+                return;
+            }
+            
+            // 1. Eliminar el registro de la DB
+            const { error: dbError } = await client
+                .from('productos')
+                .delete()
+                .eq('id', id);
+
+            if (dbError) {
+                showAlert(`Error al eliminar el registro: ${dbError.message}`, 'error');
+                return;
+            }
+
+            // 2. Eliminar las imágenes del Storage
+            const filePaths = images.map(img => img.path).filter(Boolean);
+
+            if (filePaths.length > 0) {
+                const { error: storageError } = await client.storage
+                    .from(BUCKET_NAME)
+                    .remove(filePaths);
+
+                if (storageError) {
+                    // Nota: Se borró el registro de la DB, pero las imágenes podrían quedar. 
+                    console.error("Error al borrar imágenes del storage:", storageError);
+                    showAlert(`Obra eliminada de la DB, pero falló el borrado de ${filePaths.length} imagen(es) del Storage.`, 'error');
+                }
+            }
+
+            showAlert("Obra y archivos eliminados exitosamente!", 'success');
+            loadObraList(); // Recargar la lista
+        }
+
         // Inicializar
         checkAuth();
     </script>

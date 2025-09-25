@@ -7,49 +7,25 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
+        /* Estilos del Overlay y Spinner */
         .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.8); display: flex;
+            justify-content: center; align-items: center; z-index: 1000;
         }
-        .lds-ring {
-            display: inline-block;
-            position: relative;
-            width: 80px;
-            height: 80px;
-        }
-        .lds-ring div {
-            box-sizing: border-box;
-            display: block;
-            position: absolute;
-            width: 64px;
-            height: 64px;
-            margin: 8px;
-            border: 8px solid #3b82f6;
-            border-radius: 50%;
-            animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-            border-color: #3b82f6 transparent transparent transparent;
-        }
-        .lds-ring div:nth-child(1) {
-            animation-delay: -0.45s;
-        }
-        .lds-ring div:nth-child(2) {
-            animation-delay: -0.3s;
-        }
-        .lds-ring div:nth-child(3) {
-            animation-delay: -0.15s;
-        }
-        @keyframes lds-ring {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .lds-ring { display: inline-block; position: relative; width: 80px; height: 80px; }
+        .lds-ring div { box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; border: 8px solid #3b82f6; border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: #3b82f6 transparent transparent transparent; }
+        .lds-ring div:nth-child(1) { animation-delay: -0.45s; }
+        .lds-ring div:nth-child(2) { animation-delay: -0.3s; }
+        .lds-ring div:nth-child(3) { animation-delay: -0.15s; }
+        @keyframes lds-ring { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Clase para el modo edición */
+        .sortable-ghost {
+            opacity: 0.5;
+            background-color: #e0e7ff; /* Tailwind indigo-100 */
         }
     </style>
 </head>
@@ -75,12 +51,18 @@
 
             <select id="filter-series" class="p-3 rounded-lg border border-gray-200">
                 <option value="">Todas las series</option>
-                </select>
+            </select>
 
             <select id="filter-year" class="p-3 rounded-lg border border-gray-200">
                 <option value="">Todos los años</option>
-                </select>
-            
+            </select>
+
+            <button id="edit-toggle" class="p-3 rounded-lg bg-gray-300 hover:bg-gray-400 transition duration-300">
+                Activar Edición
+            </button>
+            <button id="save-order-button" class="hidden p-3 rounded-lg bg-green-500 hover:bg-green-600 text-white transition duration-300" disabled>
+                Guardar Orden
+            </button>
         </div>
         
         <p id="status" class="text-center text-gray-500 mb-4"></p>
@@ -106,22 +88,23 @@
         const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
         
         let productos = [];
+        let isEditing = false;
+        let sortableInstance = null; // Instancia de SortableJS
+        
         const galleryContainer = document.getElementById("gallery-container");
         const status = document.getElementById("status");
         const loadingOverlay = document.getElementById("loading-overlay");
+        const editToggleButton = document.getElementById("edit-toggle");
+        const saveOrderButton = document.getElementById("save-order-button");
 
         // Elementos de Filtro
         const searchInput = document.getElementById("search");
         const filterYear = document.getElementById("filter-year");
-        const filterCategory = document.getElementById("filter-category"); // NUEVO
-        const filterSeries = document.getElementById("filter-series");    // NUEVO
+        const filterCategory = document.getElementById("filter-category");
+        const filterSeries = document.getElementById("filter-series");
 
         // --- FUNCIONES CORE ---
 
-        /**
-         * Normaliza el objeto de la DB para un uso más fácil en el frontend.
-         * (IMPORTANTE: Añade los nuevos campos 'category' y 'serie')
-         */
         function normalize(p) {
             const images = p.imagenes || [];
             
@@ -132,9 +115,8 @@
                 size: p.medidas || "",
                 year: p.anio || "",
                 description: p.descripcion || "",
-                order: p.orden || 0,
+                order: p.orden || 0, // CRÍTICO: Asegurarse de tener el campo 'orden'
                 
-                // NUEVOS CAMPOS NORMALIZADOS
                 category: p.categoria || "",
                 serie: p.serie || "",
 
@@ -143,9 +125,6 @@
             };
         }
         
-        /**
-         * Renderiza la galería con las obras filtradas.
-         */
         function renderGallery(items) {
             galleryContainer.innerHTML = '';
             if (items.length === 0) {
@@ -156,7 +135,8 @@
             items.forEach(obra => {
                 const card = document.createElement("div");
                 card.className = "bg-white rounded-lg shadow-lg overflow-hidden cursor-pointer hover:shadow-xl transition duration-300";
-                card.setAttribute('onclick', `openModal(${obra.id})`);
+                card.setAttribute('data-id', obra.id); // Clave para el reordenamiento
+                card.setAttribute('onclick', isEditing ? '' : `openModal(${obra.id})`);
                 
                 card.innerHTML = `
                     <div class="h-60 overflow-hidden">
@@ -169,20 +149,23 @@
                 `;
                 galleryContainer.appendChild(card);
             });
+            
+            // Re-inicializar SortableJS si está en modo edición
+            if (isEditing) {
+                enableSorting();
+            }
         }
         
-        /**
-         * Inicializa la galería, trae los datos y pobla los selectores dinámicos.
-         */
         async function initGallery() {
             status.textContent = "Cargando obras...";
             loadingOverlay.classList.remove('hidden');
 
+            // Ordenamiento principal por 'orden' (que el admin define)
             const { data, error } = await client
                 .from('productos')
                 .select('*')
-                .order('orden', { ascending: true }) // Ordenamiento principal por orden
-                .order('anio', { ascending: false }); // Ordenamiento secundario por año
+                .order('orden', { ascending: true }) 
+                .order('anio', { ascending: false }); 
 
             loadingOverlay.classList.add('hidden');
             
@@ -194,78 +177,142 @@
 
             productos = data.map(normalize);
 
-            // === 1. POBLAR FILTRO POR AÑO ===
-            filterYear.innerHTML = '<option value="">Todos los años</option>';
-            // Usamos un Set para obtener años únicos, filtramos nulos y ordenamos
+            // Poblar Filtros
             const years = [...new Set(productos.map(a => a.year).filter(Boolean))].sort((a, b) => b - a);
-            years.forEach(y => {
-                const opt = document.createElement("option");
-                opt.value = String(y);
-                opt.textContent = y;
-                filterYear.appendChild(opt);
-            });
+            filterYear.innerHTML = '<option value="">Todos los años</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
 
-            // === 2. POBLAR FILTRO POR SERIE (NUEVO) ===
-            filterSeries.innerHTML = '<option value="">Todas las series</option>';
-            // Obtenemos series únicas, filtramos nulos/vacíos y ordenamos alfabéticamente
             const series = [...new Set(productos.map(a => a.serie).filter(s => s && s.trim() !== ''))].sort((a, b) => a.localeCompare(b));
-            series.forEach(s => {
-                const opt = document.createElement("option");
-                opt.value = s;
-                opt.textContent = s;
-                filterSeries.appendChild(opt);
-            });
+            filterSeries.innerHTML = '<option value="">Todas las series</option>' + series.map(s => `<option value="${s}">${s}</option>`).join('');
 
             renderGallery(productos);
             status.textContent = "";
         }
         
-        /**
-         * Aplica todos los filtros a la galería (MODIFICADA).
-         */
         function applyFilters() {
             const q = searchInput.value.trim().toLowerCase();
             const y = filterYear.value;
-            const c = filterCategory.value; // NUEVO: Categoría
-            const s = filterSeries.value;   // NUEVO: Serie
+            const c = filterCategory.value;
+            const s = filterSeries.value;
 
             let filtered = productos.filter(p => {
-                // Cadena de búsqueda consolidada (incluye Serie y Categoría)
+                // Incluye todos los campos para la búsqueda de texto
                 const hay = `${p.title || ""} ${p.technique || ""} ${p.year || ""} ${p.description || ""} ${p.serie || ""} ${p.category || ""}`.toLowerCase();
                 
-                // 1. Búsqueda por texto (Busca en todos los campos clave)
                 let textMatch = hay.includes(q);
-                
-                // 2. Filtro por Año
                 let yearMatch = y ? String(p.year) === y : true;
-                
-                // 3. Filtro por Categoría (Verifica coincidencia con la categoría seleccionada)
                 let categoryMatch = c ? String(p.category).toLowerCase() === c : true;
-                
-                // 4. Filtro por Serie (Verifica coincidencia con la serie seleccionada)
                 let seriesMatch = s ? String(p.serie) === s : true;
 
-                // Todos los filtros deben ser verdaderos para mostrar la obra
                 return textMatch && yearMatch && categoryMatch && seriesMatch;
             });
 
             renderGallery(filtered);
         }
 
+        // --- LÓGICA DE REORDENAMIENTO (MODO EDICIÓN) ---
+
+        function enableSorting() {
+            if (sortableInstance) {
+                sortableInstance.destroy(); // Destruir la instancia anterior si existe
+            }
+            sortableInstance = new Sortable(galleryContainer, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: function (evt) {
+                    // Si el orden cambia, habilitar el botón de guardar
+                    if (evt.oldIndex !== evt.newIndex) {
+                        saveOrderButton.disabled = false;
+                        saveOrderButton.textContent = "Guardar Orden (Cambios Pendientes)";
+                        saveOrderButton.classList.add('bg-orange-500', 'hover:bg-orange-600');
+                        saveOrderButton.classList.remove('bg-green-500', 'hover:bg-green-600');
+                    }
+                },
+            });
+        }
+        
+        editToggleButton.addEventListener('click', () => {
+            isEditing = !isEditing;
+            
+            if (isEditing) {
+                editToggleButton.textContent = 'Salir de Edición';
+                editToggleButton.classList.replace('bg-gray-300', 'bg-red-500');
+                editToggleButton.classList.replace('hover:bg-gray-400', 'hover:bg-red-600');
+                saveOrderButton.classList.remove('hidden');
+                galleryContainer.style.cursor = 'grab';
+                enableSorting();
+            } else {
+                editToggleButton.textContent = 'Activar Edición';
+                editToggleButton.classList.replace('bg-red-500', 'bg-gray-300');
+                editToggleButton.classList.replace('hover:bg-red-600', 'hover:bg-gray-400');
+                saveOrderButton.classList.add('hidden');
+                galleryContainer.style.cursor = 'default';
+                if (sortableInstance) {
+                    sortableInstance.destroy();
+                    sortableInstance = null;
+                }
+                // Si salimos, recargar para asegurar el orden correcto
+                initGallery();
+            }
+            // Deshabilitar la apertura de modal en modo edición
+            galleryContainer.querySelectorAll('[data-id]').forEach(card => {
+                card.onclick = isEditing ? null : () => openModal(card.getAttribute('data-id'));
+            });
+        });
+
+        saveOrderButton.addEventListener('click', async () => {
+            saveOrderButton.disabled = true;
+            saveOrderButton.textContent = "Guardando...";
+
+            const cardElements = galleryContainer.querySelectorAll('[data-id]');
+            const updates = [];
+
+            cardElements.forEach((card, index) => {
+                updates.push({
+                    id: parseInt(card.getAttribute('data-id')),
+                    orden: index + 1 // El nuevo orden es el índice + 1
+                });
+            });
+            
+            // Usar una única RPC o una serie de updates para eficiencia
+            // Supabase soporta updates en lote de esta manera
+            const { error } = await client
+                .from('productos')
+                .upsert(updates); 
+
+            if (error) {
+                status.textContent = `Error al guardar el orden: ${error.message}`;
+                console.error(error);
+            } else {
+                status.textContent = "Orden guardado exitosamente!";
+            }
+
+            saveOrderButton.textContent = "Orden Guardado";
+            saveOrderButton.classList.add('bg-green-500', 'hover:bg-green-600');
+            saveOrderButton.classList.remove('bg-orange-500', 'hover:bg-orange-600');
+            
+            // Reestablecer productos internos al nuevo orden
+            productos = updates.map(update => {
+                const p = productos.find(item => item.id === update.id);
+                if (p) p.order = update.orden;
+                return p;
+            }).filter(Boolean).sort((a, b) => a.order - b.order);
+        });
+
+
         // --- EVENT LISTENERS ---
         searchInput.addEventListener("input", applyFilters);
         filterYear.addEventListener("change", applyFilters);
-        filterCategory.addEventListener("change", applyFilters); // NUEVO
-        filterSeries.addEventListener("change", applyFilters);   // NUEVO
+        filterCategory.addEventListener("change", applyFilters);
+        filterSeries.addEventListener("change", applyFilters);
 
         // Inicializar
         initGallery();
 
         // --- MODAL LÓGICA (Simplificada) ---
         function openModal(id) {
-            const obra = productos.find(p => p.id === id);
+            const obra = productos.find(p => p.id === parseInt(id));
             if (!obra) return;
-
+            // ... (Lógica del modal se mantiene igual)
             const modalContent = document.getElementById("modal-content");
             modalContent.innerHTML = `
                 <div class="grid md:grid-cols-2 gap-6">

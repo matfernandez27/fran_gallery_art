@@ -4,15 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Catálogo — Artista Visual</title>
-  <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gray-50 text-gray-900">
 
   <header class="bg-white shadow-sm">
     <div class="max-w-6xl mx-auto p-6 flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold">Francisco Fernández</h1>
+        <h1 class="text-2xl font-bold">Nombre del Artista</h1>
         <p class="text-sm text-gray-500">Artista visual — Breve bio o tagline</p>
       </div>
       <div class="text-right text-sm text-gray-600">
@@ -48,6 +48,18 @@
   </div>
 
   <script>
+    const supabase = supabase.createClient(
+      'https://railkoprsjevdyrxalfu.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhaWxrb3Byc2pldmR5cnhhbGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NjU2ODEsImV4cCI6MjA3NDM0MTY4MX0.cXlcz00HmgBAzsTmqQl7lKZPWR9f3STsLFBFBTiucR0'
+    );
+
+    const gallery = document.getElementById('gallery');
+    const modal = document.getElementById('modal');
+    const modalBody = document.getElementById('modal-body');
+    const modalClose = document.getElementById('modal-close');
+    const searchInput = document.getElementById('search');
+    const filterYear = document.getElementById('filter-year');
+    const status = document.getElementById('status');
 
     let artworks = [];
 
@@ -147,7 +159,25 @@
     searchInput.addEventListener('input', applyFilters);
     filterYear.addEventListener('change', applyFilters);
 
+    status.textContent = 'Cargando obras desde Supabase...';
+
+    async function fetchArtworks() {
+      const { data, error } = await supabase
+        .from('obras')
+        .select('*')
+        .order('createdAt', { ascending: false });
+
+      if (error) {
+        console.error('Error cargando obras:', error);
+        status.textContent = 'Error cargando obras desde Supabase.';
+        return;
+      }
+
+      artworks = data;
+      initGallery();
+    }
+
+    fetchArtworks();
   </script>
 </body>
 </html>
-

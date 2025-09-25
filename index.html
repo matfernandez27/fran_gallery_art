@@ -6,13 +6,14 @@
   <title>Catálogo — Artista Visual</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900">
 
   <header class="bg-white shadow-sm">
     <div class="max-w-6xl mx-auto p-6 flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold">Nombre del Artista</h1>
+        <h1 class="text-2xl font-bold">Francisco Fernández</h1>
         <p class="text-sm text-gray-500">Artista visual — Breve bio o tagline</p>
       </div>
       <div class="text-right text-sm text-gray-600">
@@ -23,6 +24,14 @@
   </header>
 
   <main class="max-w-6xl mx-auto p-6">
+    <!-- Barra admin (aparece si estás logueado) -->
+    <div id="admin-bar" class="mb-4 hidden items-center gap-3">
+      <button id="toggle-edit" class="bg-yellow-400 text-black px-3 py-2 rounded">Entrar modo edición</button>
+      <button id="save-order-btn" class="bg-green-600 text-white px-3 py-2 rounded hidden">Guardar orden</button>
+      <button id="cancel-edit-btn" class="bg-gray-300 text-black px-3 py-2 rounded hidden">Cancelar</button>
+      <div id="admin-status" class="text-sm text-gray-600"></div>
+    </div>
+
     <div class="mb-6 flex gap-4 items-center">
       <input id="search" type="search" placeholder="Buscar por título, técnica o año..."
         class="flex-1 p-3 rounded-lg border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
@@ -38,7 +47,7 @@
     <div id="status" class="text-center text-gray-500 mt-6"></div>
   </main>
 
-  <!-- Modal de detalle -->
+  <!-- Modal de detalle (galería dentro) -->
   <div id="modal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-60 z-50">
     <div class="bg-white max-w-4xl w-full rounded-lg overflow-hidden">
       <div class="flex justify-end p-2">
@@ -49,11 +58,11 @@
   </div>
 
   <script>
-    // ✅ Evitamos colisión con la variable global
-    const client = supabase.createClient(
-      "https://railkoprsjevdyrxalfu.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhaWxrb3Byc2pldmR5cnhhbGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NjU2ODEsImV4cCI6MjA3NDM0MTY4MX0.cXlcz00HmgBAzsTmqQl7lKZPWR9f3STsLFBFBTiucR0"
-    );
+    // === CONFIG: reemplazá por tus valores si querés ===
+    const SUPABASE_URL = "https://railkoprsjevdyrxalfu.supabase.co";   // <-- reemplazar
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhaWxrb3Byc2pldmR5cnhhbGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NjU2ODEsImV4cCI6MjA3NDM0MTY4MX0.cXlcz00HmgBAzsTmqQl7lKZPWR9f3STsLFBFBTiucR0";                 // <-- reemplazar
+    // ==================================================
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const gallery = document.getElementById("gallery");
     const modal = document.getElementById("modal");
@@ -63,70 +72,148 @@
     const filterYear = document.getElementById("filter-year");
     const status = document.getElementById("status");
 
-    let artworks = [];
+    // admin UI
+    const adminBar = document.getElementById("admin-bar");
+    const toggleEditBtn = document.getElementById("toggle-edit");
+    const saveOrderBtn = document.getElementById("save-order-btn");
+    const cancelEditBtn = document.getElementById("cancel-edit-btn");
+    const adminStatus = document.getElementById("admin-status");
+
+    let productosRaw = [];      // datos crudos desde Supabase
+    let productos = [];         // normalizados
+    let isAdmin = false;
+    let editMode = false;
+    let sortable = null;
+
+    // normaliza un registro (compatibilidad con distintos nombres de campos)
+    function normalize(p) {
+      const imagesRaw = p.imagenes || p.imgUrls || (p.imgUrl ? [p.imgUrl] : []);
+      const images = Array.isArray(imagesRaw)
+        ? imagesRaw.map(img => (typeof img === "string" ? { url: img, path: null } : { url: img.url || (img.path ? img.path : ""), path: img.path || null }))
+        : [];
+      return {
+        id: p.id,
+        title: p.titulo || p.title || "",
+        technique: p.tecnica || p.technique || "",
+        size: p.medidas || p.size || "",
+        year: p.anio || p.year || "",
+        description: p.descripcion || p.description || "",
+        images,
+        mainImage: (images.length ? images[0].url : "")
+      };
+    }
 
     function initGallery() {
       filterYear.innerHTML = '<option value="">Todos los años</option>';
-      const years = [...new Set(artworks.map(a => a.year))].sort((a, b) => b - a);
+      const years = [...new Set(productos.map(a => a.year).filter(Boolean))].sort((a,b) => b - a);
       years.forEach(y => {
         const opt = document.createElement("option");
         opt.value = y;
         opt.textContent = y;
         filterYear.appendChild(opt);
       });
-      renderGallery(artworks);
+      renderGallery(productos);
       status.textContent = "";
     }
 
+    // Renderiza el grid usando DOM (para manejar data-id con facilidad)
     function renderGallery(items) {
       if (!items || items.length === 0) {
         gallery.innerHTML = '<p class="text-center col-span-full text-gray-500">No hay obras que coincidan.</p>';
         return;
       }
 
-      gallery.innerHTML = items.map((a, i) => {
-        const imgSrc = a.imgUrl && typeof a.imgUrl === "string"
-          ? a.imgUrl.trim().replace(/\s/g, "").replace(/"/g, "")
-          : "";
-        const isValidImageLink = imgSrc.startsWith("https://");
+      gallery.innerHTML = "";
+      items.forEach(p => {
+        const article = document.createElement("article");
+        article.className = "bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-shadow relative";
+        article.setAttribute("data-id", p.id);
 
-        return `
-          <article class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-shadow">
-            <button data-id="${i}" class="w-full text-left group">
-              <div class="h-56 w-full overflow-hidden bg-gray-100">
-                <img src="${isValidImageLink ? imgSrc : 'https://placehold.co/800x600?text=Link+inválido'}"
-                  alt="${a.title}"
-                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  onerror="this.onerror=null;this.src='https://placehold.co/800x600?text=Error+de+imagen';">
-              </div>
-              <div class="p-4">
-                <h3 class="font-semibold text-lg">${a.title || ""}</h3>
-                <p class="text-sm text-gray-500">${a.technique || ""} · ${a.year || ""}</p>
-                <p class="text-sm text-gray-400 mt-2">${a.size || ""}</p>
-              </div>
-            </button>
-          </article>
-        `;
-      }).join("");
+        // drag handle (visible solo en modo edición)
+        const dragHandle = document.createElement("div");
+        dragHandle.className = "drag-handle absolute top-2 left-2 p-1 rounded bg-white/80 text-sm cursor-grab hidden shadow";
+        dragHandle.innerHTML = "☰";
+        article.appendChild(dragHandle);
+
+        const btn = document.createElement("button");
+        btn.className = "w-full text-left group";
+        btn.setAttribute("data-id", p.id);
+
+        const imgWrap = document.createElement("div");
+        imgWrap.className = "h-56 w-full overflow-hidden bg-gray-100";
+
+        const img = document.createElement("img");
+        img.src = p.mainImage && p.mainImage.startsWith("http") ? p.mainImage : 'https://placehold.co/800x600?text=Sin+imagen';
+        img.alt = p.title || "";
+        img.className = "w-full h-full object-cover group-hover:scale-105 transition-transform duration-300";
+        img.onerror = function(){ this.onerror=null; this.src='https://placehold.co/800x600?text=Error+de+imagen'; };
+
+        imgWrap.appendChild(img);
+        btn.appendChild(imgWrap);
+
+        const body = document.createElement("div");
+        body.className = "p-4";
+
+        const h3 = document.createElement("h3");
+        h3.className = "font-semibold text-lg";
+        h3.textContent = p.title || "";
+        body.appendChild(h3);
+
+        const meta = document.createElement("p");
+        meta.className = "text-sm text-gray-500";
+        meta.textContent = `${p.technique || ""} · ${p.year || ""}`;
+        body.appendChild(meta);
+
+        const med = document.createElement("p");
+        med.className = "text-sm text-gray-400 mt-2";
+        med.textContent = p.size || "";
+        body.appendChild(med);
+
+        btn.appendChild(body);
+        article.appendChild(btn);
+        gallery.appendChild(article);
+      });
+
+      // si estamos en modo edición, mostramos manejadores y activamos sortable
+      if (isAdmin && editMode) {
+        Array.from(document.querySelectorAll(".drag-handle")).forEach(el => el.classList.remove("hidden"));
+        enableDrag();
+      } else {
+        Array.from(document.querySelectorAll(".drag-handle")).forEach(el => el.classList.add("hidden"));
+        disableDrag();
+      }
     }
 
-    function openModal(id) {
-      const a = artworks[id];
-      if (!a) return;
+    // Abrir modal por id
+    function openModalById(id) {
+      const p = productos.find(x => String(x.id) === String(id));
+      if (!p) return;
+
       modalBody.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <img src="${a.imgUrl || 'https://picsum.photos/1200/800?random=' + id}" alt="${a.title}" class="w-full h-auto object-contain rounded">
+            <img id="modal-main-img" src="${p.mainImage || 'https://picsum.photos/1200/800?random=' + id}" alt="${p.title}" class="w-full h-auto object-contain rounded mb-4">
+            <div class="flex gap-2" id="modal-thumbs"></div>
           </div>
           <div>
-            <h2 class="text-2xl font-bold mb-2">${a.title || ""}</h2>
-            <p class="text-gray-600 mb-1"><strong>Año:</strong> ${a.year || ""}</p>
-            <p class="text-gray-600 mb-1"><strong>Técnica:</strong> ${a.technique || ""}</p>
-            <p class="text-gray-600 mb-4"><strong>Medidas:</strong> ${a.size || ""}</p>
-            <p class="text-gray-500">${a.description || ""}</p>
+            <h2 class="text-2xl font-bold mb-2">${p.title || ""}</h2>
+            <p class="text-gray-600 mb-1"><strong>Año:</strong> ${p.year || ""}</p>
+            <p class="text-gray-600 mb-1"><strong>Técnica:</strong> ${p.technique || ""}</p>
+            <p class="text-gray-600 mb-4"><strong>Medidas:</strong> ${p.size || ""}</p>
+            <p class="text-gray-500">${p.description || ""}</p>
           </div>
         </div>
       `;
+
+      const thumbsContainer = modalBody.querySelector("#modal-thumbs");
+      (p.images || []).forEach(imgObj => {
+        const t = document.createElement("img");
+        t.src = imgObj.url;
+        t.className = "w-20 h-20 object-cover rounded cursor-pointer border hover:scale-105 transition";
+        t.onclick = () => document.getElementById("modal-main-img").src = imgObj.url;
+        thumbsContainer.appendChild(t);
+      });
+
       modal.classList.remove("hidden");
       modal.classList.add("flex");
     }
@@ -137,50 +224,153 @@
       modalBody.innerHTML = "";
     }
 
+    // Delegated click: abre modal cuando clickeás la tarjeta
     gallery.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-id]");
       if (!btn) return;
       const id = btn.getAttribute("data-id");
-      openModal(id);
+      openModalById(id);
     });
+
     modalClose.addEventListener("click", closeModal);
     modal.addEventListener("click", (e) => {
       if (e.target === modal) closeModal();
     });
 
+    // filtros / búsqueda
     function applyFilters() {
       const q = searchInput.value.trim().toLowerCase();
       const y = filterYear.value;
-      let filtered = artworks.filter(a => {
-        const hay = `${a.title || ""} ${a.technique || ""} ${a.year || ""}`.toLowerCase();
+      let filtered = productos.filter(p => {
+        const hay = `${p.title || ""} ${p.technique || ""} ${p.year || ""}`.toLowerCase();
         return hay.includes(q);
       });
-      if (y) filtered = filtered.filter(a => String(a.year) === y);
+      if (y) filtered = filtered.filter(p => String(p.year) === y);
       renderGallery(filtered);
     }
 
     searchInput.addEventListener("input", applyFilters);
     filterYear.addEventListener("change", applyFilters);
 
-    status.textContent = "Cargando obras desde Supabase...";
+    // === admin / drag & drop ===
+    async function checkSessionAndSetupAdminBar() {
+      try {
+        const { data } = await client.auth.getSession();
+        if (data && data.session) {
+          isAdmin = true;
+          adminBar.classList.remove("hidden");
+          adminStatus.textContent = `Sesión: ${data.session.user.email || "usuario autenticado"}`;
+        } else {
+          isAdmin = false;
+          adminBar.classList.add("hidden");
+        }
+      } catch (err) {
+        console.warn("No se pudo chequear sesión:", err);
+        isAdmin = false;
+        adminBar.classList.add("hidden");
+      }
+    }
 
-    async function fetchArtworks() {
+    toggleEditBtn.addEventListener("click", () => {
+      editMode = !editMode;
+      toggleEditBtn.textContent = editMode ? "Salir modo edición" : "Entrar modo edición";
+      saveOrderBtn.classList.toggle("hidden", !editMode);
+      cancelEditBtn.classList.toggle("hidden", !editMode);
+      renderGallery(productos); // re-render para mostrar/ocultar handles
+    });
+
+    cancelEditBtn.addEventListener("click", async () => {
+      editMode = false;
+      toggleEditBtn.textContent = "Entrar modo edición";
+      saveOrderBtn.classList.add("hidden");
+      cancelEditBtn.classList.add("hidden");
+      await fetchProductos(); // recargar desde DB (descartar cambios locales)
+    });
+
+    // habilita Sortable
+    function enableDrag() {
+      if (sortable) return;
+      sortable = Sortable.create(gallery, {
+        animation: 150,
+        handle: ".drag-handle",
+        draggable: "article",
+        dataIdAttr: "data-id"
+      });
+    }
+    function disableDrag() {
+      if (!sortable) return;
+      try { sortable.destroy(); } catch(e){/*ignore*/ }
+      sortable = null;
+    }
+
+    // guardar orden en DB (guarda orden = índice)
+    saveOrderBtn.addEventListener("click", async () => {
+      adminStatus.textContent = "Guardando orden...";
+      saveOrderBtn.disabled = true;
+      try {
+        const ids = Array.from(gallery.querySelectorAll("article[data-id]")).map(el => Number(el.getAttribute("data-id")));
+        // actualizar orden (index) en la DB
+        const updates = ids.map((id, idx) => {
+          return client
+            .from("productos")
+            .update({ orden: idx })
+            .eq("id", id);
+        });
+        const results = await Promise.all(updates);
+        // chequeo simple de errores
+        const anyError = results.find(r => r.error);
+        if (anyError) {
+          console.error("Error guardando orden:", results);
+          adminStatus.textContent = "Error guardando orden (ver consola).";
+        } else {
+          adminStatus.textContent = "Orden guardado correctamente.";
+          editMode = false;
+          toggleEditBtn.textContent = "Entrar modo edición";
+          saveOrderBtn.classList.add("hidden");
+          cancelEditBtn.classList.add("hidden");
+          await fetchProductos(); // recargar con el nuevo orden
+        }
+      } catch (err) {
+        console.error(err);
+        adminStatus.textContent = "Error guardando orden (ver consola).";
+      } finally {
+        saveOrderBtn.disabled = false;
+        setTimeout(()=> adminStatus.textContent = "", 2500);
+      }
+    });
+
+    // === fetch ===
+    status.textContent = "Cargando productos desde Supabase...";
+
+    async function fetchProductos() {
       const { data, error } = await client
-        .from("obras")
+        .from("productos")
+        // intenta ordenar por 'orden' y en desempate por created_at (si no tenés created_at, no rompas)
         .select("*")
-        .order("createdAt", { ascending: false });
+        .order("orden", { ascending: true })
+        .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("Error cargando obras:", error);
-        status.textContent = "Error cargando obras desde Supabase.";
+        console.error("Error cargando productos:", error);
+        status.textContent = "Error cargando productos desde Supabase.";
         return;
       }
 
-      artworks = data;
+      productosRaw = data || [];
+      productos = productosRaw.map(normalize);
       initGallery();
     }
 
-    fetchArtworks();
+    // inicial
+    (async () => {
+      await checkSessionAndSetupAdminBar();
+      await fetchProductos();
+
+      // re-check sesión si cambia (ej: te logueás en admin.html en otra pestaña)
+      client.auth.onAuthStateChange((event, sess) => {
+        checkSessionAndSetupAdminBar();
+      });
+    })();
   </script>
 </body>
 </html>

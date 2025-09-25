@@ -266,15 +266,13 @@
                 const mainImage = obra.imagenes && obra.imagenes.length > 0 ? obra.imagenes[0].url : '';
                 
                 item.className = 'flex items-center space-x-4 p-3 border-b hover:bg-gray-50 rounded-lg transition duration-150';
-                item.setAttribute('id', `obra-item-${obra.id}`); // ID para poder removerlo del DOM
+                item.setAttribute('id', `obra-item-${obra.id}`); 
                 
                 // 1. Convertir el objeto imágenes a una cadena JSON.
-                // 2. Escapar CUALQUIER comilla simple (') o doble (") dentro de la cadena con una barra invertida (\').
                 const jsonString = JSON.stringify(obra.imagenes);
-                const safeImages = jsonString.replace(/'/g, "\\'").replace(/"/g, '\\"');
+                // 2. CODIFICAR LA CADENA JSON a Base64 para evitar CUALQUIER error de sintaxis en el HTML.
+                const base64Images = btoa(jsonString);
 
-                // Usamos comillas simples para encerrar el argumento en el onclick.
-                // El error era que las comillas simples DENTRO del JSON no se estaban escapando correctamente.
                 item.innerHTML = `
                     <img src="${mainImage}" alt="${obra.titulo}" class="w-16 h-16 object-cover rounded-md" onerror="this.style.display='none'" />
                     <div class="flex-1">
@@ -282,7 +280,7 @@
                         <p class="text-sm text-gray-500">${obra.tecnica}</p>
                     </div>
                     <div>
-                        <button id="delete-btn-${obra.id}" onclick="deleteObra(${obra.id}, '${safeImages}', this)" class="bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-3 rounded-lg transition duration-300">
+                        <button id="delete-btn-${obra.id}" onclick="deleteObra(${obra.id}, '${base64Images}', this)" class="bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-3 rounded-lg transition duration-300">
                             Eliminar
                         </button>
                     </div>
@@ -292,15 +290,16 @@
         }
         
         // Se pasa el botón como argumento para deshabilitarlo durante la operación
-        async function deleteObra(id, imagesString, button) {
+        async function deleteObra(id, base64Images, button) {
             let images = [];
             try {
-                // Revertir el escape de comillas para que JSON.parse funcione.
-                const unescapedString = imagesString.replace(/\\'/g, "'").replace(/\\"/g, '"');
-                images = JSON.parse(unescapedString);
+                // 1. Decodificar de Base64
+                const jsonString = atob(base64Images);
+                // 2. Parsear el JSON
+                images = JSON.parse(jsonString);
             } catch (e) {
-                console.error("Error al parsear JSON de imágenes (revisar la cadena de escape):", e);
-                showAlert("Error interno al preparar la eliminación. Revise la consola.", 'error');
+                console.error("Error al decodificar/parsear imágenes:", e);
+                showAlert("Error interno al preparar la eliminación. Los datos de la imagen no son válidos.", 'error');
                 return;
             }
 

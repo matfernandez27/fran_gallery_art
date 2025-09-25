@@ -130,12 +130,14 @@
         function normalize(p) {
             const images = p.imagenes || [];
             
+            // CRÍTICO: Asegurarse de que los campos NOT NULL siempre tengan un valor por defecto si son nulos en la DB
             return {
                 id: p.id,
-                title: p.titulo || "",
-                technique: p.tecnica || "",
-                size: p.medidas || "",
-                year: p.anio || "",
+                title: p.titulo || "", // NOT NULL
+                technique: p.tecnica || "", // NOT NULL
+                size: p.medidas || "", // NOT NULL
+                year: p.anio || 0, // NOT NULL (asumiendo que es int4)
+                
                 description: p.descripcion || "",
                 order: p.orden || 0,
                 
@@ -288,12 +290,34 @@
             const updates = [];
 
             cardElements.forEach((card, index) => {
-                updates.push({
-                    id: parseInt(card.getAttribute('data-id')),
-                    orden: index + 1
-                });
+                const obraId = parseInt(card.getAttribute('data-id'));
+                const newOrder = index + 1;
+                
+                // 1. Encontrar el objeto completo de la obra en el arreglo 'productos'
+                const existingObra = productos.find(item => item.id === obraId);
+                
+                if (existingObra) {
+                    // 2. Crear el objeto de actualización incluyendo TODOS los campos NOT NULL.
+                    updates.push({
+                        id: existingObra.id,
+                        orden: newOrder, // El campo que estamos cambiando
+                        
+                        // CAMPOS NOT NULL (MANDATORIOS)
+                        titulo: existingObra.title,
+                        anio: existingObra.year,
+                        tecnica: existingObra.technique,
+                        medidas: existingObra.size,
+                        
+                        // Otros campos (para evitar posibles problemas de NULL)
+                        descripcion: existingObra.description,
+                        imagenes: existingObra.images,
+                        categoria: existingObra.category,
+                        serie: existingObra.serie,
+                    });
+                }
             });
             
+            // La corrección está en el objeto 'updates' de arriba.
             const { error } = await client
                 .from('productos')
                 .upsert(updates); 
@@ -309,6 +333,7 @@
             saveOrderButton.classList.add('bg-green-500', 'hover:bg-green-600');
             saveOrderButton.classList.remove('bg-orange-500', 'hover:bg-orange-600');
             
+            // Reestablecer productos internos al nuevo orden
             productos = updates.map(update => {
                 const p = productos.find(item => item.id === update.id);
                 if (p) p.order = update.orden;

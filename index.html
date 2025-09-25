@@ -47,13 +47,7 @@
     </div>
   </div>
 
-  <!-- ✅ Script movido al final del body -->
   <script>
-    const supabase = supabase.createClient(
-      'https://railkoprsjevdyrxalfu.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhaWxrb3Byc2pldmR5cnhhbGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NjU2ODEsImV4cCI6MjA3NDM0MTY4MX0.cXlcz00HmgBAzsTmqQl7lKZPWR9f3STsLFBFBTiucR0'
-    );
-
     const gallery = document.getElementById('gallery');
     const modal = document.getElementById('modal');
     const modalBody = document.getElementById('modal-body');
@@ -179,6 +173,12 @@
     }
 
     fetchArtworks();
+  </script>
+  <script>
+    const supabase = supabase.createClient(
+      'https://railkoprsjevdyrxalfu.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhaWxrb3Byc2pldmR5cnhhbGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NjU2ODEsImV4cCI6MjA3NDM0MTY4MX0.cXlcz00HmgBAzsTmqQl7lKZPWR9f3STsLFBFBTiucR0'
+    );
   </script>
 </body>
 </html>

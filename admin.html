@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
@@ -14,49 +13,37 @@
   <div id="login-container" class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
     <h1 class="text-2xl font-bold mb-6 text-center">Acceso</h1>
     <form id="login-form" class="space-y-4">
-      <input 
-        type="email" 
-        id="email" 
-        placeholder="Email" 
-        class="w-full border p-2 rounded"
-        required
-      />
-      <input 
-        type="password" 
-        id="password" 
-        placeholder="Contraseña" 
-        class="w-full border p-2 rounded"
-        required
-      />
-      <button 
-        type="submit" 
-        class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded"
-      >
-        Ingresar
-      </button>
+      <input type="email" id="email" placeholder="Email" class="w-full border p-2 rounded" required />
+      <input type="password" id="password" placeholder="Contraseña" class="w-full border p-2 rounded" required />
+      <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded">Ingresar</button>
     </form>
     <p id="mensaje" class="text-center text-red-500 mt-4 hidden"></p>
   </div>
 
-  <!-- 🔹 Panel (inicialmente oculto) -->
+  <!-- 🔹 Panel -->
   <div id="panel-container" class="hidden w-full p-6">
-    <div class="bg-white p-6 rounded-2xl shadow">
-      <h2 class="text-xl font-bold mb-4">Panel de administración</h2>
-
-      <!-- Aquí va TODO tu contenido del panel -->
+    <div class="bg-white p-6 rounded-2xl shadow space-y-6 max-w-2xl mx-auto">
+      <h2 class="text-xl font-bold">Panel de administración</h2>
       <p>Bienvenido al panel 🎉</p>
 
-      <button 
-        id="logout-btn" 
-        class="mt-4 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded"
-      >
-        Cerrar sesión
-      </button>
+      <!-- 🔹 Formulario de carga -->
+      <form id="upload-form" class="space-y-4">
+        <input type="file" id="file-input" accept="image/*" required class="w-full border p-2 rounded" />
+        <img id="preview" class="max-w-full rounded border hidden" />
+        <input type="text" id="title-input" placeholder="Título de la obra" required class="w-full border p-2 rounded" />
+        <input type="text" id="year-input" placeholder="Año" class="w-full border p-2 rounded" />
+        <input type="text" id="technique-input" placeholder="Técnica" class="w-full border p-2 rounded" />
+        <input type="text" id="size-input" placeholder="Medidas (ej. 60x80 cm)" class="w-full border p-2 rounded" />
+        <textarea id="description-input" placeholder="Descripción (opcional)" class="w-full border p-2 rounded"></textarea>
+        <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded">Subir obra</button>
+        <p id="upload-status" class="text-center text-sm mt-2"></p>
+      </form>
+
+      <button id="logout-btn" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded">Cerrar sesión</button>
     </div>
   </div>
 
   <script>
-    // 🔹 Configura tus credenciales
     const SUPABASE_URL = "https://railkoprsjevdyrxalfu.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhaWxrb3Byc2pldmR5cnhhbGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NjU2ODEsImV4cCI6MjA3NDM0MTY4MX0.cXlcz00HmgBAzsTmqQl7lKZPWR9f3STsLFBFBTiucR0";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -67,17 +54,12 @@
     const mensaje = document.getElementById("mensaje");
     const logoutBtn = document.getElementById("logout-btn");
 
-    // 🔹 Manejo login
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
         mensaje.textContent = "❌ " + error.message;
@@ -87,7 +69,6 @@
       }
     });
 
-    // 🔹 Mostrar panel y ocultar login
     function mostrarPanel(usuario) {
       loginContainer.classList.add("hidden");
       panelContainer.classList.remove("hidden");
@@ -95,14 +76,12 @@
       console.log("Usuario logueado:", usuario);
     }
 
-    // 🔹 Logout
     logoutBtn.addEventListener("click", async () => {
       await supabase.auth.signOut();
       loginContainer.classList.remove("hidden");
       panelContainer.classList.add("hidden");
     });
 
-    // 🔹 Revisar si ya hay sesión activa
     async function checkSession() {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
@@ -110,6 +89,80 @@
       }
     }
     checkSession();
+
+    const fileInput = document.getElementById("file-input");
+    const preview = document.getElementById("preview");
+    const uploadForm = document.getElementById("upload-form");
+    const uploadStatus = document.getElementById("upload-status");
+
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          preview.src = e.target.result;
+          preview.classList.remove("hidden");
+        };
+        reader.readAsDataURL(file);
+      } else {
+        preview.classList.add("hidden");
+      }
+    });
+
+    uploadForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const file = fileInput.files[0];
+      const title = document.getElementById("title-input").value.trim();
+      const year = document.getElementById("year-input").value.trim();
+      const technique = document.getElementById("technique-input").value.trim();
+      const size = document.getElementById("size-input").value.trim();
+      const description = document.getElementById("description-input").value.trim();
+
+      if (!file || !title) {
+        uploadStatus.textContent = "❌ Faltan datos obligatorios.";
+        uploadStatus.className = "text-red-500 text-center";
+        return;
+      }
+
+      const fileName = `${Date.now()}_${file.name}`;
+      uploadStatus.textContent = "Subiendo imagen...";
+      uploadStatus.className = "text-gray-500 text-center";
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("obras")
+        .upload(fileName, file);
+
+      if (uploadError) {
+        uploadStatus.textContent = "❌ Error al subir imagen.";
+        uploadStatus.className = "text-red-500 text-center";
+        return;
+      }
+
+      const imgUrl = `${SUPABASE_URL}/storage/v1/object/public/obras/${fileName}`;
+
+      const { error: dbError } = await supabase
+        .from("obras")
+        .insert([{
+          title,
+          year: parseInt(year) || null,
+          technique,
+          size,
+          description,
+          imgUrl,
+          createdAt: new Date().toISOString()
+        }]);
+
+      if (dbError) {
+        uploadStatus.textContent = "❌ Error al guardar datos.";
+        uploadStatus.className = "text-red-500 text-center";
+      } else {
+        uploadStatus.textContent = "✅ Obra registrada correctamente.";
+        uploadStatus.className = "text-green-600 text-center";
+        uploadForm.reset();
+        preview.classList.add("hidden");
+      }
+    });
   </script>
 </body>
 </html>

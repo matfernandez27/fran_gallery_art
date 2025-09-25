@@ -1,185 +1,326 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Panel Admin — Obras</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Panel Admin — Obras</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900">
-  <header class="bg-white shadow-sm">
-    <div class="max-w-6xl mx-auto p-6">
-      <h1 class="text-2xl font-bold">Panel de Administración</h1>
-      <p class="text-sm text-gray-500">Gestionar obras y catálogo</p>
-    </div>
-  </header>
-
-  <main class="max-w-6xl mx-auto p-6 space-y-8">
-
-    <!-- Formulario para nueva obra -->
-    <section class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-xl font-semibold mb-4">Agregar nueva obra</h2>
-      <form id="obra-form" class="space-y-4">
-        <input id="title" type="text" placeholder="Título"
-          class="w-full p-3 border rounded-lg" required />
-        <input id="year" type="number" placeholder="Año"
-          class="w-full p-3 border rounded-lg" required />
-        <input id="technique" type="text" placeholder="Técnica"
-          class="w-full p-3 border rounded-lg" />
-        <input id="size" type="text" placeholder="Medidas"
-          class="w-full p-3 border rounded-lg" />
-        <textarea id="description" placeholder="Descripción"
-          class="w-full p-3 border rounded-lg"></textarea>
-        <input id="images" type="file" multiple accept="image/*"
-          class="w-full p-3 border rounded-lg" />
-        <button type="submit"
-          class="bg-indigo-600 text-white px-6 py-2 rounded-lg">Guardar obra</button>
-      </form>
-    </section>
-
-    <!-- Lista de obras -->
-    <section class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-xl font-semibold mb-4">Listado de obras</h2>
-      <ul id="obra-list" class="space-y-4">
-        <!-- Items generados por JS -->
-      </ul>
-    </section>
-  </main>
-
-  <script>
-    const client = supabase.createClient(
-      "https://railkoprsjevdyrxalfu.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhaWxrb3Byc2pldmR5cnhhbGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NjU2ODEsImV4cCI6MjA3NDM0MTY4MX0.cXlcz00HmgBAzsTmqQl7lKZPWR9f3STsLFBFBTiucR0"
-    );
-
-    const obraForm = document.getElementById("obra-form");
-    const obraList = document.getElementById("obra-list");
-
-    let obras = [];
-
-    // Renderizar listado
-    function renderObras() {
-      obraList.innerHTML = obras.map(o => `
-        <li class="p-4 border rounded-lg bg-gray-50" data-id="${o.id}">
-          <div class="flex items-center justify-between">
+    <header class="bg-white shadow-sm">
+        <div class="max-w-6xl mx-auto p-6 flex justify-between items-center">
             <div>
-              <h3 class="font-bold">${o.title}</h3>
-              <p class="text-sm text-gray-600">${o.year} · ${o.technique || ""} · ${o.size || ""}</p>
+                <h1 class="text-2xl font-bold">Panel de Administración</h1>
+                <p class="text-sm text-gray-500">Gestionar obras y catálogo</p>
             </div>
-            <button onclick="deleteObra(${o.id})"
-              class="bg-red-500 text-white px-3 py-1 rounded">Eliminar</button>
-          </div>
-          <div class="flex gap-2 mt-2 flex-wrap">
-            ${(o.imagenes || []).map(img => `
-              <div class="relative group">
-                <img src="${img.url}" class="w-24 h-24 object-cover rounded">
-                <button onclick="deleteImage(${o.id}, '${img.path}')"
-                  class="absolute top-1 right-1 bg-black bg-opacity-60 text-white text-xs px-1 rounded hidden group-hover:block">✕</button>
-              </div>
-            `).join("")}
-          </div>
-        </li>
-      `).join("");
+            <button id="logout-btn" class="bg-red-500 text-white px-3 py-1 rounded hidden">Cerrar Sesión</button>
+        </div>
+    </header>
 
-      // Activar drag & drop
-      new Sortable(obraList, {
-        animation: 150,
-        onEnd: saveOrder
-      });
-    }
+    <main class="max-w-6xl mx-auto p-6 space-y-8">
 
-    // Cargar obras
-    async function fetchObras() {
-      const { data, error } = await client
-        .from("productos")
-        .select("*")
-        .order("orden", { ascending: true });
+        <section id="auth-ui" class="bg-white p-6 rounded-lg shadow max-w-md mx-auto hidden">
+            <h2 class="text-xl font-semibold mb-4">Acceso de Administrador</h2>
+            <form id="login-form" class="space-y-4">
+                <input id="login-email" type="email" placeholder="Email"
+                    class="w-full p-3 border rounded-lg" required />
+                <input id="login-password" type="password" placeholder="Contraseña"
+                    class="w-full p-3 border rounded-lg" required />
+                <button type="submit" id="login-btn"
+                    class="bg-indigo-600 text-white px-6 py-2 rounded-lg w-full">Ingresar</button>
+                <div id="auth-status" class="text-red-500 text-center text-sm mt-2"></div>
+            </form>
+        </section>
 
-      if (error) {
-        console.error("Error cargando obras:", error);
-        return;
-      }
-      obras = data;
-      renderObras();
-    }
+        <div id="admin-panel" class="hidden space-y-8">
+            
+            <section class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4">Agregar nueva obra</h2>
+                <form id="obra-form" class="space-y-4">
+                    <input id="title" type="text" placeholder="Título"
+                        class="w-full p-3 border rounded-lg" required />
+                    <input id="year" type="number" placeholder="Año"
+                        class="w-full p-3 border rounded-lg" required />
+                    <input id="technique" type="text" placeholder="Técnica"
+                        class="w-full p-3 border rounded-lg" />
+                    <input id="size" type="text" placeholder="Medidas"
+                        class="w-full p-3 border rounded-lg" />
+                    <textarea id="description" placeholder="Descripción"
+                        class="w-full p-3 border rounded-lg"></textarea>
+                    <input id="images" type="file" multiple accept="image/*"
+                        class="w-full p-3 border rounded-lg" />
+                    <button type="submit" id="save-obra-btn"
+                        class="bg-indigo-600 text-white px-6 py-2 rounded-lg">Guardar obra</button>
+                </form>
+            </section>
 
-    // Guardar nueva obra
-    obraForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const title = document.getElementById("title").value;
-      const year = document.getElementById("year").value;
-      const technique = document.getElementById("technique").value;
-      const size = document.getElementById("size").value;
-      const description = document.getElementById("description").value;
-      const files = document.getElementById("images").files;
+            <section class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4">Listado de obras</h2>
+                <ul id="obra-list" class="space-y-4">
+                    </ul>
+            </section>
+        </div>
 
-      let imagenes = [];
-      for (let f of files) {
-        const filePath = `${Date.now()}_${f.name}`;
-        const { error: uploadError } = await client.storage
-          .from("imagenes")
-          .upload(filePath, f, { upsert: true });
-        if (uploadError) {
-          console.error("Error subiendo archivo:", uploadError);
-          continue;
+    </main>
+
+    <script>
+        // === CONFIG: reemplazá por tus valores si querés ===
+        const SUPABASE_URL = "https://railkoprsjevdyrxalfu.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhaWxrb3Byc2pldmR5cnhhbGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NjU2ODEsImV4cCI6MjA3NDM0MTY4MX0.cXlcz00HmgBAzsTmqQl7lKZPWR9f3STsLFBFBTiucR0";
+        // ==================================================
+        const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const authUi = document.getElementById("auth-ui");
+        const adminPanel = document.getElementById("admin-panel");
+        const logoutBtn = document.getElementById("logout-btn");
+        const loginForm = document.getElementById("login-form");
+        const authStatus = document.getElementById("auth-status");
+
+        const obraForm = document.getElementById("obra-form");
+        const saveObraBtn = document.getElementById("save-obra-btn");
+        const obraList = document.getElementById("obra-list");
+        const BUCKET_NAME = "imagenes"; // El nombre de tu bucket
+
+        let obras = [];
+
+        // --- AUTENTICACIÓN ---
+        async function checkSession() {
+            const { data } = await client.auth.getSession();
+            if (data.session) {
+                authUi.classList.add("hidden");
+                adminPanel.classList.remove("hidden");
+                logoutBtn.classList.remove("hidden");
+                fetchObras(); // Cargar datos solo si hay sesión
+            } else {
+                authUi.classList.remove("hidden");
+                adminPanel.classList.add("hidden");
+                logoutBtn.classList.add("hidden");
+            }
         }
-        const { data } = client.storage.from("imagenes").getPublicUrl(filePath);
-        imagenes.push({ url: data.publicUrl, path: filePath });
-      }
 
-      const { data, error } = await client
-        .from("productos")
-        .insert([{ title, year, technique, size, description, imagenes }])
-        .select();
+        // Listener de Login
+        loginForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            authStatus.textContent = "Ingresando...";
+            const email = document.getElementById("login-email").value;
+            const password = document.getElementById("login-password").value;
 
-      if (error) {
-        console.error("Error guardando obra:", error);
-        return;
-      }
+            const { error } = await client.auth.signInWithPassword({ email, password });
 
-      obras.unshift(data[0]);
-      renderObras();
-      obraForm.reset();
-    });
+            if (error) {
+                authStatus.textContent = "Error de login: " + error.message;
+                console.error("Error de login:", error);
+            } else {
+                authStatus.textContent = "";
+                loginForm.reset();
+                // checkSession se encargará de mostrar el panel
+            }
+        });
 
-    // Eliminar obra completa (con imágenes)
-    async function deleteObra(id) {
-      const obra = obras.find(o => o.id === id);
-      if (!obra) return;
-      if (!confirm("¿Eliminar esta obra y todas sus imágenes?")) return;
+        // Listener de Logout
+        logoutBtn.addEventListener("click", async () => {
+            const { error } = await client.auth.signOut();
+            if (error) {
+                alert("Error al cerrar sesión: " + error.message);
+                console.error("Error al cerrar sesión:", error);
+            }
+            // checkSession se encargará de mostrar el login
+        });
 
-      for (let img of obra.imagenes || []) {
-        await client.storage.from("imagenes").remove([img.path]);
-      }
-      await client.from("productos").delete().eq("id", id);
-      obras = obras.filter(o => o.id !== id);
-      renderObras();
-    }
+        // Listener de cambio de estado de autenticación (importante para refresco)
+        client.auth.onAuthStateChange((event, session) => {
+            checkSession();
+        });
 
-    // Eliminar solo una imagen
-    async function deleteImage(obraId, path) {
-      const obra = obras.find(o => o.id === obraId);
-      if (!obra) return;
-      await client.storage.from("imagenes").remove([path]);
-      const nuevas = (obra.imagenes || []).filter(img => img.path !== path);
-      await client.from("productos").update({ imagenes: nuevas }).eq("id", obraId);
-      obra.imagenes = nuevas;
-      renderObras();
-    }
+        // --- CRUD DE OBRAS ---
 
-    // Guardar orden
-    async function saveOrder() {
-      const ids = [...obraList.children].map(li => li.dataset.id);
-      for (let i = 0; i < ids.length; i++) {
-        await client.from("productos").update({ orden: i }).eq("id", ids[i]);
-      }
-      fetchObras();
-    }
+        // Renderizar listado
+        function renderObras() {
+            if (!obras.length) {
+                obraList.innerHTML = '<li class="p-4 text-gray-500">No hay obras cargadas.</li>';
+                return;
+            }
+            obraList.innerHTML = obras.map(o => `
+                <li class="p-4 border rounded-lg bg-gray-50" data-id="${o.id}">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <h3 class="font-bold">${o.title}</h3>
+                            <p class="text-sm text-gray-600">${o.year} · ${o.technique || ""} · ${o.size || ""}</p>
+                        </div>
+                        <button onclick="deleteObra(${o.id})"
+                            class="bg-red-500 text-white px-3 py-1 rounded ml-4">Eliminar</button>
+                    </div>
+                    <div class="flex gap-2 mt-2 flex-wrap">
+                        ${(o.imagenes || []).map(img => `
+                            <div class="relative group">
+                                <img src="${img.url}" class="w-24 h-24 object-cover rounded">
+                                <button onclick="deleteImage(${o.id}, '${img.path}')"
+                                    class="absolute top-1 right-1 bg-black bg-opacity-60 text-white text-xs px-1 rounded hidden group-hover:block">✕</button>
+                            </div>
+                        `).join("")}
+                    </div>
+                </li>
+            `).join("");
 
-    // Inicializar
-    fetchObras();
-  </script>
+            // Activar drag & drop (solo si hay obras)
+            new Sortable(obraList, {
+                animation: 150,
+                onEnd: saveOrder
+            });
+        }
+
+        // Cargar obras
+        async function fetchObras() {
+            const { data, error } = await client
+                .from("productos")
+                .select("*")
+                .order("orden", { ascending: true }) // Aseguramos el orden
+                .order("created_at", { ascending: false });
+
+            if (error) {
+                console.error("Error cargando obras:", error);
+                obraList.innerHTML = '<li class="p-4 text-red-500">Error cargando obras.</li>';
+                return;
+            }
+            obras = data;
+            renderObras();
+        }
+
+        // Guardar nueva obra
+        obraForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            saveObraBtn.disabled = true;
+            saveObraBtn.textContent = "Guardando...";
+
+            const title = document.getElementById("title").value;
+            const year = document.getElementById("year").value;
+            const technique = document.getElementById("technique").value;
+            const size = document.getElementById("size").value;
+            const description = document.getElementById("description").value;
+            const files = document.getElementById("images").files;
+
+            let imagenes = [];
+            for (let f of files) {
+                const filePath = `${Date.now()}-${f.name}`; // Nombre único
+                const { error: uploadError } = await client.storage
+                    .from(BUCKET_NAME)
+                    .upload(filePath, f, { upsert: true });
+
+                if (uploadError) {
+                    console.error("Error subiendo archivo:", uploadError);
+                    alert("Error subiendo imagen: " + uploadError.message);
+                    saveObraBtn.disabled = false;
+                    saveObraBtn.textContent = "Guardar obra";
+                    return;
+                }
+                const { data } = client.storage.from(BUCKET_NAME).getPublicUrl(filePath);
+                imagenes.push({ url: data.publicUrl, path: filePath });
+            }
+
+            // El campo 'orden' se asigna automáticamente con el valor por defecto de 0 (o NULL, pero se ordenará al final)
+            // Se asume que el campo 'orden' en Supabase tiene un valor por defecto de 0 (como en tu imagen) o se manejará luego.
+            // Para asegurar que vaya al principio si el orden es 0, lo guardamos con un orden grande y luego re-ordenamos.
+            const newOrder = obras.length > 0 ? obras[0].orden - 1 : 0; // Se inserta al inicio
+            
+            const { data, error } = await client
+                .from("productos")
+                .insert([{ titulo: title, anio: year, tecnica: technique, medidas: size, descripcion: description, imagenes, orden: newOrder }])
+                .select();
+
+            if (error) {
+                console.error("Error guardando obra:", error);
+                alert("Error guardando obra: " + error.message);
+            } else {
+                obras.unshift(data[0]);
+                await saveOrder(); // Forzar reordenamiento para asegurar el nuevo 'orden'
+                obraForm.reset();
+            }
+            
+            saveObraBtn.disabled = false;
+            saveObraBtn.textContent = "Guardar obra";
+        });
+
+        // Eliminar obra completa (con imágenes)
+        window.deleteObra = async function (id) {
+            const obra = obras.find(o => o.id === id);
+            if (!obra) return;
+            if (!confirm(`¿Eliminar la obra "${obra.title}" y todas sus imágenes?`)) return;
+
+            try {
+                // 1. Eliminar imágenes
+                const paths = (obra.imagenes || []).map(img => img.path).filter(p => p);
+                if (paths.length > 0) {
+                    const { error: storageError } = await client.storage.from(BUCKET_NAME).remove(paths);
+                    if (storageError) console.warn("Advertencia: No se pudieron eliminar todas las imágenes del storage.", storageError);
+                }
+                
+                // 2. Eliminar registro de la tabla
+                const { error: dbError } = await client.from("productos").delete().eq("id", id);
+                if (dbError) throw dbError;
+
+                // 3. Actualizar UI
+                obras = obras.filter(o => o.id !== id);
+                renderObras();
+                saveOrder(); // Reordenar para tapar el hueco
+            } catch (err) {
+                console.error("Error al eliminar obra:", err);
+                alert("Hubo un error al eliminar la obra.");
+            }
+        }
+
+        // Eliminar solo una imagen
+        window.deleteImage = async function (obraId, path) {
+            const obra = obras.find(o => o.id === obraId);
+            if (!obra) return;
+            if (!confirm("¿Eliminar solo esta imagen?")) return;
+
+            try {
+                // 1. Eliminar del Storage
+                await client.storage.from(BUCKET_NAME).remove([path]);
+                
+                // 2. Actualizar JSONB en la DB
+                const nuevas = (obra.imagenes || []).filter(img => img.path !== path);
+                const { error: dbError } = await client.from("productos").update({ imagenes: nuevas }).eq("id", obraId);
+                if (dbError) throw dbError;
+
+                // 3. Actualizar UI
+                obra.imagenes = nuevas;
+                renderObras();
+            } catch (err) {
+                console.error("Error al eliminar imagen:", err);
+                alert("Hubo un error al eliminar la imagen.");
+            }
+        }
+
+        // Guardar orden desde SortableJS
+        async function saveOrder() {
+            const ids = [...obraList.children].map(li => Number(li.dataset.id));
+            if (ids.length === 0) return;
+
+            // Creamos un array de objetos { id, orden } para la actualización en lote
+            const updates = ids.map((id, idx) => ({ id, orden: idx }));
+
+            // Usamos Promise.all para actualizar en paralelo, más eficiente.
+            const results = await Promise.all(
+                updates.map(upd => client.from("productos").update(upd).eq("id", upd.id))
+            );
+            
+            const anyError = results.find(r => r.error);
+            if (anyError) {
+                console.error("Error guardando orden:", results);
+                alert("Error guardando el nuevo orden.");
+            }
+
+            // Refrescar para asegurar que los datos locales y la UI coincidan
+            await fetchObras();
+        }
+
+        // Inicializar: solo comprueba la sesión, el resto se hace en checkSession
+        (async () => {
+            checkSession();
+        })();
+    </script>
 </body>
 </html>

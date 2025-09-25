@@ -2,8 +2,9 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Panel de Carga de Obras</title>
+  <title>Panel de Carga — Fran Art Gallery</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; padding: 1rem; }
     input, button, textarea { display: block; margin-bottom: 1rem; width: 100%; padding: 0.5rem; }
@@ -12,9 +13,17 @@
   </style>
 </head>
 <body>
-  <h1>Panel de Carga de Obras</h1>
 
-  <form id="upload-form">
+  <div id="login-screen">
+    <h2>Acceso</h2>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Contraseña" />
+    <button id="login-btn">Ingresar</button>
+    <p id="login-status" style="color: red;"></p>
+  </div>
+
+  <form id="upload-form" style="display: none;">
+    <h2>Cargar nueva obra</h2>
     <input type="file" id="file-input" accept="image/*" required />
     <img id="preview" alt="Vista previa" />
     <input type="text" id="title-input" placeholder="Título de la obra" required />
@@ -27,70 +36,102 @@
   </form>
 
   <script>
+    const supabase = supabase.createClient(
+      'https://railkoprsjevdyrxalfu.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhaWxrb3Byc2pldmR5cnhhbGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NjU2ODEsImV4cCI6MjA3NDM0MTY4MX0.cXlcz00HmgBAzsTmqQl7lKZPWR9f3STsLFBFBTiucR0'
+    );
 
-      // Vista previa de imagen
-      fileInput.addEventListener('change', () => {
-        const file = fileInput.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = e => {
-            preview.src = e.target.result;
-            preview.style.display = 'block';
-          };
-          reader.readAsDataURL(file);
-        } else {
-          preview.style.display = 'none';
-        }
-      });
+    const loginBtn = document.getElementById('login-btn');
+    const loginStatus = document.getElementById('login-status');
+    const loginScreen = document.getElementById('login-screen');
+    const uploadForm = document.getElementById('upload-form');
 
-      // Subida y registro
-      uploadForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    loginBtn.addEventListener('click', async () => {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
 
-        const file = fileInput.files[0];
-        const title = titleInput.value.trim();
-        const year = yearInput.value.trim();
-        const technique = techniqueInput.value.trim();
-        const size = sizeInput.value.trim();
-        const description = descriptionInput.value.trim();
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-        if (!file || !title) {
-          uploadStatus.textContent = "Faltan datos obligatorios.";
-          uploadStatus.style.color = "red";
-          return;
-        }
+      if (error) {
+        loginStatus.textContent = '❌ Login incorrecto';
+      } else {
+        loginScreen.style.display = 'none';
+        uploadForm.style.display = 'block';
+      }
+    });
 
-        const fileName = `${Date.now()}_${file.name}`;
-        const storageRef = storage.ref().child(`obras/${fileName}`);
-        uploadStatus.textContent = "Subiendo imagen...";
-        uploadStatus.style.color = "black";
+    const fileInput = document.getElementById('file-input');
+    const preview = document.getElementById('preview');
+    const uploadStatus = document.getElementById('upload-status');
 
-        try {
-          const snapshot = await storageRef.put(file);
-          const imgUrl = await snapshot.ref.getDownloadURL();
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          preview.src = e.target.result;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        preview.style.display = 'none';
+      }
+    });
 
-          await db.collection("obras").add({
-            title,
-            year,
-            technique,
-            size,
-            description,
-            imgUrl,
-            createdAt: new Date().toISOString()
-          });
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-          uploadStatus.textContent = "✅ Obra registrada correctamente.";
-          uploadStatus.style.color = "green";
-          uploadForm.reset();
-          preview.style.display = 'none';
-        } catch (err) {
-          console.error("Error:", err);
-          uploadStatus.textContent = "❌ Error al subir o guardar.";
-          uploadStatus.style.color = "red";
-        }
-      });
-    ;
+      const file = fileInput.files[0];
+      const title = document.getElementById('title-input').value.trim();
+      const year = document.getElementById('year-input').value.trim();
+      const technique = document.getElementById('technique-input').value.trim();
+      const size = document.getElementById('size-input').value.trim();
+      const description = document.getElementById('description-input').value.trim();
+
+      if (!file || !title) {
+        uploadStatus.textContent = "Faltan datos obligatorios.";
+        uploadStatus.style.color = "red";
+        return;
+      }
+
+      const fileName = `${Date.now()}_${file.name}`;
+      uploadStatus.textContent = "Subiendo imagen...";
+      uploadStatus.style.color = "black";
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('obras')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        uploadStatus.textContent = '❌ Error al subir imagen';
+        uploadStatus.style.color = "red";
+        return;
+      }
+
+      const imgUrl = `https://railkoprsjevdyrxalfu.supabase.co/storage/v1/object/public/obras/${fileName}`;
+
+      const { error: dbError } = await supabase
+        .from('obras')
+        .insert([{
+          title,
+          year: parseInt(year) || null,
+          technique,
+          size,
+          description,
+          imgUrl,
+          createdAt: new Date().toISOString()
+        }]);
+
+      if (dbError) {
+        uploadStatus.textContent = '❌ Error al guardar datos';
+        uploadStatus.style.color = "red";
+      } else {
+        uploadStatus.textContent = '✅ Obra registrada correctamente';
+        uploadStatus.style.color = "green";
+        uploadForm.reset();
+        preview.style.display = 'none';
+      }
+    });
   </script>
 </body>
 </html>
-

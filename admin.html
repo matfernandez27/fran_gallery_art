@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel de Carga de Obras</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; padding: 1rem; }
+    input, button, textarea { display: block; margin-bottom: 1rem; width: 100%; padding: 0.5rem; }
+    #preview { max-width: 100%; margin-bottom: 1rem; display: none; border: 1px solid #ccc; border-radius: 4px; }
+    #upload-status { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Panel de Carga de Obras</h1>
+
+  <form id="upload-form">
+    <input type="file" id="file-input" accept="image/*" required />
+    <img id="preview" alt="Vista previa" />
+    <input type="text" id="title-input" placeholder="Título de la obra" required />
+    <input type="text" id="year-input" placeholder="Año" />
+    <input type="text" id="technique-input" placeholder="Técnica" />
+    <input type="text" id="size-input" placeholder="Medidas (ej. 60x80 cm)" />
+    <textarea id="description-input" placeholder="Descripción (opcional)"></textarea>
+    <button type="submit">Subir imagen</button>
+    <p id="upload-status"></p>
+  </form>
+
+  <script>
+
+      // Vista previa de imagen
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = e => {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+          };
+          reader.readAsDataURL(file);
+        } else {
+          preview.style.display = 'none';
+        }
+      });
+
+      // Subida y registro
+      uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const file = fileInput.files[0];
+        const title = titleInput.value.trim();
+        const year = yearInput.value.trim();
+        const technique = techniqueInput.value.trim();
+        const size = sizeInput.value.trim();
+        const description = descriptionInput.value.trim();
+
+        if (!file || !title) {
+          uploadStatus.textContent = "Faltan datos obligatorios.";
+          uploadStatus.style.color = "red";
+          return;
+        }
+
+        const fileName = `${Date.now()}_${file.name}`;
+        const storageRef = storage.ref().child(`obras/${fileName}`);
+        uploadStatus.textContent = "Subiendo imagen...";
+        uploadStatus.style.color = "black";
+
+        try {
+          const snapshot = await storageRef.put(file);
+          const imgUrl = await snapshot.ref.getDownloadURL();
+
+          await db.collection("obras").add({
+            title,
+            year,
+            technique,
+            size,
+            description,
+            imgUrl,
+            createdAt: new Date().toISOString()
+          });
+
+          uploadStatus.textContent = "✅ Obra registrada correctamente.";
+          uploadStatus.style.color = "green";
+          uploadForm.reset();
+          preview.style.display = 'none';
+        } catch (err) {
+          console.error("Error:", err);
+          uploadStatus.textContent = "❌ Error al subir o guardar.";
+          uploadStatus.style.color = "red";
+        }
+      });
+    ;
+  </script>
+</body>
+</html>
+

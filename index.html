@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Catálogo — Artista Visual</title>
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+  <header class="bg-white shadow-sm">
+    <div class="max-w-6xl mx-auto p-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold">Nombre del Artista</h1>
+        <p class="text-sm text-gray-500">Artista visual — Breve bio o tagline</p>
+      </div>
+      <div class="text-right text-sm text-gray-600">
+        <div>Catálogo de obras</div>
+        <div class="mt-1">Contacto · Instagram · Email</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto p-6">
+    <div class="mb-6 flex gap-4 items-center">
+      <input id="search" type="search" placeholder="Buscar por título, técnica o año..."
+        class="flex-1 p-3 rounded-lg border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+      <select id="filter-year" class="p-3 rounded-lg border border-gray-200">
+        <option value="">Todos los años</option>
+      </select>
+    </div>
+
+    <section id="gallery" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <!-- Cards generadas por JS -->
+    </section>
+
+    <div id="status" class="text-center text-gray-500 mt-6"></div>
+  </main>
+
+  <div id="modal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-60 z-50">
+    <div class="bg-white max-w-4xl w-full rounded-lg overflow-hidden">
+      <div class="flex justify-end p-2">
+        <button id="modal-close" class="text-gray-600 hover:text-gray-900 px-3 py-1">Cerrar ✕</button>
+      </div>
+      <div id="modal-body" class="p-4"></div>
+    </div>
+  </div>
+
+  <script>
+
+    let artworks = [];
+
+    function initGallery() {
+      filterYear.innerHTML = '<option value="">Todos los años</option>';
+      const years = [...new Set(artworks.map(a => a.year))].sort((a,b)=>b-a);
+      years.forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        filterYear.appendChild(opt);
+      });
+      renderGallery(artworks);
+      status.textContent = '';
+    }
+
+    function renderGallery(items) {
+      if (!items || items.length === 0) {
+        gallery.innerHTML = '<p class="text-center col-span-full text-gray-500">No hay obras que coincidan.</p>';
+        return;
+      }
+
+      gallery.innerHTML = items.map((a, i) => {
+        const imgSrc = a.imgUrl && typeof a.imgUrl === 'string'
+          ? a.imgUrl.trim().replace(/\s/g, '').replace(/"/g, '')
+          : '';
+        const isValidImageLink = imgSrc.startsWith("https://");
+
+        return `
+          <article class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-shadow">
+            <button data-id="${i}" class="w-full text-left group">
+              <div class="h-56 w-full overflow-hidden bg-gray-100">
+                <img src="${isValidImageLink ? imgSrc : 'https://placehold.co/800x600?text=Link+inválido'}"
+                    alt="${a.title}"
+                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    onerror="this.onerror=null;this.src='https://placehold.co/800x600?text=Error+de+imagen';">
+              </div>
+              <div class="p-4">
+                <h3 class="font-semibold text-lg">${a.title || ''}</h3>
+                <p class="text-sm text-gray-500">${a.technique || ''} · ${a.year || ''}</p>
+                <p class="text-sm text-gray-400 mt-2">${a.size || ''}</p>
+              </div>
+            </button>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function openModal(id) {
+      const a = artworks[id];
+      if (!a) return;
+      modalBody.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <img src="${a.imgUrl || 'https://picsum.photos/1200/800?random=' + id}" alt="${a.title}" class="w-full h-auto object-contain rounded">
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold mb-2">${a.title || ''}</h2>
+            <p class="text-gray-600 mb-1"><strong>Año:</strong> ${a.year || ''}</p>
+            <p class="text-gray-600 mb-1"><strong>Técnica:</strong> ${a.technique || ''}</p>
+            <p class="text-gray-600 mb-4"><strong>Medidas:</strong> ${a.size || ''}</p>
+            <p class="text-gray-500">${a.description || ''}</p>
+          </div>
+        </div>
+      `;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      modalBody.innerHTML = '';
+    }
+
+    gallery.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-id]');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      openModal(id);
+    });
+    modalClose.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    function applyFilters() {
+      const q = searchInput.value.trim().toLowerCase();
+      const y = filterYear.value;
+      let filtered = artworks.filter(a => {
+        const hay = `${a.title || ''} ${a.technique || ''} ${a.year || ''}`.toLowerCase();
+        return hay.includes(q);
+      });
+      if (y) filtered = filtered.filter(a => String(a.year) === y);
+      renderGallery(filtered);
+    }
+    searchInput.addEventListener('input', applyFilters);
+    filterYear.addEventListener('change', applyFilters);
+
+  </script>
+</body>
+</html>
+

@@ -9,7 +9,6 @@
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
 
-  <!-- 🔹 Login -->
   <div id="login-container" class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
     <h1 class="text-2xl font-bold mb-6 text-center">Acceso</h1>
     <form id="login-form" class="space-y-4">
@@ -20,13 +19,11 @@
     <p id="mensaje" class="text-center text-red-500 mt-4 hidden"></p>
   </div>
 
-  <!-- 🔹 Panel -->
   <div id="panel-container" class="hidden w-full p-6">
     <div class="bg-white p-6 rounded-2xl shadow space-y-6 max-w-2xl mx-auto">
       <h2 class="text-xl font-bold">Panel de administración</h2>
       <p>Bienvenido al panel 🎉</p>
 
-      <!-- 🔹 Formulario de carga -->
       <form id="upload-form" class="space-y-4">
         <input type="file" id="file-input" accept="image/*" required class="w-full border p-2 rounded" />
         <img id="preview" class="max-w-full rounded border hidden" />
@@ -122,11 +119,22 @@
       const description = document.getElementById("description-input").value.trim();
 
       if (!file || !title) {
-        uploadStatus.textContent = "❌ Faltan datos obligatorios.";
+        uploadStatus.textContent = "❌ Faltan datos obligatorios (imagen y título).";
         uploadStatus.className = "text-red-500 text-center";
         return;
       }
+      
+      // 1. Obtener el ID del usuario de forma segura antes de continuar
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      const user_id = userData?.user?.id;
 
+      if (userError || !user_id) {
+          uploadStatus.textContent = "❌ Error de autenticación: No se pudo obtener el ID de usuario. Vuelve a iniciar sesión.";
+          uploadStatus.className = "text-red-500 text-center";
+          return;
+      }
+      
+      // Proceder con la subida de la imagen
       const fileName = `${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
       uploadStatus.textContent = "Subiendo imagen...";
       uploadStatus.className = "text-gray-500 text-center";
@@ -139,15 +147,14 @@
         });
 
       if (uploadError) {
-        uploadStatus.textContent = "❌ Error al subir imagen: " + uploadError.message;
+        uploadStatus.textContent = "❌ Error al subir imagen a Storage: " + uploadError.message;
         uploadStatus.className = "text-red-500 text-center";
         return;
       }
 
       const imgUrl = `${SUPABASE_URL}/storage/v1/object/public/obras/${fileName}`;
-      const { data: userData } = await supabase.auth.getUser();
-      const user_id = userData?.user?.id;
 
+      // 2. Insertar los datos en la tabla, incluyendo el user_id obtenido
       const { error: dbError } = await supabase
         .from("obras")
         .insert([{
@@ -158,11 +165,12 @@
           description,
           imgUrl,
           createdAt: new Date().toISOString(),
-          user_id
+          user_id // Se garantiza que es el ID del usuario logueado
         }]);
 
       if (dbError) {
-        uploadStatus.textContent = "❌ Error al guardar datos: " + dbError.message;
+        // Este es el error de "violates row-level security policy"
+        uploadStatus.textContent = "❌ Error al guardar datos (RLS Violada o DB): " + dbError.message;
         uploadStatus.className = "text-red-500 text-center";
       } else {
         uploadStatus.textContent = "✅ Obra registrada correctamente.";

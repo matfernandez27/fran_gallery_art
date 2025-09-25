@@ -267,6 +267,13 @@
                 
                 item.className = 'flex items-center space-x-4 p-3 border-b hover:bg-gray-50 rounded-lg transition duration-150';
                 item.setAttribute('id', `obra-item-${obra.id}`); // ID para poder removerlo del DOM
+                
+                // --- CORRECCIÓN CRÍTICA DE SINTAXIS PARA ONCLICK ---
+                // Sanitizar la cadena JSON de imágenes para el onclick, evitando el error de sintaxis.
+                const safeImages = JSON.stringify(obra.imagenes)
+                                       .replace(/'/g, "\\'") // Escapa comillas simples
+                                       .replace(/"/g, "'"); // Convierte comillas dobles a simples
+
                 item.innerHTML = `
                     <img src="${mainImage}" alt="${obra.titulo}" class="w-16 h-16 object-cover rounded-md" onerror="this.style.display='none'" />
                     <div class="flex-1">
@@ -274,7 +281,7 @@
                         <p class="text-sm text-gray-500">${obra.tecnica}</p>
                     </div>
                     <div>
-                        <button id="delete-btn-${obra.id}" onclick="deleteObra(${obra.id}, ${JSON.stringify(obra.imagenes)}, this)" class="bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-3 rounded-lg transition duration-300">
+                        <button id="delete-btn-${obra.id}" onclick="deleteObra(${obra.id}, '${safeImages}', this)" class="bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-3 rounded-lg transition duration-300">
                             Eliminar
                         </button>
                     </div>
@@ -284,7 +291,18 @@
         }
         
         // Se pasa el botón como argumento para deshabilitarlo durante la operación
-        async function deleteObra(id, images, button) {
+        async function deleteObra(id, imagesString, button) {
+            // Se debe parsear la cadena JSON que recibimos del onclick
+            let images = [];
+            try {
+                images = JSON.parse(imagesString.replace(/'/g, '"')); // Revertir a comillas dobles para que JSON.parse funcione
+            } catch (e) {
+                console.error("Error al parsear JSON de imágenes:", e);
+                showAlert("Error interno al preparar la eliminación. Revise la consola.", 'error');
+                return;
+            }
+
+
             if (!confirm(`¿Está seguro de eliminar la obra con ID ${id} y todas sus imágenes? Esta acción es irreversible.`)) {
                 return;
             }
@@ -301,7 +319,7 @@
                     .eq('id', id);
 
                 if (dbError) {
-                    throw new Error(`Error al eliminar el registro: ${dbError.message}. VERIFIQUE PERMISOS RLS.`);
+                    throw new Error(`Error al eliminar el registro: ${dbError.message}.`);
                 }
 
                 // 2. Eliminar las imágenes del Storage
@@ -313,7 +331,7 @@
                         .remove(filePaths);
 
                     if (storageError && storageError.statusCode !== '200') {
-                         // Si falla el Storage, notificamos, pero el registro de la DB ya se fue
+                        // Si falla el Storage, notificamos, pero el registro de la DB ya se fue
                         console.warn("Error al borrar imágenes del storage:", storageError);
                         showAlert(`Obra eliminada de la DB. ADVERTENCIA: Falló el borrado de ${filePaths.length} imagen(es) del Storage (permisos).`, 'error');
                         return; // Salimos después de notificar el problema de Storage

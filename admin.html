@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>Panel de Carga — Fran Art Gallery</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Cargar Supabase antes de usarlo -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; padding: 1rem; }
@@ -15,7 +14,6 @@
 </head>
 <body>
 
-  <!-- Login -->
   <div id="login-screen">
     <h2>Acceso</h2>
     <input type="email" id="email" placeholder="Email" />
@@ -24,7 +22,6 @@
     <p id="login-status" style="color: red;"></p>
   </div>
 
-  <!-- Formulario de carga -->
   <form id="upload-form" style="display: none;">
     <h2>Cargar nueva obra</h2>
     <input type="file" id="file-input" accept="image/*" required />
@@ -38,15 +35,12 @@
     <p id="upload-status"></p>
   </form>
 
-  <!-- Script principal -->
   <script>
-    // Inicializar Supabase correctamente
     const supabase = supabase.createClient(
       'https://railkoprsjevdyrxalfu.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhaWxrb3Byc2pldmR5cnhhbGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NjU2ODEsImV4cCI6MjA3NDM0MTY4MX0.cXlcz00HmgBAzsTmqQl7lKZPWR9f3STsLFBFBTiucR0'
     );
 
-    // Login
     document.getElementById('login-btn').addEventListener('click', async () => {
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value.trim();
@@ -61,7 +55,6 @@
       }
     });
 
-    // Vista previa
     const fileInput = document.getElementById('file-input');
     const preview = document.getElementById('preview');
     const uploadStatus = document.getElementById('upload-status');
@@ -80,7 +73,6 @@
       }
     });
 
-    // Subida y registro
     document.getElementById('upload-form').addEventListener('submit', async (e) => {
       e.preventDefault();
 

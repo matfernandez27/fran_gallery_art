@@ -57,12 +57,14 @@
                 <option value="">Todos los años</option>
             </select>
 
-            <button id="edit-toggle" class="p-3 rounded-lg bg-gray-300 hover:bg-gray-400 transition duration-300">
-                Activar Edición
-            </button>
-            <button id="save-order-button" class="hidden p-3 rounded-lg bg-green-500 hover:bg-green-600 text-white transition duration-300" disabled>
-                Guardar Orden
-            </button>
+            <div id="admin-controls" class="hidden flex gap-2">
+                <button id="edit-toggle" class="p-3 rounded-lg bg-gray-300 hover:bg-gray-400 transition duration-300">
+                    Activar Edición
+                </button>
+                <button id="save-order-button" class="hidden p-3 rounded-lg bg-green-500 hover:bg-green-600 text-white transition duration-300" disabled>
+                    Guardar Orden
+                </button>
+            </div>
         </div>
         
         <p id="status" class="text-center text-gray-500 mb-4"></p>
@@ -89,19 +91,39 @@
         
         let productos = [];
         let isEditing = false;
-        let sortableInstance = null; // Instancia de SortableJS
+        let sortableInstance = null;
         
         const galleryContainer = document.getElementById("gallery-container");
         const status = document.getElementById("status");
         const loadingOverlay = document.getElementById("loading-overlay");
-        const editToggleButton = document.getElementById("edit-toggle");
-        const saveOrderButton = document.getElementById("save-order-button");
 
         // Elementos de Filtro
         const searchInput = document.getElementById("search");
         const filterYear = document.getElementById("filter-year");
         const filterCategory = document.getElementById("filter-category");
         const filterSeries = document.getElementById("filter-series");
+
+        // Elementos de Control de Administrador
+        const adminControls = document.getElementById("admin-controls");
+        const editToggleButton = document.getElementById("edit-toggle");
+        const saveOrderButton = document.getElementById("save-order-button");
+
+
+        // --- LÓGICA DE SEGURIDAD: VERIFICACIÓN DE ADMIN ---
+
+        async function checkAdminStatus() {
+            // Verifica si existe una sesión activa (es decir, si el admin se logueó en admin.html)
+            const { data: { session } } = await client.auth.getSession();
+            
+            if (session) {
+                // Si hay una sesión activa, mostramos los controles de edición.
+                adminControls.classList.remove('hidden');
+            } else {
+                // Si no hay sesión, aseguramos que estén ocultos.
+                adminControls.classList.add('hidden');
+            }
+        }
+
 
         // --- FUNCIONES CORE ---
 
@@ -115,7 +137,7 @@
                 size: p.medidas || "",
                 year: p.anio || "",
                 description: p.descripcion || "",
-                order: p.orden || 0, // CRÍTICO: Asegurarse de tener el campo 'orden'
+                order: p.orden || 0,
                 
                 category: p.categoria || "",
                 serie: p.serie || "",
@@ -135,7 +157,7 @@
             items.forEach(obra => {
                 const card = document.createElement("div");
                 card.className = "bg-white rounded-lg shadow-lg overflow-hidden cursor-pointer hover:shadow-xl transition duration-300";
-                card.setAttribute('data-id', obra.id); // Clave para el reordenamiento
+                card.setAttribute('data-id', obra.id); 
                 card.setAttribute('onclick', isEditing ? '' : `openModal(${obra.id})`);
                 
                 card.innerHTML = `
@@ -150,7 +172,6 @@
                 galleryContainer.appendChild(card);
             });
             
-            // Re-inicializar SortableJS si está en modo edición
             if (isEditing) {
                 enableSorting();
             }
@@ -160,7 +181,6 @@
             status.textContent = "Cargando obras...";
             loadingOverlay.classList.remove('hidden');
 
-            // Ordenamiento principal por 'orden' (que el admin define)
             const { data, error } = await client
                 .from('productos')
                 .select('*')
@@ -177,15 +197,19 @@
 
             productos = data.map(normalize);
 
-            // Poblar Filtros
+            // Poblar Filtros (Año)
             const years = [...new Set(productos.map(a => a.year).filter(Boolean))].sort((a, b) => b - a);
             filterYear.innerHTML = '<option value="">Todos los años</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
 
+            // Poblar Filtros (Serie)
             const series = [...new Set(productos.map(a => a.serie).filter(s => s && s.trim() !== ''))].sort((a, b) => a.localeCompare(b));
             filterSeries.innerHTML = '<option value="">Todas las series</option>' + series.map(s => `<option value="${s}">${s}</option>`).join('');
 
             renderGallery(productos);
             status.textContent = "";
+
+            // Llamar a la función de seguridad
+            await checkAdminStatus(); 
         }
         
         function applyFilters() {
@@ -195,7 +219,6 @@
             const s = filterSeries.value;
 
             let filtered = productos.filter(p => {
-                // Incluye todos los campos para la búsqueda de texto
                 const hay = `${p.title || ""} ${p.technique || ""} ${p.year || ""} ${p.description || ""} ${p.serie || ""} ${p.category || ""}`.toLowerCase();
                 
                 let textMatch = hay.includes(q);
@@ -213,13 +236,12 @@
 
         function enableSorting() {
             if (sortableInstance) {
-                sortableInstance.destroy(); // Destruir la instancia anterior si existe
+                sortableInstance.destroy();
             }
             sortableInstance = new Sortable(galleryContainer, {
                 animation: 150,
                 ghostClass: 'sortable-ghost',
                 onEnd: function (evt) {
-                    // Si el orden cambia, habilitar el botón de guardar
                     if (evt.oldIndex !== evt.newIndex) {
                         saveOrderButton.disabled = false;
                         saveOrderButton.textContent = "Guardar Orden (Cambios Pendientes)";
@@ -250,8 +272,7 @@
                     sortableInstance.destroy();
                     sortableInstance = null;
                 }
-                // Si salimos, recargar para asegurar el orden correcto
-                initGallery();
+                initGallery(); // Recargar para asegurar el orden correcto
             }
             // Deshabilitar la apertura de modal en modo edición
             galleryContainer.querySelectorAll('[data-id]').forEach(card => {
@@ -269,12 +290,10 @@
             cardElements.forEach((card, index) => {
                 updates.push({
                     id: parseInt(card.getAttribute('data-id')),
-                    orden: index + 1 // El nuevo orden es el índice + 1
+                    orden: index + 1
                 });
             });
             
-            // Usar una única RPC o una serie de updates para eficiencia
-            // Supabase soporta updates en lote de esta manera
             const { error } = await client
                 .from('productos')
                 .upsert(updates); 
@@ -290,7 +309,6 @@
             saveOrderButton.classList.add('bg-green-500', 'hover:bg-green-600');
             saveOrderButton.classList.remove('bg-orange-500', 'hover:bg-orange-600');
             
-            // Reestablecer productos internos al nuevo orden
             productos = updates.map(update => {
                 const p = productos.find(item => item.id === update.id);
                 if (p) p.order = update.orden;
@@ -308,11 +326,11 @@
         // Inicializar
         initGallery();
 
-        // --- MODAL LÓGICA (Simplificada) ---
+        // --- MODAL LÓGICA ---
         function openModal(id) {
             const obra = productos.find(p => p.id === parseInt(id));
             if (!obra) return;
-            // ... (Lógica del modal se mantiene igual)
+            
             const modalContent = document.getElementById("modal-content");
             modalContent.innerHTML = `
                 <div class="grid md:grid-cols-2 gap-6">

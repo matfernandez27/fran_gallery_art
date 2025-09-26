@@ -97,6 +97,14 @@
             /* Degradado de un tono de magenta claro a blanco */
             background: linear-gradient(to right, #F5E5EC, #FFFFFF); 
         }
+
+        /* Estilo de alerta flotante */
+        #alert {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 1001; /* Más alto que el modal */
+            padding: 1rem; border-radius: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            font-weight: 500;
+        }
     </style>
 </head>
 <body class="bg-bg-principal text-text-dark font-sans min-h-screen">
@@ -104,6 +112,8 @@
     <div id="loading-overlay" class="loading-overlay hidden">
         <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
     </div>
+
+    <div id="alert" class="hidden" role="alert"></div>
 
     <a id="whatsapp-btn" href="https://wa.me/+5492805032663?text=Hola,%20quisiera%20consultar%20sobre%20una%20obra%20de%20la%20galería." 
         target="_blank" 
@@ -196,7 +206,7 @@
                 </div>
             </div>
             
-            <p id="status" class="text-center text-text-muted mb-8"></p>
+            <p id="status" class="text-center text-red-500 font-semibold mb-8"></p>
 
             <div id="gallery-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 </div>
@@ -241,6 +251,7 @@
         const loadingOverlay = document.getElementById("loading-overlay");
         const modal = document.getElementById("modal");
         const modalContent = document.getElementById("modal-content");
+        const alertDiv = document.getElementById('alert');
 
         // Elementos de Filtro
         const searchInput = document.getElementById("search");
@@ -256,10 +267,25 @@
         // Elementos de interacción dinámica
         const whatsappButton = document.getElementById('whatsapp-btn');
         const mainFooter = document.getElementById('main-footer');
-        const gallerySection = document.getElementById('gallery-section'); // La sección del catálogo
+        const gallerySection = document.getElementById('gallery-section');
 
 
-        // --- LÓGICA DE SEGURIDAD: VERIFICACIÓN DE ADMIN (MANTENIDA) ---
+        // --- FUNCIONES DE UTILIDAD ---
+        function showAlert(message, type = 'success') {
+            alertDiv.textContent = message;
+            alertDiv.classList.remove('hidden');
+            alertDiv.classList.remove('bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+
+            if (type === 'error') {
+                alertDiv.classList.add('bg-red-100', 'text-red-700');
+            } else {
+                alertDiv.classList.add('bg-green-100', 'text-green-700');
+            }
+            setTimeout(() => alertDiv.classList.add('hidden'), 5000);
+        }
+        window.showAlert = showAlert;
+
+        // --- LÓGICA DE SEGURIDAD: VERIFICACIÓN DE ADMIN ---
         async function checkAdminStatus() {
             const { data: { session } } = await client.auth.getSession();
             if (session) {
@@ -270,7 +296,7 @@
         }
 
 
-        // --- FUNCIONES CORE (AJUSTADAS A LA PALETA CLARA) ---
+        // --- FUNCIONES CORE ---
         function normalize(p) {
             const images = p.imagenes || [];
             return {
@@ -291,17 +317,15 @@
         function renderGallery(items) {
             galleryContainer.innerHTML = '';
             if (items.length === 0) {
-                // Ajuste de texto a text-muted
                 galleryContainer.innerHTML = '<p class="col-span-full text-center text-text-muted">No se encontraron obras que coincidan con los filtros.</p>';
                 return;
             }
 
             items.forEach(obra => {
                 const card = document.createElement("div");
-                // Ajuste de la tarjeta a bg-card/borde border-light
                 card.className = "bg-bg-card rounded-sm overflow-hidden cursor-pointer shadow-lg hover:shadow-xl transition duration-500 transform hover:-translate-y-1 hover:rotate-1 group border border-border-light";
                 card.setAttribute('data-id', obra.id); 
-                card.setAttribute('onclick', isEditing ? '' : `openModal(${obra.id})`);
+                card.setAttribute('onclick', `openModal(${obra.id})`);
                 
                 card.innerHTML = `
                     <div class="aspect-[4/3] overflow-hidden">
@@ -320,39 +344,45 @@
             }
         }
         
+        // --- FUNCIÓN INITGALLERY MÁS ROBUSTA CON TRY/CATCH ---
         async function initGallery() {
-            // Ajuste del texto de carga a text-muted
             status.textContent = "Cargando obras...";
             loadingOverlay.classList.remove('hidden');
 
-            const { data, error } = await client
-                .from('productos')
-                .select('*')
-                .order('orden', { ascending: true }) 
-                .order('anio', { ascending: false }); 
+            try {
+                const { data, error } = await client
+                    .from('productos')
+                    .select('*')
+                    .order('orden', { ascending: true }) 
+                    .order('anio', { ascending: false }); 
 
-            loadingOverlay.classList.add('hidden');
-            
-            if (error) {
-                status.textContent = `Error al cargar: ${error.message}`;
-                console.error(error);
-                return;
+                loadingOverlay.classList.add('hidden');
+                
+                if (error) {
+                    // Si hay un error de Supabase (ej: RLS o conexión), lanza una excepción
+                    throw new Error(`Error de Supabase: ${error.message}`);
+                }
+
+                productos = data.map(normalize);
+
+                // Poblar Filtros (Año)
+                const years = [...new Set(productos.map(a => a.year).filter(Boolean))].sort((a, b) => b - a);
+                filterYear.innerHTML = '<option value="">Todos los años</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+
+                // Poblar Filtros (Serie)
+                const series = [...new Set(productos.map(a => a.serie).filter(s => s && s.trim() !== ''))].sort((a, b) => a.localeCompare(b));
+                filterSeries.innerHTML = '<option value="">Todas las series</option>' + series.map(s => `<option value="${s}">${s}</option>`).join('');
+
+                renderGallery(productos);
+                status.textContent = "";
+
+                await checkAdminStatus(); 
+            } catch (e) {
+                // Si algo falla, esconde la capa de carga y muestra el error en la pantalla.
+                loadingOverlay.classList.add('hidden');
+                status.textContent = `¡ERROR AL CARGAR LA GALERÍA! Verifique su archivo config.js o la Consola del Navegador. Detalle: ${e.message}`;
+                console.error("Error crítico al cargar initGallery:", e);
             }
-
-            productos = data.map(normalize);
-
-            // Poblar Filtros (Año)
-            const years = [...new Set(productos.map(a => a.year).filter(Boolean))].sort((a, b) => b - a);
-            filterYear.innerHTML = '<option value="">Todos los años</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
-
-            // Poblar Filtros (Serie)
-            const series = [...new Set(productos.map(a => a.serie).filter(s => s && s.trim() !== ''))].sort((a, b) => a.localeCompare(b));
-            filterSeries.innerHTML = '<option value="">Todas las series</option>' + series.map(s => `<option value="${s}">${s}</option>`).join('');
-
-            renderGallery(productos);
-            status.textContent = "";
-
-            await checkAdminStatus(); 
         }
         
         function applyFilters() {
@@ -375,7 +405,7 @@
             renderGallery(filtered);
         }
 
-        // --- LÓGICA DE REORDENAMIENTO (MODO EDICIÓN - Ajustada a nueva paleta) ---
+        // --- LÓGICA DE REORDENAMIENTO (MANTENIDA) ---
         function enableSorting() {
             if (sortableInstance) {
                 sortableInstance.destroy();
@@ -387,7 +417,6 @@
                     if (evt.oldIndex !== evt.newIndex) {
                         saveOrderButton.disabled = false;
                         saveOrderButton.textContent = "Guardar Orden (Cambios Pendientes)";
-                        // Ajuste de colores para indicar cambios (pantone-magenta)
                         saveOrderButton.classList.add('bg-pantone-magenta', 'hover:bg-opacity-80', 'text-white');
                         saveOrderButton.classList.remove('bg-green-600', 'hover:bg-green-700');
                     }
@@ -400,18 +429,16 @@
             
             if (isEditing) {
                 editToggleButton.textContent = 'Salir de Edición';
-                // Ajuste de colores en modo edición (rojo de alerta)
                 editToggleButton.classList.replace('bg-border-light', 'bg-red-500');
                 editToggleButton.classList.replace('hover:bg-pantone-magenta', 'hover:bg-red-600');
                 editToggleButton.classList.remove('text-text-dark');
-                editToggleButton.classList.add('text-white'); // Asegurar texto blanco sobre rojo
+                editToggleButton.classList.add('text-white');
 
                 saveOrderButton.classList.remove('hidden');
                 galleryContainer.style.cursor = 'grab';
                 enableSorting();
             } else {
                 editToggleButton.textContent = 'Activar Edición';
-                // Ajuste de colores al salir (vuelve a los neutros)
                 editToggleButton.classList.replace('bg-red-500', 'bg-border-light');
                 editToggleButton.classList.replace('hover:bg-red-600', 'hover:bg-pantone-magenta');
                 editToggleButton.classList.add('text-text-dark');
@@ -425,16 +452,11 @@
                 }
                 initGallery(); 
             }
-            galleryContainer.querySelectorAll('[data-id]').forEach(card => {
-                const obraId = card.getAttribute('data-id');
-                card.onclick = isEditing ? null : () => openModal(obraId); 
-            });
         });
 
         saveOrderButton.addEventListener('click', async () => {
             saveOrderButton.disabled = true;
             saveOrderButton.textContent = "Guardando...";
-            // Cambio a un color neutro mientras guarda
             saveOrderButton.classList.remove('bg-pantone-magenta', 'hover:bg-opacity-80');
             saveOrderButton.classList.add('bg-gray-500', 'hover:bg-gray-600'); 
             
@@ -451,6 +473,7 @@
                     updates.push({
                         id: existingObra.id,
                         orden: newOrder,
+                        // Mantener todos los demás campos para el upsert
                         titulo: existingObra.title,
                         anio: existingObra.year,
                         tecnica: existingObra.technique,
@@ -475,9 +498,8 @@
             }
             
             saveOrderButton.textContent = "Orden Guardado";
-            // Ajuste de colores para estado "Guardado" (verde para éxito)
             saveOrderButton.classList.add('bg-green-600', 'hover:bg-green-700', 'text-white');
-            saveOrderButton.classList.remove('bg-gray-500', 'hover:bg-gray-600'); 
+            saveOrderButton.classList.remove('bg-gray-500', 'hover:bg-gray-600', 'bg-pantone-magenta'); 
             
             productos = updates.map(update => {
                 const p = productos.find(item => item.id === update.id);
@@ -487,103 +509,164 @@
         });
 
 
-        // --- EVENT LISTENERS (MANTENIDOS) ---
-        searchInput.addEventListener("input", applyFilters);
-        filterYear.addEventListener("change", applyFilters);
-        filterCategory.addEventListener("change", applyFilters);
-        filterSeries.addEventListener("change", applyFilters);
+        // --- LÓGICA DE GUARDADO DE CAMBIOS DESDE EL MODAL ---
+        async function saveModalChanges(event, id) {
+            event.preventDefault(); 
+            
+            const form = event.target;
+            const saveButton = form.querySelector('button[type="submit"]');
 
-        // Inicializar
-        document.addEventListener('DOMContentLoaded', initGallery);
-        
-        // --- FUNCIÓN DE ZOOM INTERACTIVO (MANTENIDA) ---
-        function handleZoom(event) {
-            const container = event.currentTarget;
-            const img = container.querySelector('.zoom-image');
+            const updatedData = {
+                titulo: form.titulo.value.trim(),
+                anio: parseInt(form.anio.value.trim()),
+                tecnica: form.tecnica.value.trim(),
+                medidas: form.medidas.value.trim(),
+                categoria: form.categoria.value,
+                serie: form.serie.value.trim(),
+                descripcion: form.descripcion.value.trim(),
+            };
+
+            saveButton.textContent = "Guardando...";
+            saveButton.disabled = true;
             
-            if (!img) return;
-            
-            const rect = container.getBoundingClientRect();
-            const x = event.clientX - rect.left; 
-            const y = event.clientY - rect.top;  
-            
-            const xPercent = (x / rect.width) * 100;
-            const yPercent = (y / rect.height) * 100;
-            const zoomScale = 2.5; 
-            
-            img.style.transformOrigin = `${xPercent}% ${yPercent}%`;
-            img.style.transform = `scale(${zoomScale})`;
-        }
-        
-        function resetZoom(container) {
-            const img = container.querySelector('.zoom-image');
-            if (img) {
-                img.style.transform = null; 
-                img.style.transformOrigin = 'center center';
+            const { error } = await client
+                .from('productos')
+                .update(updatedData)
+                .eq('id', id);
+
+            if (error) {
+                showAlert(`Error al guardar: ${error.message}. ¿Tiene las Políticas RLS de UPDATE configuradas?`, 'error');
+            } else {
+                showAlert("¡Obra actualizada exitosamente!", 'success');
+                closeModal();
+                await initGallery(); // Recargar la galería para mostrar los cambios
             }
-        }
 
-        // --- MODAL LÓGICA (AJUSTADA A LA NUEVA PALETA) ---
+            saveButton.textContent = "Guardar Cambios";
+            saveButton.disabled = false;
+        }
+        window.saveModalChanges = saveModalChanges;
+
+
+        // --- MODAL LÓGICA ---
         function openModal(id) {
             const obra = productos.find(p => p.id === parseInt(id));
             if (!obra) return;
+            
+            modalContent.innerHTML = '';
             
             const whatsappNumber = '+5492805032663'; 
             const whatsappMessage = encodeURIComponent(`¡Hola, Francisco! Vi esta obra en tu galería web y me encantaría saber más. El título es: ${obra.title}.`);
             const whatsappLink = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
             
-            modalContent.innerHTML = `
-                <div class="grid md:grid-cols-2 gap-8">
-                    <div id="zoom-container-${id}" class="md:h-[65vh] h-80 overflow-hidden flex items-center justify-center bg-bg-principal rounded-sm zoom-container">
-                        <div class="zoom-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-                        </div>
-                        <img id="modal-main-image" src="${obra.mainImage}" alt="Detalle de la obra de Francisco Fernández: ${obra.title}" class="max-w-full max-h-full object-contain zoom-image" />
-                    </div>
+            let modalHtml;
 
-                    <div>
-                        <h2 class="text-3xl font-light text-text-dark mb-2">${obra.title}</h2>
-                        <p class="text-xl text-pantone-magenta mb-4">${obra.year}</p>
-                        
-                        <div class="space-y-3 text-text-dark mb-6 border-b border-border-light pb-4">
-                            <p class="text-sm"><strong>Categoría:</strong> ${obra.category || 'N/A'}</p>
-                            <p class="text-sm"><strong>Serie:</strong> ${obra.serie || 'N/A'}</p>
-                            <p class="text-sm"><strong>Técnica:</strong> ${obra.technique}</p>
-                            <p class="text-sm"><strong>Medidas:</strong> ${obra.size}</p>
+            if (isEditing) {
+                // MODO EDICIÓN: RENDERIZAR FORMULARIO
+                modalHtml = `
+                    <form id="edit-form" onsubmit="saveModalChanges(event, ${obra.id})">
+                        <div class="grid md:grid-cols-2 gap-8">
+                            <div class="md:h-[65vh] h-80 overflow-hidden flex items-center justify-center bg-bg-principal rounded-sm">
+                                <img src="${obra.mainImage}" alt="Imagen de la obra ${obra.title}" class="max-w-full max-h-full object-contain" />
+                            </div>
+                            
+                            <div>
+                                <input name="titulo" value="${obra.title}" class="text-3xl font-light w-full text-text-dark mb-2 border-b border-pantone-magenta focus:outline-none p-1" required />
+                                <input name="anio" type="number" value="${obra.year}" class="text-xl text-pantone-magenta mb-4 w-20 border-b border-pantone-magenta focus:outline-none p-1" required />
+                                
+                                <div class="space-y-3 text-text-dark mb-6 border-b border-border-light pb-4">
+                                    <p class="text-sm">
+                                        <strong class="text-text-dark">Categoría:</strong>
+                                        <select name="categoria" class="ml-2 border border-border-light rounded-sm p-1 text-text-dark">
+                                            <option value="grabado" ${obra.category === 'grabado' ? 'selected' : ''}>Grabado</option>
+                                            <option value="dibujo" ${obra.category === 'dibujo' ? 'selected' : ''}>Dibujo</option>
+                                            <option value="pintura" ${obra.category === 'pintura' ? 'selected' : ''}>Pintura</option>
+                                        </select>
+                                    </p>
+                                    <p class="text-sm"><strong class="text-text-dark">Serie:</strong> <input name="serie" value="${obra.serie || ''}" class="ml-2 border-b border-border-light focus:outline-none p-1 w-2/3 text-text-dark" /></p>
+                                    <p class="text-sm"><strong class="text-text-dark">Técnica:</strong> <input name="tecnica" value="${obra.technique}" class="ml-2 border-b border-border-light focus:outline-none p-1 w-2/3 text-text-dark" required /></p>
+                                    <p class="text-sm"><strong class="text-text-dark">Medidas:</strong> <input name="medidas" value="${obra.size}" class="ml-2 border-b border-border-light focus:outline-none p-1 w-2/3 text-text-dark" required /></p>
+                                </div>
+                                
+                                <h3 class="text-xl font-medium border-b border-border-light pb-1 mb-2 text-text-dark">Descripción</h3>
+                                <textarea name="descripcion" class="text-text-muted whitespace-pre-wrap text-sm w-full h-32 border border-border-light p-2 focus:border-pantone-magenta rounded-sm">${obra.description || 'Sin descripción.'}</textarea>
+                                
+                                <div class="mt-8 flex flex-wrap gap-3 pt-4 border-t border-border-light" id="thumbnail-container">
+                                    ${obra.images.map(img => `
+                                        <img src="${img.url}" alt="Miniatura de ${obra.title}" class="h-16 w-16 object-cover rounded-sm shadow border border-border-light" />
+                                    `).join('')}
+                                </div>
+
+                                <button type="submit" class="mt-8 w-full inline-flex text-center py-3 px-6 rounded-sm bg-pantone-magenta hover:bg-opacity-80 text-white font-semibold transition-colors items-center justify-center shadow-md">
+                                    Guardar Cambios
+                                </button>
+                                <button type="button" onclick="closeModal()" class="mt-4 w-full py-3 px-6 rounded-sm bg-border-light hover:bg-gray-300 text-text-dark font-semibold transition-colors items-center justify-center shadow-md">
+                                    Cancelar
+                                </button>
+                            </div>
                         </div>
-                        
-                        <h3 class="text-xl font-medium border-b border-border-light pb-1 mb-2 text-text-dark">Descripción</h3>
-                        <p class="text-text-muted whitespace-pre-wrap text-sm">${obra.description || 'Sin descripción.'}</p>
-                        
-                        <div class="mt-8 flex flex-wrap gap-3 pt-4 border-t border-border-light" id="thumbnail-container">
-                            ${obra.images.map(img => `
-                                <img src="${img.url}" alt="Miniatura de ${obra.title}" class="h-16 w-16 object-cover rounded-sm shadow cursor-pointer border border-border-light hover:border-pantone-magenta transition-colors" 
-                                    data-url="${img.url}" />
-                            `).join('')}
+                    </form>
+                `;
+            } else {
+                // MODO LECTURA: RENDERIZAR VISTA NORMAL (CON ZOOM Y WHATSAPP)
+                modalHtml = `
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div id="zoom-container-${id}" class="md:h-[65vh] h-80 overflow-hidden flex items-center justify-center bg-bg-principal rounded-sm zoom-container">
+                            <div class="zoom-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                            </div>
+                            <img id="modal-main-image" src="${obra.mainImage}" alt="Detalle de la obra de Francisco Fernández: ${obra.title}" class="max-w-full max-h-full object-contain zoom-image" />
                         </div>
 
-                        <a href="${whatsappLink}" target="_blank" 
-                           class="mt-8 w-full md:w-auto inline-flex text-center py-3 px-6 rounded-sm bg-whatsapp hover:bg-green-600 text-white font-semibold transition-colors items-center justify-center space-x-2 shadow-md">
-                            <svg fill="#FFF" viewBox="0 0 24 24" width="20" height="20" class="whatsapp-icon"><path d="M12 2C6.48 2 2 6.48 2 12c0 3.25 1.5 6.2 3.88 8.1l-1.38 5.02L7.6 21.62C9.5 22.18 11.08 22 12 22c5.52 0 10-4.48 10-10C22 6.48 17.52 2 12 2zM17.43 15.4c-.09-.15-.36-.24-.77-.42-.42-.18-2.52-1.24-2.91-1.38-.39-.14-.67-.21-.95.21-.28.42-1.09 1.38-1.34 1.66-.25.28-.5.31-.92.21-.42-.1-.71-.34-1.27-.64-.47-.25-1.07-.65-2.03-1.89-.75-.98-1.25-1.95-1.38-2.2-.14-.25-.02-.38.11-.5.1-.11.23-.26.35-.4.12-.14.16-.25.25-.42.09-.17.04-.32-.02-.45-.06-.13-.57-1.36-.78-1.87-.2-.5-.41-.42-.56-.42-.15 0-.33-.02-.51-.02-.18 0-.47.07-.72.35-.25.28-.95.93-.95 2.27 0 1.34.97 2.64 1.1 2.82.13.18 1.92 3.03 4.6 4.24 2.68 1.21 2.68.85 2.97.8.29-.05.95-.39 1.08-.77.13-.38.13-.7.09-.77z"/></svg>
-                            <span>Consultar por esta Obra</span>
-                        </a>
+                        <div>
+                            <h2 class="text-3xl font-light text-text-dark mb-2">${obra.title}</h2>
+                            <p class="text-xl text-pantone-magenta mb-4">${obra.year}</p>
+                            
+                            <div class="space-y-3 text-text-dark mb-6 border-b border-border-light pb-4">
+                                <p class="text-sm"><strong>Categoría:</strong> ${obra.category || 'N/A'}</p>
+                                <p class="text-sm"><strong>Serie:</strong> ${obra.serie || 'N/A'}</p>
+                                <p class="text-sm"><strong>Técnica:</strong> ${obra.technique}</p>
+                                <p class="text-sm"><strong>Medidas:</strong> ${obra.size}</p>
+                            </div>
+                            
+                            <h3 class="text-xl font-medium border-b border-border-light pb-1 mb-2 text-text-dark">Descripción</h3>
+                            <p class="text-text-muted whitespace-pre-wrap text-sm">${obra.description || 'Sin descripción.'}</p>
+                            
+                            <div class="mt-8 flex flex-wrap gap-3 pt-4 border-t border-border-light" id="thumbnail-container">
+                                ${obra.images.map(img => `
+                                    <img src="${img.url}" alt="Miniatura de ${obra.title}" class="h-16 w-16 object-cover rounded-sm shadow cursor-pointer border border-border-light hover:border-pantone-magenta transition-colors" 
+                                        data-url="${img.url}" />
+                                `).join('')}
+                            </div>
+
+                            <a href="${whatsappLink}" target="_blank" 
+                            class="mt-8 w-full md:w-auto inline-flex text-center py-3 px-6 rounded-sm bg-whatsapp hover:bg-green-600 text-white font-semibold transition-colors items-center justify-center space-x-2 shadow-md">
+                                <svg fill="#FFF" viewBox="0 0 24 24" width="20" height="20" class="whatsapp-icon"><path d="M12 2C6.48 2 2 6.48 2 12c0 3.25 1.5 6.2 3.88 8.1l-1.38 5.02L7.6 21.62C9.5 22.18 11.08 22 12 22c5.52 0 10-4.48 10-10C22 6.48 17.52 2 12 2zM17.43 15.4c-.09-.15-.36-.24-.77-.42-.42-.18-2.52-1.24-2.91-1.38-.39-.14-.67-.21-.95.21-.28.42-1.09 1.38-1.34 1.66-.25.28-.5.31-.92.21-.42-.1-.71-.34-1.27-.64-.47-.25-1.07-.65-2.03-1.89-.75-.98-1.25-1.95-1.38-2.2-.14-.25-.02-.38.11-.5.1-.11.23-.26.35-.4.12-.14.16-.25.25-.42.09-.17.04-.32-.02-.45-.06-.13-.57-1.36-.78-1.87-.2-.5-.41-.42-.56-.42-.15 0-.33-.02-.51-.02-.18 0-.47.07-.72.35-.25.28-.95.93-.95 2.27 0 1.34.97 2.64 1.1 2.82.13.18 1.92 3.03 4.6 4.24 2.68 1.21 2.68.85 2.97.8.29-.05.95-.39 1.08-.77.13-.38.13-.7.09-.77z"/></svg>
+                                <span>Consultar por esta Obra</span>
+                            </a>
+                        </div>
                     </div>
-                </div>
-            `;
-            
-            const zoomContainer = document.getElementById(`zoom-container-${id}`);
-            if (zoomContainer) {
-                zoomContainer.addEventListener('mousemove', handleZoom);
-                zoomContainer.addEventListener('mouseleave', () => resetZoom(zoomContainer));
+                `;
             }
             
-            const mainImage = document.getElementById('modal-main-image');
-            document.querySelectorAll('#thumbnail-container img').forEach(thumb => {
-                thumb.addEventListener('click', () => {
-                    mainImage.src = thumb.getAttribute('data-url');
-                    resetZoom(zoomContainer);
+            modalContent.innerHTML = modalHtml;
+
+            // Lógica de Zoom solo se aplica en modo lectura
+            if (!isEditing) {
+                const zoomContainer = document.getElementById(`zoom-container-${id}`);
+                if (zoomContainer) {
+                    zoomContainer.addEventListener('mousemove', handleZoom);
+                    zoomContainer.addEventListener('mouseleave', () => resetZoom(zoomContainer));
+                }
+                
+                const mainImage = document.getElementById('modal-main-image');
+                document.querySelectorAll('#thumbnail-container img').forEach(thumb => {
+                    thumb.addEventListener('click', () => {
+                        mainImage.src = thumb.getAttribute('data-url');
+                        resetZoom(zoomContainer);
+                    });
                 });
-            });
+            }
 
 
             modal.classList.remove('hidden');
@@ -601,8 +684,31 @@
 
 
         
-        // --- LÓGICA DE APARICIÓN DEL FOOTER Y BOTÓN DE WHATSAPP (MANTENIDA) ---
+        // --- LÓGICA DE ZOOM Y SCROLL (MANTENIDA) ---
+        function handleZoom(event) {
+            const container = event.currentTarget;
+            const img = container.querySelector('.zoom-image');
+            if (!img) return;
+            const rect = container.getBoundingClientRect();
+            const x = event.clientX - rect.left; 
+            const y = event.clientY - rect.top;  
+            const xPercent = (x / rect.width) * 100;
+            const yPercent = (y / rect.height) * 100;
+            const zoomScale = 2.5; 
+            img.style.transformOrigin = `${xPercent}% ${yPercent}%`;
+            img.style.transform = `scale(${zoomScale})`;
+        }
+        
+        function resetZoom(container) {
+            const img = container.querySelector('.zoom-image');
+            if (img) {
+                img.style.transform = null; 
+                img.style.transformOrigin = 'center center';
+            }
+        }
+
         const firstSection = document.querySelector('section.min-h-screen'); 
+        const gallerySectionTop = document.getElementById('gallery-section').offsetTop;
         
         window.addEventListener('scroll', () => {
             const firstSectionHeight = firstSection.offsetHeight;
@@ -613,8 +719,7 @@
                 mainFooter.classList.add('translate-y-full');
             }
 
-            const gallerySectionTop = gallerySection.getBoundingClientRect().top;
-            if (gallerySectionTop < window.innerHeight / 2) { 
+            if (window.scrollY > gallerySectionTop / 2) { 
                 whatsappButton.classList.add('show');
             } else {
                 whatsappButton.classList.remove('show');
@@ -625,6 +730,16 @@
             mainFooter.classList.add('translate-y-full');
             whatsappButton.classList.remove('show');
         });
+
+        // Event Listeners de Filtro
+        searchInput.addEventListener("input", applyFilters);
+        filterYear.addEventListener("change", applyFilters);
+        filterCategory.addEventListener("change", applyFilters);
+        filterSeries.addEventListener("change", applyFilters);
+
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', initGallery);
 
     </script>
 </body>

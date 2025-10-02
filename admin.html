@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Administración</title>
+    <title>Panel de Administración Simplificado</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
@@ -23,7 +23,7 @@
             transition: color 0.2s;
         }
         .drag-handle:hover {
-            color: #DE3B89; /* Color magenta */
+            color: #4f46e5; /* Color índigo */
         }
         .sortable-ghost {
             opacity: 0.4;
@@ -37,7 +37,7 @@
 
     <header class="bg-white shadow-md p-4">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-gray-800">Panel de Obras (Admin)</h1>
+            <h1 class="text-2xl font-bold text-gray-800">Admin Obras (Productos)</h1>
             <div id="auth-controls" class="flex items-center space-x-4">
                 </div>
         </div>
@@ -49,13 +49,6 @@
             <button onclick="openForm('add')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-sm transition duration-300">
                 + Agregar Nueva Obra
             </button>
-            <input type="text" id="search-input" placeholder="Buscar por Título o Técnica..." 
-                   class="p-2 border border-gray-300 rounded-sm w-1/3 focus:ring-indigo-500 focus:border-indigo-500 transition duration-300">
-        </div>
-        
-        <div class="mb-6 bg-yellow-100 border-l-4 border-yellow-500 p-4 text-sm text-yellow-700">
-            <p class="font-bold">Modo Edición de Orden:</p>
-            <p>Arrastra y suelta las obras para cambiar su posición en la galería principal.</p>
         </div>
         
         <div class="mb-6 flex items-center space-x-4">
@@ -71,73 +64,52 @@
     </main>
 
     <div id="obra-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" onclick="event.stopPropagation()">
+        <div class="bg-white rounded-lg shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6" onclick="event.stopPropagation()">
             <h2 id="form-title" class="text-2xl font-bold mb-6 border-b pb-2">Agregar Nueva Obra</h2>
             
             <form id="obra-form" class="space-y-4">
                 <input type="hidden" id="obra-id" name="id">
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="titulo" class="block text-sm font-medium text-gray-700">Título</label>
-                        <input type="text" id="titulo" name="titulo" required class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
-                    </div>
-                    <div>
-                        <label for="anio" class="block text-sm font-medium text-gray-700">Año</label>
-                        <input type="number" id="anio" name="anio" class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
-                    </div>
-                    <div>
-                        <label for="categoria" class="block text-sm font-medium text-gray-700">Categoría</label>
-                        <input type="text" id="categoria" name="categoria" class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
-                    </div>
-                    <div>
-                        <label for="tecnica" class="block text-sm font-medium text-gray-700">Técnica</label>
-                        <input type="text" id="tecnica" name="tecnica" class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
-                    </div>
-                    <div>
-                        <label for="medidas" class="block text-sm font-medium text-gray-700">Medidas</label>
-                        <input type="text" id="medidas" name="medidas" class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
-                    </div>
-                    <div>
-                        <label for="serie" class="block text-sm font-medium text-gray-700">Serie (Opcional)</label>
-                        <input type="text" id="serie" name="serie" class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
-                    </div>
-                </div>
-
                 <div>
-                    <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción</label>
+                    <label for="titulo" class="block text-sm font-medium text-gray-700">Título</label>
+                    <input type="text" id="titulo" name="titulo" required class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
+                </div>
+                <div>
+                    <label for="tecnica" class="block text-sm font-medium text-gray-700">Técnica</label>
+                    <input type="text" id="tecnica" name="tecnica" class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
+                </div>
+                <div>
+                    <label for="anio" class="block text-sm font-medium text-gray-700">Año</label>
+                    <input type="number" id="anio" name="anio" class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
+                </div>
+                <div>
+                    <label for="dimensiones" class="block text-sm font-medium text-gray-700">Dimensiones</label>
+                    <input type="text" id="dimensiones" name="dimensiones" class="mt-1 block w-full border border-gray-300 rounded-sm p-2" placeholder="Ej: 50x70 cm">
+                </div>
+                <div>
+                    <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción (para el modal en Index)</label>
                     <textarea id="descripcion" name="descripcion" rows="3" class="mt-1 block w-full border border-gray-300 rounded-sm p-2"></textarea>
                 </div>
-                <div>
-                    <label for="price" class="block text-sm font-medium text-gray-700">Precio (ARS - Solo números)</label>
-                    <input type="number" id="price" name="price" class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
-                </div>
+
 
                 <div class="flex items-center space-x-6 pt-2">
                     <div class="flex items-center">
                         <input id="is_available" name="is_available" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
-                        <label for="is_available" class="ml-2 block text-sm text-gray-900">Disponible</label>
-                    </div>
-                    <div class="flex items-center">
-                        <input id="show_price" name="show_price" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
-                        <label for="show_price" class="ml-2 block text-sm text-gray-900">Mostrar Precio</label>
-                    </div>
-                    <div class="flex items-center">
-                        <input id="es_carrusel" name="es_carrusel" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
-                        <label for="es_carrusel" class="ml-2 block text-sm text-gray-900">Mostrar en Carrusel (Home)</label>
+                        <label for="is_available" class="ml-2 block text-sm text-gray-900">Disponible (Se muestra en la galería)</label>
                     </div>
                 </div>
                 
                 <hr class="my-4">
 
-                <div id="current-images" class="space-y-3">
-                    <h3 class="text-lg font-semibold text-gray-700">Imágenes Actuales</h3>
-                    <p id="no-images-text" class="text-sm text-gray-500">No hay imágenes cargadas para esta obra.</p>
+                <div id="current-image-container">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Imagen Principal Actual</h3>
+                    <img id="current-main-image" src="./img/placeholder.jpg" class="w-24 h-24 object-cover rounded-sm border mb-2">
+                    <p id="image-path-text" class="text-xs text-gray-500 mb-2"></p>
                 </div>
-
+                
                 <div>
-                    <label for="image-files" class="block text-sm font-medium text-gray-700">Subir Nuevas Imágenes (Máx. 4)</label>
-                    <input type="file" id="image-files" name="image-files" multiple accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    <label for="image-file" class="block text-sm font-medium text-gray-700">Subir/Reemplazar Imagen Principal</label>
+                    <input type="file" id="image-file" name="image-file" accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                 </div>
 
 
@@ -167,7 +139,7 @@
         const BUCKET_NAME = 'imagenes';
         
         let currentWorks = []; 
-        let currentEditingObraId = null;
+        let currentEditingObra = null; // Obra actual en edición
 
         // --- REFERENCIAS DOM ---
         const authControls = document.getElementById('auth-controls');
@@ -178,7 +150,8 @@
         const obraForm = document.getElementById('obra-form');
         const formTitle = document.getElementById('form-title');
         const saveOrderButton = document.getElementById('save-order-button');
-        const searchInput = document.getElementById('search-input');
+        const currentMainImage = document.getElementById('current-main-image');
+        const imagePathText = document.getElementById('image-path-text');
 
         // --- UTILIDADES ---
 
@@ -195,6 +168,7 @@
         }
 
         function getPublicUrl(path) {
+            if (!path) return './img/placeholder.jpg';
             const { data } = client.storage.from(BUCKET_NAME).getPublicUrl(path);
             return data.publicUrl;
         }
@@ -209,7 +183,6 @@
                 adminMain.classList.remove('hidden');
                 loadWorks();
             } else {
-                // Redirigir al login si no está autenticado
                 window.location.href = './login.html'; 
             }
         }
@@ -265,7 +238,7 @@
                 }));
 
                 const updatePromises = newOrder.map(item => 
-                    // CORRECCIÓN: Usar TABLE_NAME ('productos') y la columna 'orden'
+                    // Usar TABLE_NAME ('productos') y la columna 'orden'
                     client.from(TABLE_NAME).update({ orden: item.position }).eq('id', item.id)
                 );
                 
@@ -298,10 +271,10 @@
             worksList.innerHTML = '';
             
             try {
-                // CORRECCIÓN: Uso de TABLE_NAME
+                // Selecciona todos los campos para el formulario
                 const { data, error } = await client
                     .from(TABLE_NAME) 
-                    .select("id, titulo, tecnica, anio, orden, imagenes, is_available")
+                    .select("id, titulo, tecnica, anio, orden, imagen_principal, is_available, descripcion, dimensiones")
                     .order("orden", { ascending: true })
                     .order("anio", { ascending: false });
 
@@ -328,7 +301,7 @@
             }
 
             works.forEach(obra => {
-                const mainImage = obra.imagenes && obra.imagenes.length > 0 ? getPublicUrl(obra.imagenes[0].path) : './img/placeholder.jpg';
+                const mainImage = getPublicUrl(obra.imagen_principal);
                 const statusColor = obra.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
 
                 worksList.innerHTML += `
@@ -339,8 +312,8 @@
                             </span>
                             <img src="${mainImage}" alt="${obra.titulo}" class="w-12 h-12 object-cover rounded-sm shadow" onerror="this.onerror=null;this.src='./img/placeholder.jpg';">
                             <div>
-                                <p class="font-semibold text-gray-800">${obra.titulo} (${obra.anio})</p>
-                                <p class="text-sm text-gray-500">${obra.tecnica}</p>
+                                <p class="font-semibold text-gray-800">${obra.titulo} (${obra.anio || 'N/A'})</p>
+                                <p class="text-sm text-gray-500">${obra.tecnica || 'N/A'}</p>
                             </div>
                         </div>
                         <div class="flex items-center space-x-4">
@@ -359,28 +332,15 @@
             });
         }
 
-        function filterWorks() {
-            const searchTerm = searchInput.value.toLowerCase();
-            const filteredWorks = currentWorks.filter(obra => 
-                obra.titulo.toLowerCase().includes(searchTerm) ||
-                obra.tecnica.toLowerCase().includes(searchTerm)
-            );
-            renderWorksList(filteredWorks);
-        }
-
-        searchInput.addEventListener('input', filterWorks);
-
-
         // --- LÓGICA DE FORMULARIO MODAL ---
 
         function openForm(mode, id = null) {
             resetForm();
             if (mode === 'add') {
                 formTitle.textContent = "Agregar Nueva Obra";
-                currentEditingObraId = null;
+                currentEditingObra = null;
             } else if (mode === 'edit' && id) {
                 formTitle.textContent = "Editar Obra Existente";
-                currentEditingObraId = id;
                 loadObraToForm(id);
             }
             obraModal.classList.remove('hidden');
@@ -398,138 +358,56 @@
         function resetForm() {
             obraForm.reset();
             document.getElementById('obra-id').value = '';
-            document.getElementById('current-images').innerHTML = '<p id="no-images-text" class="text-sm text-gray-500">No hay imágenes cargadas para esta obra.</p>';
-            document.getElementById('image-files').value = '';
+            currentMainImage.src = './img/placeholder.jpg';
+            imagePathText.textContent = '';
+            document.getElementById('image-file').value = '';
         }
 
-        async function loadObraToForm(id) {
+        function loadObraToForm(id) {
             const obra = currentWorks.find(w => w.id === id);
             if (!obra) {
                 showAlert("Error: Obra no encontrada para edición.", 'error');
                 closeModal();
                 return;
             }
+            currentEditingObra = obra;
 
             document.getElementById('obra-id').value = obra.id;
             document.getElementById('titulo').value = obra.titulo || '';
             document.getElementById('anio').value = obra.anio || '';
-            document.getElementById('categoria').value = obra.categoria || '';
             document.getElementById('tecnica').value = obra.tecnica || '';
-            document.getElementById('medidas').value = obra.medidas || '';
-            document.getElementById('serie').value = obra.serie || '';
+            document.getElementById('dimensiones').value = obra.dimensiones || '';
             document.getElementById('descripcion').value = obra.descripcion || '';
-            document.getElementById('price').value = obra.price || ''; 
-            
             document.getElementById('is_available').checked = obra.is_available || false;
-            document.getElementById('show_price').checked = obra.show_price || false; 
-            document.getElementById('es_carrusel').checked = obra.es_carrusel || false; 
-
-            renderCurrentImages(obra.imagenes || []);
-        }
-
-        function renderCurrentImages(images) {
-            const container = document.getElementById('current-images');
-            container.innerHTML = `<h3 class="text-lg font-semibold text-gray-700">Imágenes Actuales (${images.length})</h3>`;
             
-            if (images.length === 0) {
-                container.innerHTML += '<p id="no-images-text" class="text-sm text-gray-500">No hay imágenes cargadas para esta obra.</p>';
-                return;
-            }
-
-            const imageHtml = images.map(img => `
-                <div id="img-${img.path.replace(/[^a-zA-Z0-9]/g, '-')}" class="flex items-center space-x-3 p-2 border rounded-sm">
-                    <img src="${getPublicUrl(img.path)}" class="w-12 h-12 object-cover rounded-sm">
-                    <span class="text-sm truncate">${img.path.split('/').pop()}</span>
-                    <button type="button" onclick="deleteImage('${img.path}', '${currentEditingObraId}')" class="text-red-500 hover:text-red-700 ml-auto p-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                </div>
-            `).join('');
-            
-            container.innerHTML += imageHtml;
+            // Cargar imagen principal actual
+            currentMainImage.src = getPublicUrl(obra.imagen_principal);
+            imagePathText.textContent = obra.imagen_principal ? obra.imagen_principal.split('/').pop() : 'Ninguna imagen cargada.';
         }
 
         // --- MANEJO DE IMÁGENES ---
 
-        async function uploadImages(files) {
-            const fileArray = Array.from(files).slice(0, 4); 
-            const uploadPromises = fileArray.map(file => {
-                const filePath = `${client.auth.session().user.id}/${Date.now()}-${file.name}`;
-                return client.storage
-                    .from(BUCKET_NAME)
-                    .upload(filePath, file);
-            });
+        async function uploadImage(file, oldPath) {
+            const user = (await client.auth.getUser()).data.user;
+            if (!user) throw new Error("Usuario no autenticado.");
 
-            const results = await Promise.all(uploadPromises);
-            
-            const newImageObjects = results
-                .filter(res => !res.error)
-                .map(res => ({
-                    path: res.data.path,
-                    url: getPublicUrl(res.data.path)
-                }));
-            
-            const failedCount = results.filter(res => res.error).length;
-            if (failedCount > 0) {
-                 showAlert(`ADVERTENCIA: Falló la subida de ${failedCount} imagen(es).`, 'error');
+            // 1. Si hay una imagen anterior, la borramos del storage
+            if (oldPath) {
+                // El error de Supabase al intentar borrar un archivo que no existe es '404', 
+                // por lo que no lanzamos una excepción si falla la eliminación
+                const { error: deleteError } = await client.storage.from(BUCKET_NAME).remove([oldPath]);
+                if (deleteError) console.warn("Advertencia: No se pudo eliminar la imagen anterior:", deleteError.message);
             }
 
-            return newImageObjects;
+            // 2. Subir la nueva imagen
+            const filePath = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9\.]/g, '_')}`;
+            const { data, error } = await client.storage
+                .from(BUCKET_NAME)
+                .upload(filePath, file);
+
+            if (error) throw error;
+            return data.path; // Retorna la nueva ruta
         }
-
-        async function deleteImage(imagePath, obraId) {
-            if (!confirm("¿Estás seguro de que quieres eliminar esta imagen?")) return;
-
-            const button = event.currentTarget;
-            button.disabled = true;
-            button.innerHTML = '<svg class="animate-spin h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
-
-
-            try {
-                // 1. Eliminar del Storage
-                const { error: storageError } = await client.storage
-                    .from(BUCKET_NAME)
-                    .remove([imagePath]);
-
-                if (storageError) throw new Error("Error al borrar del Storage: " + storageError.message);
-
-                // 2. Eliminar de la columna 'imagenes' en la DB
-                const obraIndex = currentWorks.findIndex(w => w.id === obraId);
-                if (obraIndex === -1) throw new Error("Obra no encontrada localmente.");
-
-                const currentImages = currentWorks[obraIndex].imagenes || [];
-                const newImages = currentImages.filter(img => img.path !== imagePath);
-
-                // CORRECCIÓN: Uso de TABLE_NAME
-                const { error: dbError } = await client
-                    .from(TABLE_NAME) 
-                    .update({ imagenes: newImages })
-                    .eq('id', obraId);
-
-                if (dbError) throw new Error("Error al actualizar la DB: " + dbError.message);
-
-                // 3. Actualización local y UI
-                currentWorks[obraIndex].imagenes = newImages;
-                document.getElementById(`img-${imagePath.replace(/[^a-zA-Z0-9]/g, '-')}`).remove();
-                showAlert("Imagen eliminada exitosamente!", 'success');
-                
-                // Actualizar la lista principal (miniatura)
-                const obraItem = document.getElementById(`obra-item-${obraId}`);
-                if (obraItem) {
-                    const imgElement = obraItem.querySelector('img');
-                    if (newImages.length > 0) {
-                        imgElement.src = getPublicUrl(newImages[0].path);
-                    } else {
-                        imgElement.src = './img/placeholder.jpg';
-                    }
-                }
-
-            } catch (error) {
-                console.error(error);
-                showAlert(error.message, 'error');
-            }
-        }
-
 
         // --- MANEJO DE SUBMIT DEL FORMULARIO ---
 
@@ -542,51 +420,36 @@
 
             const formData = new FormData(obraForm);
             const id = formData.get('id');
-            const newFiles = document.getElementById('image-files').files;
+            const newFile = document.getElementById('image-file').files[0];
             
             try {
-                // 1. Subir nuevas imágenes (si las hay)
-                const newImages = await uploadImages(newFiles);
+                let imagePath = currentEditingObra ? currentEditingObra.imagen_principal : null;
                 
-                // 2. Obtener imágenes actuales de la obra que se está editando
-                let finalImages = [];
-                if (id) {
-                    const existingObra = currentWorks.find(w => w.id === id);
-                    if (existingObra) {
-                        finalImages = existingObra.imagenes || [];
-                    }
+                // Si hay un archivo nuevo, lo subimos y actualizamos la ruta
+                if (newFile) {
+                    imagePath = await uploadImage(newFile, currentEditingObra ? currentEditingObra.imagen_principal : null);
                 }
-                
-                // 3. Combinar las imágenes (máximo 4)
-                finalImages = [...finalImages.filter(img => img.path), ...newImages].slice(0, 4);
 
-                // 4. Preparar datos para la DB
+                // 2. Preparar datos para la DB
                 const payload = {
                     titulo: formData.get('titulo'),
                     anio: parseInt(formData.get('anio')) || null,
-                    categoria: formData.get('categoria'),
                     tecnica: formData.get('tecnica'),
-                    medidas: formData.get('medidas'),
-                    serie: formData.get('serie'),
+                    dimensiones: formData.get('dimensiones'),
                     descripcion: formData.get('descripcion'),
-                    price: parseFloat(formData.get('price')) || null,
                     is_available: formData.get('is_available') === 'on',
-                    show_price: formData.get('show_price') === 'on',
-                    es_carrusel: formData.get('es_carrusel') === 'on',
-                    imagenes: finalImages,
+                    imagen_principal: imagePath // Usar la nueva ruta o la existente
                 };
                 
-                // 5. Insertar o Actualizar
+                // 3. Insertar o Actualizar
                 let response;
                 if (id) {
                     // Update
-                    // CORRECCIÓN: Uso de TABLE_NAME
                     response = await client.from(TABLE_NAME).update(payload).eq('id', id).select(); 
                 } else {
                     // Insert - Obtener el orden máximo para colocar la nueva obra al final
                     const maxOrder = currentWorks.length > 0 ? Math.max(...currentWorks.map(w => w.orden)) : 0;
                     payload.orden = maxOrder + 1;
-                    // CORRECCIÓN: Uso de TABLE_NAME
                     response = await client.from(TABLE_NAME).insert(payload).select(); 
                 }
 
@@ -594,7 +457,7 @@
                 
                 showAlert(`Obra ${id ? 'actualizada' : 'creada'} exitosamente.`, 'success');
                 closeModal();
-                loadWorks(); // Recargar la lista para reflejar los cambios
+                loadWorks(); // Recargar la lista
 
             } catch (error) {
                 console.error("Error al guardar la obra:", error);
@@ -609,7 +472,7 @@
         // --- LÓGICA DE ELIMINACIÓN ---
 
         async function deleteObra(id, button) {
-            if (!confirm("ADVERTENCIA: ¿Estás seguro de que quieres eliminar esta obra y todas sus imágenes asociadas? Esta acción es irreversible.")) {
+            if (!confirm("ADVERTENCIA: ¿Estás seguro de que quieres eliminar esta obra y su imagen principal?")) {
                 return;
             }
 
@@ -618,32 +481,28 @@
             button.innerHTML = '<svg class="animate-spin h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
 
             try {
-                // 1. Obtener los paths de las imágenes antes de borrar
                 const obra = currentWorks.find(w => w.id === id);
                 if (!obra) throw new Error("Obra no encontrada localmente.");
 
-                // 2. Eliminar de la DB
-                // CORRECCIÓN: Uso de TABLE_NAME
+                // 1. Eliminar de la DB
                 const { error: dbError } = await client.from(TABLE_NAME).delete().eq('id', id); 
                 if (dbError) throw dbError;
 
-                // 3. Eliminar archivos del Storage
-                const filePaths = obra.imagenes.map(img => img.path).filter(Boolean);
-
-                if (filePaths.length > 0) {
+                // 2. Eliminar archivo del Storage
+                if (obra.imagen_principal) {
                     const { error: storageError } = await client.storage
                         .from(BUCKET_NAME)
-                        .remove(filePaths);
+                        .remove([obra.imagen_principal]);
 
                     if (storageError && storageError.statusCode !== '200') {
-                        console.warn("Error al borrar imágenes del storage:", storageError);
-                        showAlert(`Obra eliminada de la DB. ADVERTENCIA: Falló el borrado de ${filePaths.length} imagen(es) del Storage.`, 'error');
+                        console.warn("Error al borrar imagen del storage:", storageError.message);
+                        showAlert(`Obra eliminada de la DB. ADVERTENCIA: Falló el borrado de la imagen del Storage.`, 'error');
                         return; 
                     }
                 }
 
-                // 4. Éxito
-                showAlert("Obra y archivos eliminados exitosamente!", 'success');
+                // 3. Éxito
+                showAlert("Obra eliminada exitosamente!", 'success');
                 document.getElementById(`obra-item-${id}`).remove(); 
                 currentWorks = currentWorks.filter(w => w.id !== id);
 
@@ -659,7 +518,6 @@
         // --- FUNCIONES ACCESIBLES GLOBALMENTE ---
         window.editObra = (id) => openForm('edit', id);
         window.deleteObra = deleteObra;
-        window.deleteImage = deleteImage;
         window.closeModal = closeModal;
         window.openForm = openForm;
 

@@ -17,24 +17,19 @@
     <link rel="icon" type="image/png" href="./img/favicon.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    <script src="config.js"></script>
-
     <script>
         // Configuración de colores personalizados (VIVO Y CLARO)
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'pantone-magenta': '#DE3B89',
-                        'bg-principal': '#FAEBF0',
-                        'bg-card': '#FFFFFF',
-                        'text-dark': '#333333',
-                        'text-muted': '#666666',
-                        'border-light': '#E0E0E0',
-                        'whatsapp': '#25D366',
+                        'pantone-magenta': '#DE3B89', // PANTONE 17-2036 TPG/TCX (Color central)
+                        'bg-principal': '#FAEBF0',    // Fondo suave, casi blanco rosado
+                        'bg-card': '#FFFFFF',         // Blanco para tarjetas
+                        'text-dark': '#333333',       // Texto principal oscuro
+                        'text-muted': '#666666',      // Texto secundario/descripciones
+                        'border-light': '#E0E0E0',    // Borde de divisores
+                        'whatsapp': '#25D366',        // Color oficial de WhatsApp
                     },
                     fontFamily: {
                         'sans': ['Inter', 'system-ui', 'sans-serif'],
@@ -45,452 +40,326 @@
     </script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
 
     <style>
-        /* Estilos de Utilidad */
-        .swiper-button-prev, .swiper-button-next {
-            color: #DE3B89 !important;
-        }
-        .whatsapp-button {
+        /* Estilos específicos para el botón de WhatsApp (REESTABLECIDOS) */
+        #whatsapp-button {
             position: fixed;
             bottom: 20px;
             right: 20px;
             z-index: 1000;
-            opacity: 0;
-            transform: scale(0.8);
             transition: all 0.3s ease-in-out;
-            pointer-events: none; 
+            transform: scale(0); /* Inicialmente oculto */
+            opacity: 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
-        .whatsapp-button.show {
-            opacity: 1;
+        #whatsapp-button.show {
             transform: scale(1);
-            pointer-events: all;
+            opacity: 1;
         }
-        /* Clase para evitar que el scroll se rompa al abrir el modal */
-        .modal-open {
-            overflow: hidden;
+        
+        /* Estilos para el Footer (REESTABLECIDOS) */
+        #main-footer {
+            transition: transform 0.5s ease-out;
+        }
+
+        /* Estilos de la galería */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        /* Animación de carga */
+        @keyframes pulse-bg {
+            0%, 100% { background-color: #f3f4f6; }
+            50% { background-color: #e5e7eb; }
+        }
+        .loading-card {
+            height: 350px;
+            animation: pulse-bg 1.5s infinite;
+            border-radius: 0.5rem;
         }
     </style>
 </head>
 <body class="bg-bg-principal text-text-dark font-sans min-h-screen">
 
-    <header class="bg-bg-principal fixed top-0 w-full z-20 border-b border-border-light shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <a href="./index.html" class="flex-shrink-0 font-bold text-lg text-pantone-magenta">
-                    Francisco Fernández
-                </a>
-                <nav class="flex space-x-6 text-sm font-medium">
-                    <a href="./index.html#gallery-section" class="text-text-dark hover:text-pantone-magenta transition duration-150">Galería</a>
-                    <a href="./biografia-completa.html" class="text-text-dark hover:text-pantone-magenta transition duration-150">Biografía</a>
-                    <a href="mailto:tuemail@dominio.com" class="text-text-dark hover:text-pantone-magenta transition duration-150 hidden sm:inline-block">Contacto</a>
-                </nav>
-            </div>
+    <header class="bg-bg-principal py-6 shadow-sm sticky top-0 z-40 border-b border-border-light">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <a href="./index.html" class="text-3xl font-bold text-pantone-magenta tracking-tight">
+                F.F.
+            </a>
+            <nav class="space-x-8 hidden sm:block">
+                <a href="#gallery-section" class="text-text-dark hover:text-pantone-magenta font-medium transition duration-300">Galería</a>
+                <a href="./biografia-completa.html" class="text-text-dark hover:text-pantone-magenta font-medium transition duration-300">Biografía</a>
+                <a href="mailto:contacto@ffernandez.com" class="text-text-dark hover:text-pantone-magenta font-medium transition duration-300">Contacto</a>
+            </nav>
+            <button class="sm:hidden text-text-dark hover:text-pantone-magenta">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
         </div>
     </header>
 
-    <main class="pt-16">
-        
-        <section id="carousel-section" class="pt-10 pb-16">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 id="carousel-header" class="text-2xl font-bold mb-8 text-center text-text-dark">Obras Destacadas</h2>
-                
-                <div class="swiper mySwiper">
-                    <div id="carousel-items" class="swiper-wrapper">
-                        </div>
-                    <div class="swiper-button-next"></div>
-                    <div class="swiper-button-prev"></div>
-                </div>
-            </div>
-        </section>
+    <section id="hero-section" class="relative pt-16 pb-24 bg-white/70">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="text-6xl md:text-8xl font-extrabold text-pantone-magenta leading-none mb-4">
+                Francisco Fernández
+            </h1>
+            <p class="text-xl md:text-2xl text-text-dark mb-10 max-w-3xl mx-auto">
+                Arte Patagónico | Grabado Contemporáneo
+            </p>
+            <a href="#gallery-section" class="bg-pantone-magenta hover:bg-opacity-80 text-white font-bold py-3 px-8 rounded-sm transition duration-300 text-sm uppercase tracking-wider shadow-lg">
+                Explorar Obras
+            </a>
+        </div>
+    </section>
 
-
-        <section id="gallery-section" class="py-16 bg-bg-card shadow-inner">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 class="text-3xl font-bold mb-10 text-center text-text-dark">Catálogo Completo</h2>
-
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-                    <input type="text" id="search-input" placeholder="Buscar por Título o Técnica..." 
-                           class="col-span-1 md:col-span-2 p-2 border border-border-light rounded-sm focus:ring-pantone-magenta focus:border-pantone-magenta">
-                    
-                    <select id="filter-year" class="p-2 border border-border-light rounded-sm focus:ring-pantone-magenta focus:border-pantone-magenta">
-                        <option value="">Todos los Años</option>
-                    </select>
-                    <select id="filter-category" class="p-2 border border-border-light rounded-sm focus:ring-pantone-magenta focus:border-pantone-magenta">
-                        <option value="">Todas las Categorías</option>
-                    </select>
-                    <select id="filter-series" class="p-2 border border-border-light rounded-sm focus:ring-pantone-magenta focus:border-pantone-magenta">
-                        <option value="">Todas las Series</option>
-                    </select>
-                </div>
-
-                <div id="gallery-container" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                    <p id="loading-gallery" class="col-span-full text-center text-text-muted">Cargando obras...</p>
-                    </div>
-                
-                <p id="no-results" class="col-span-full text-center text-text-muted mt-10 hidden">No se encontraron obras con los filtros seleccionados.</p>
-            </div>
-        </section>
-        
-    </main>
-
-    <div id="details-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-2xl max-w-4xl w-full flex flex-col md:flex-row max-h-[95vh]" onclick="event.stopPropagation()">
+    <section id="gallery-section" class="py-20 bg-bg-principal">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-4xl font-bold text-text-dark mb-12 border-b-4 border-pantone-magenta inline-block pb-1">
+                Galería
+            </h2>
             
-            <div class="w-full md:w-1/2 relative bg-gray-100 p-4">
-                <div class="swiper mySwiperModal h-full">
-                    <div id="modal-image-carousel" class="swiper-wrapper">
-                        </div>
-                    <div class="swiper-pagination"></div>
+            <div class="mb-10 p-4 bg-bg-card rounded-lg shadow-sm flex flex-wrap items-center space-y-4 md:space-y-0 md:space-x-6">
+                <div class="flex-grow w-full md:w-auto">
+                    <label for="search" class="sr-only">Buscar por título, técnica o descripción</label>
+                    <input type="text" id="search" placeholder="Buscar por título o técnica..." class="w-full border-2 border-border-light rounded-sm p-2 focus:border-pantone-magenta focus:ring-pantone-magenta transition duration-300">
                 </div>
+                <div>
+                    <label for="filter-year" class="text-sm text-text-muted mr-2">Año:</label>
+                    <select id="filter-year" class="border-2 border-border-light rounded-sm p-2 bg-white focus:border-pantone-magenta transition duration-300">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div id="admin-link-container" class="ml-auto text-sm">
+                    </div>
             </div>
 
-            <div class="w-full md:w-1/2 p-6 overflow-y-auto">
-                <button onclick="closeModal()" class="absolute top-4 right-4 text-text-dark hover:text-pantone-magenta z-10">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-                <h3 id="modal-titulo" class="text-3xl font-bold text-text-dark mb-2"></h3>
-                <p id="modal-tecnica-anio" class="text-lg text-text-muted mb-4"></p>
-                
-                <hr class="my-4 border-border-light">
-
-                <div class="space-y-2 text-sm">
-                    <p><span class="font-semibold">Categoría:</span> <span id="modal-categoria"></span></p>
-                    <p><span class="font-semibold">Medidas:</span> <span id="modal-medidas"></span></p>
-                    <p><span class="font-semibold">Serie:</span> <span id="modal-serie"></span></p>
-                </div>
-
-                <hr class="my-4 border-border-light">
-
-                <p id="modal-descripcion" class="text-text-dark leading-relaxed mb-6"></p>
-
-                <div id="modal-price-status" class="mt-auto pt-4 border-t border-border-light">
-                    </div>
-
+            <div id="gallery-grid" class="gallery-grid">
+                <div class="loading-card"></div>
+                <div class="loading-card hidden md:block"></div>
+                <div class="loading-card hidden lg:block"></div>
+            </div>
+            
+            <div id="no-results" class="text-center py-10 hidden">
+                <p class="text-xl text-text-muted">No se encontraron obras que coincidan con los filtros aplicados.</p>
             </div>
         </div>
-    </div>
+    </section>
     
-    <footer id="main-footer" class="fixed bottom-0 w-full bg-pantone-magenta text-white py-4 z-10 transition-transform duration-500 ease-out">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center space-x-8 text-sm">
-            <p>&copy; <span id="current-year"></span> Francisco Fernández. Todos los derechos reservados.</p>
-            <a href="./biografia-completa.html" class="hover:underline">Términos y Condiciones</a>
+    <a id="whatsapp-button" href="https://wa.me/XXXXXXXXXXX" target="_blank" class="bg-whatsapp text-white rounded-full p-4 hover:bg-green-600 transition duration-300">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 3.189 1.353 6.07 3.513 8.046L4 22l2.067-.53c.895.498 1.897.777 2.933.777C13.523 22 18 17.523 18 12S13.523 2 12 2zm3.385 14.896c-.198-.103-.795-.401-.916-.479-.121-.078-.26-.117-.373.117s-.471.479-.574.597c-.103.117-.206.117-.384.078-.962-.321-1.789-.887-2.482-1.637-.693-.75-1.15-1.651-1.282-2.584-.04-.123-.004-.2-.043-.242-.038-.04-.373-.079-.486-.103-.113-.024-.26-.062-.384-.062s-.223.039-.344.195c-.121.156-.467.452-.467 1.1c0 .647.477 1.258.54 1.346.062.088.948 1.488 2.296 2.046 1.348.558 1.348.371 1.6 1.058.252.687.252 1.272.189 1.389-.062.117-.216.156-.412.039-1.896-.78-2.673-1.652-2.887-1.936-.214-.284-.428-.58-.428-.902 0-.323.238-.49.33-.585.093-.096.206-.242.308-.36.103-.117.206-.175.308-.234.103-.058.206-.058.308.039.103.097.649 1.579 2.053 2.193 1.404.614 2.152.479 2.508.432.356-.048.795-.316.916-.672.121-.356.121-.661.082-.739-.039-.078-.152-.103-.311-.181z"/></svg>
+    </a>
+
+    <footer id="main-footer" class="fixed bottom-0 left-0 right-0 bg-pantone-magenta/95 backdrop-blur-sm text-white transform translate-y-full z-30 shadow-2xl">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 text-center text-sm">
+            <p>&copy; 2024 Francisco Fernández. Todos los derechos reservados.</p>
+            <p class="text-xs mt-1 opacity-80">Hecho con ❤️ en Patagonia. | <a href="./admin.html" class="underline hover:opacity-100 transition duration-300" id="admin-auth-text">Admin Login</a></p>
         </div>
     </footer>
 
-    <a href="https://wa.me/5491100000000?text=Hola%2C%20estoy%20interesado%20en%20una%20obra." target="_blank" class="whatsapp-button bg-whatsapp text-white p-4 rounded-full shadow-lg hover:bg-opacity-90 transition duration-300">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 16.29c-1.3-3.6 1.45-7.7 5.75-9.3 4.3-1.6 8.9 1.2 10.2 4.8s-1.4 7.7-5.7 9.3c-4.3 1.6-8.9-1.2-10.2-4.8zM19.1 4.9c-.9-.9-2.1-1.3-3.4-1.3-1.3 0-2.5.4-3.4 1.3L4.9 11.4c-.9.9-1.3 2.1-1.3 3.4 0 1.3.4 2.5 1.3 3.4l8.1-8.1 3.4-3.4zM20 12c0 4.4-3.6 8-8 8s-8-3.6-8-8 3.6-8 8-8 8 3.6 8 8z"/></svg>
-    </a>
+    <div id="obra-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 items-center justify-center p-4" onclick="closeDetailModal()">
+        <div class="bg-bg-card rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <div id="modal-content" class="p-6">
+                </div>
+            <button onclick="closeDetailModal()" class="absolute top-3 right-3 text-text-dark hover:text-pantone-magenta bg-white rounded-full p-2 transition duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+    </div>
 
 
     <script>
-        /* global supabase, window, Swiper */ 
-
+        /* global supabase, window */ 
+        
         // --- CONFIGURACIÓN DE SUPABASE ---
         const supabaseUrl = window.supabaseUrl;
         const supabaseAnonKey = window.supabaseAnonKey;
         const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
         
-        // CORRECCIÓN: Usar la tabla 'productos' para la galería
         const TABLE_NAME = 'productos'; 
-        const BUCKET_NAME = 'imagenes'; 
-
-        // --- VARIABLES GLOBALES ---
-        let allWorks = []; // Almacena todas las obras cargadas
-        let availableYears = new Set();
-        let availableCategories = new Set();
-        let availableSeries = new Set();
+        const BUCKET_NAME = 'imagenes';
+        
+        let allWorks = []; // Almacena todas las obras
+        let filteredWorks = []; // Obras después de aplicar filtros
 
         // --- REFERENCIAS DOM ---
-        const galleryContainer = document.getElementById('gallery-container');
-        const loadingGallery = document.getElementById('loading-gallery');
+        const galleryGrid = document.getElementById('gallery-grid');
         const noResults = document.getElementById('no-results');
-        const detailsModal = document.getElementById('details-modal');
-        const modalImageCarousel = document.getElementById('modal-image-carousel');
+        const mainFooter = document.getElementById('main-footer');
+        const whatsappButton = document.getElementById('whatsapp-button');
+        const searchInput = document.getElementById('search');
         const filterYear = document.getElementById('filter-year');
-        const filterCategory = document.getElementById('filter-category');
-        const filterSeries = document.getElementById('filter-series');
-        const searchInput = document.getElementById('search-input');
-        const carouselItems = document.getElementById('carousel-items');
+        const obraDetailModal = document.getElementById('obra-detail-modal');
+        const modalContent = document.getElementById('modal-content');
+        const adminLinkContainer = document.getElementById('admin-link-container');
         
         // --- UTILIDADES ---
 
         function getPublicUrl(path) {
+            if (!path) return './img/placeholder.jpg';
             const { data } = client.storage.from(BUCKET_NAME).getPublicUrl(path);
             return data.publicUrl;
         }
 
-        function formatPrice(price) {
-            if (price === null) return 'Consultar precio';
-            return price.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 });
-        }
-
-        // --- LÓGICA DE DATOS Y CARGA ---
+        // --- LÓGICA DE GALERÍA Y FILTROS ---
 
         async function loadWorks() {
-            loadingGallery.classList.remove('hidden');
-            galleryContainer.innerHTML = ''; 
-
             try {
-                // CORRECCIÓN: Carga desde TABLE_NAME ('productos')
+                // Se obtiene sólo los campos necesarios
                 const { data, error } = await client
                     .from(TABLE_NAME) 
-                    .select("*")
-                    .order("orden", { ascending: true }) // Ordenamiento por el campo de arrastre
-                    .order("anio", { ascending: false });
+                    .select("id, titulo, tecnica, anio, is_available, imagen_principal, descripcion, dimensiones")
+                    .order("orden", { ascending: true }) // Ordenamiento por el campo 'orden'
+                    .order("anio", { ascending: false }); // Segundo orden por año
 
                 if (error) throw error;
                 
                 allWorks = data;
-                
-                renderFilterOptions(data);
-                applyFilters(); // Mostrar la galería inicial
-                renderCarouselItems(data);
-                
+                populateYearFilters(data);
+                applyFilters();
+
             } catch (error) {
                 console.error("Error al cargar las obras:", error);
-                loadingGallery.textContent = `Error al cargar: ${error.message}`;
-            } finally {
-                loadingGallery.classList.add('hidden');
+                galleryGrid.innerHTML = '<p class="text-center text-red-600 col-span-full">Error al cargar las obras. Por favor, intente de nuevo más tarde.</p>';
             }
         }
-
-        // --- RENDERIZADO Y FILTROS ---
-
-        function renderFilterOptions(works) {
-            availableYears.clear();
-            availableCategories.clear();
-            availableSeries.clear();
-
-            works.forEach(w => {
-                if (w.anio) availableYears.add(w.anio.toString());
-                if (w.categoria) availableCategories.add(w.categoria);
-                if (w.serie) availableSeries.add(w.serie);
-            });
-
-            // Llenar Años (orden descendente)
-            [...availableYears].sort((a, b) => b - a).forEach(year => {
+        
+        function populateYearFilters(works) {
+            const years = [...new Set(works.map(w => w.anio).filter(Boolean))].sort((a, b) => b - a);
+            filterYear.innerHTML = '<option value="">Todos</option>';
+            years.forEach(year => {
                 filterYear.innerHTML += `<option value="${year}">${year}</option>`;
-            });
-
-            // Llenar Categorías
-            [...availableCategories].sort().forEach(category => {
-                filterCategory.innerHTML += `<option value="${category}">${category}</option>`;
-            });
-            
-            // Llenar Series
-            [...availableSeries].sort().forEach(series => {
-                filterSeries.innerHTML += `<option value="${series}">${series}</option>`;
             });
         }
 
         function applyFilters() {
-            const searchTerm = searchInput.value.toLowerCase();
-            const yearFilter = filterYear.value;
-            const categoryFilter = filterCategory.value;
-            const seriesFilter = filterSeries.value;
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const selectedYear = filterYear.value;
 
-            const filteredWorks = allWorks.filter(w => {
-                const matchesSearch = searchTerm === '' || 
-                                      w.titulo.toLowerCase().includes(searchTerm) || 
-                                      w.tecnica.toLowerCase().includes(searchTerm);
-                
-                const matchesYear = yearFilter === '' || w.anio.toString() === yearFilter;
-                const matchesCategory = categoryFilter === '' || w.categoria === categoryFilter;
-                const matchesSeries = seriesFilter === '' || w.serie === seriesFilter;
+            filteredWorks = allWorks.filter(obra => {
+                const matchesSearch = 
+                    obra.titulo.toLowerCase().includes(searchTerm) ||
+                    (obra.tecnica && obra.tecnica.toLowerCase().includes(searchTerm)) ||
+                    (obra.descripcion && obra.descripcion.toLowerCase().includes(searchTerm));
 
-                // Solo mostrar obras que tengan imágenes y estén disponibles
-                const isDisplayable = w.imagenes && w.imagenes.length > 0 && w.is_available;
+                const matchesYear = selectedYear === '' || obra.anio == selectedYear;
                 
-                return matchesSearch && matchesYear && matchesCategory && matchesSeries && isDisplayable;
+                // Mostrar solo las obras disponibles
+                const isAvailable = obra.is_available; 
+
+                return matchesSearch && matchesYear && isAvailable;
             });
-            
+
             renderGallery(filteredWorks);
         }
-        
+
         function renderGallery(works) {
-            galleryContainer.innerHTML = '';
-            noResults.classList.add('hidden');
+            galleryGrid.innerHTML = ''; // Limpiar el grid
 
             if (works.length === 0) {
                 noResults.classList.remove('hidden');
                 return;
             }
 
+            noResults.classList.add('hidden');
+
             works.forEach(obra => {
-                const mainImage = obra.imagenes[0];
-                galleryContainer.innerHTML += `
-                    <div onclick="openModal('${obra.id}')" class="bg-bg-card rounded-sm shadow-md hover:shadow-xl transition duration-300 transform hover:-translate-y-0.5 cursor-pointer overflow-hidden">
-                        <div class="h-60 overflow-hidden">
-                            <img src="${getPublicUrl(mainImage.path)}" alt="${obra.titulo}" 
-                                 class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                                 onerror="this.onerror=null;this.src='./img/placeholder.jpg';">
-                        </div>
+                const imageUrl = getPublicUrl(obra.imagen_principal);
+                
+                galleryGrid.innerHTML += `
+                    <div class="bg-bg-card rounded-lg shadow-lg overflow-hidden transform hover:shadow-xl hover:scale-[1.01] transition duration-300 cursor-pointer" onclick="openDetailModal('${obra.id}')">
+                        <img src="${imageUrl}" alt="${obra.titulo}" class="w-full h-80 object-cover" onerror="this.onerror=null;this.src='./img/placeholder.jpg';">
                         <div class="p-4">
-                            <h4 class="font-semibold text-text-dark truncate">${obra.titulo}</h4>
-                            <p class="text-sm text-text-muted">${obra.tecnica} (${obra.anio})</p>
-                            <p class="mt-2 text-pantone-magenta font-bold text-sm">
-                                ${obra.show_price ? formatPrice(obra.price) : 'Consultar Precio'}
-                            </p>
+                            <h3 class="text-xl font-semibold text-text-dark">${obra.titulo}</h3>
+                            <p class="text-text-muted mt-1">${obra.tecnica} (${obra.anio})</p>
                         </div>
                     </div>
                 `;
             });
         }
-
-        // --- CARRUSEL (HOME) ---
         
-        let swiperInstance = null;
-        
-        function renderCarouselItems(works) {
-            const carouselWorks = works.filter(w => w.es_carrusel && w.is_available && w.imagenes && w.imagenes.length > 0);
-            carouselItems.innerHTML = '';
-            
-            if (carouselWorks.length === 0) {
-                document.getElementById('carousel-header').classList.add('hidden');
-                return;
-            }
-            
-            document.getElementById('carousel-header').classList.remove('hidden');
-            
-            carouselWorks.forEach(obra => {
-                const mainImage = obra.imagenes[0];
-                carouselItems.innerHTML += `
-                    <div class="swiper-slide bg-bg-card rounded-lg shadow-lg overflow-hidden cursor-pointer" onclick="openModal('${obra.id}')">
-                        <div class="h-96 w-full relative">
-                            <img src="${getPublicUrl(mainImage.path)}" alt="${obra.titulo}" class="w-full h-full object-cover">
-                            <div class="absolute inset-0 bg-black bg-opacity-30 flex items-end p-6">
-                                <h3 class="text-white text-2xl font-bold">${obra.titulo}</h3>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            // Inicializar Swiper después de cargar los elementos
-            if (swiperInstance) {
-                swiperInstance.destroy();
-            }
-            swiperInstance = new Swiper(".mySwiper", {
-                slidesPerView: 1,
-                spaceBetween: 30,
-                loop: true,
-                autoplay: {
-                    delay: 4500,
-                    disableOnInteraction: false,
-                },
-                pagination: {
-                    el: ".swiper-pagination",
-                    clickable: true,
-                },
-                navigation: {
-                    nextEl: ".swiper-button-next",
-                    prevEl: ".swiper-button-prev",
-                },
-                breakpoints: {
-                    768: {
-                        slidesPerView: 2,
-                        spaceBetween: 40,
-                    },
-                    1024: {
-                        slidesPerView: 3,
-                        spaceBetween: 50,
-                    },
-                },
-            });
-        }
+        // --- LÓGICA DEL MODAL DE DETALLES ---
 
-        // --- MODAL DE DETALLES ---
-
-        let swiperModalInstance = null;
-
-        function openModal(id) {
+        function openDetailModal(id) {
             const obra = allWorks.find(w => w.id === id);
             if (!obra) return;
-            
-            // Llenar detalles de la obra
-            document.getElementById('modal-titulo').textContent = obra.titulo || 'Sin Título';
-            document.getElementById('modal-tecnica-anio').textContent = `${obra.tecnica || 'Técnica no especificada'} (${obra.anio || 'N/A'})`;
-            document.getElementById('modal-categoria').textContent = obra.categoria || 'N/A';
-            document.getElementById('modal-medidas').textContent = obra.medidas || 'N/A';
-            document.getElementById('modal-serie').textContent = obra.serie || 'N/A';
-            document.getElementById('modal-descripcion').textContent = obra.descripcion || 'Sin descripción.';
 
-            // Llenar estado y precio
-            const priceStatusDiv = document.getElementById('modal-price-status');
-            const availabilityText = obra.is_available ? '<span class="text-green-600 font-semibold">Disponible</span>' : '<span class="text-red-600 font-semibold">Vendido</span>';
-            const priceText = obra.show_price ? `<p class="text-2xl font-bold text-pantone-magenta mt-2">${formatPrice(obra.price)}</p>` : `<p class="text-lg font-bold text-pantone-magenta mt-2">Consultar Precio</p>`;
-            
-            priceStatusDiv.innerHTML = `
-                <p class="text-sm mb-1">Estado: ${availabilityText}</p>
-                ${priceText}
-                <a href="https://wa.me/5491100000000?text=Hola%2C%20me%20interesa%20la%20obra%3A%20${encodeURIComponent(obra.titulo)}" target="_blank" class="mt-4 inline-block bg-whatsapp hover:bg-opacity-90 text-white font-bold py-3 px-6 rounded-sm transition duration-300">
-                    Consultar por WhatsApp
-                </a>
+            const imageUrl = getPublicUrl(obra.imagen_principal);
+
+            modalContent.innerHTML = `
+                <div class="md:flex">
+                    <div class="md:w-1/2 p-2">
+                        <img src="${imageUrl}" alt="${obra.titulo}" class="w-full h-auto object-contain rounded-md shadow-lg" onerror="this.onerror=null;this.src='./img/placeholder.jpg';">
+                    </div>
+                    <div class="md:w-1/2 md:p-6 p-2 pt-4">
+                        <h3 class="text-3xl font-bold text-pantone-magenta mb-2">${obra.titulo}</h3>
+                        <p class="text-xl text-text-dark mb-4">${obra.tecnica} | ${obra.anio}</p>
+                        
+                        <div class="space-y-3 mb-6">
+                            <p class="text-text-muted"><span class="font-semibold text-text-dark">Dimensiones:</span> ${obra.dimensiones || 'N/A'}</p>
+                            <p class="text-text-muted"><span class="font-semibold text-text-dark">Estado:</span> <span class="text-green-600 font-semibold">${obra.is_available ? 'Disponible' : 'Vendido'}</span></p>
+                        </div>
+                        
+                        <p class="text-text-dark leading-relaxed mb-6">
+                            ${obra.descripcion || 'Sin descripción detallada.'}
+                        </p>
+                        
+                        <a href="https://wa.me/XXXXXXXXXXX?text=Hola%2C%20estoy%20interesado%20en%20la%20obra%20%22${encodeURIComponent(obra.titulo)}%22." target="_blank" class="bg-whatsapp hover:bg-green-600 text-white font-bold py-3 px-6 rounded-sm transition duration-300 flex items-center justify-center space-x-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 3.189 1.353 6.07 3.513 8.046L4 22l2.067-.53c.895.498 1.897.777 2.933.777C13.523 22 18 17.523 18 12S13.523 2 12 2zm3.385 14.896c-.198-.103-.795-.401-.916-.479-.121-.078-.26-.117-.373.117s-.471.479-.574.597c-.103.117-.206.117-.384.078-.962-.321-1.789-.887-2.482-1.637-.693-.75-1.15-1.651-1.282-2.584-.04-.123-.004-.2-.043-.242-.038-.04-.373-.079-.486-.103-.113-.024-.26-.062-.384-.062s-.223.039-.344.195c-.121.156-.467.452-.467 1.1c0 .647.477 1.258.54 1.346.062.088.948 1.488 2.296 2.046 1.348.558 1.348.371 1.6 1.058.252.687.252 1.272.189 1.389-.062.117-.216.156-.412.039-1.896-.78-2.673-1.652-2.887-1.936-.214-.284-.428-.58-.428-.902 0-.323.238-.49.33-.585.093-.096.206-.242.308-.36.103-.117.206-.175.308-.234.103-.058.206-.058.308.039.103.097.649 1.579 2.053 2.193 1.404.614 2.152.479 2.508.432.356-.048.795-.316.916-.672.121-.356.121-.661.082-.739-.039-.078-.152-.103-.311-.181z"/></svg>
+                            <span>Consultar Disponibilidad</span>
+                        </a>
+                    </div>
+                </div>
             `;
 
+            obraDetailModal.classList.remove('hidden');
+            obraDetailModal.classList.add('flex');
+            document.body.style.overflow = 'hidden'; // Evitar scroll de fondo
+        }
 
-            // Llenar carrusel de imágenes
-            modalImageCarousel.innerHTML = '';
-            obra.imagenes.forEach(img => {
-                modalImageCarousel.innerHTML += `
-                    <div class="swiper-slide h-full flex items-center justify-center">
-                        <img src="${getPublicUrl(img.path)}" alt="${obra.titulo}" class="max-h-full max-w-full object-contain">
-                    </div>
-                `;
-            });
+        function closeDetailModal() {
+            obraDetailModal.classList.add('hidden');
+            obraDetailModal.classList.remove('flex');
+            document.body.style.overflow = '';
+        }
+        
+        // --- GESTIÓN DE AUTENTICACIÓN ADMIN ---
 
-            // Mostrar el modal
-            detailsModal.classList.remove('hidden');
-            detailsModal.classList.add('flex');
-            document.body.classList.add('modal-open');
-
-            // Destruir e inicializar Swiper del modal
-            if (swiperModalInstance) {
-                swiperModalInstance.destroy();
+        async function checkAdminStatus() {
+            const { data: { user } } = await client.auth.getUser();
+            const adminText = document.getElementById('admin-auth-text');
+            
+            if (user) {
+                adminLinkContainer.innerHTML = `<span class="text-sm text-green-600">Admin Logueado</span> | <a href="./admin.html" class="text-pantone-magenta hover:underline font-semibold">Ir a Panel</a>`;
+                adminText.textContent = 'Panel Admin';
+            } else {
+                adminLinkContainer.innerHTML = ''; // Se mantiene solo el enlace del footer
+                adminText.textContent = 'Admin Login';
             }
-            swiperModalInstance = new Swiper(".mySwiperModal", {
-                slidesPerView: 1,
-                spaceBetween: 10,
-                pagination: {
-                    el: ".swiper-pagination",
-                    clickable: true,
-                },
-                loop: false,
-            });
-            // Es necesario forzar el update después de mostrarlo si el modal estaba oculto
-            setTimeout(() => swiperModalInstance.update(), 100); 
         }
+        
+        // --- CONTROL DE SCROLL (Footer y WhatsApp) ---
 
-        function closeModal() {
-            detailsModal.classList.add('hidden');
-            detailsModal.classList.remove('flex');
-            document.body.classList.remove('modal-open');
-        }
-        
-        // --- LOGICA DE FOOTER Y WHATSAPP ---
-        
-        const mainFooter = document.getElementById('main-footer');
-        const whatsappButton = document.querySelector('.whatsapp-button');
-        const firstSection = document.getElementById('carousel-header') ? document.getElementById('carousel-section') : null;
-        const gallerySection = document.getElementById('gallery-section'); 
-        document.getElementById('current-year').textContent = new Date().getFullYear();
+        const heroSection = document.getElementById('hero-section');
+        const gallerySection = document.getElementById('gallery-section');
 
         window.addEventListener('scroll', () => {
-            if (!firstSection) return;
+            if (!heroSection) return;
             
-            const firstSectionHeight = firstSection.offsetHeight;
+            const heroSectionHeight = heroSection.offsetHeight;
             
             // Lógica del Footer
-            if (window.scrollY > firstSectionHeight - 100) { 
+            if (window.scrollY > heroSectionHeight - 100) { 
                 mainFooter.classList.remove('translate-y-full');
             } else {
                 mainFooter.classList.add('translate-y-full');
             }
 
             // Lógica del Botón de WhatsApp
-            const gallerySectionTop = gallerySection ? gallerySection.offsetTop : firstSectionHeight;
+            const gallerySectionTop = gallerySection ? gallerySection.offsetTop : heroSectionHeight;
             if (window.scrollY > gallerySectionTop - window.innerHeight / 2) { 
                 whatsappButton.classList.add('show');
             } else {
@@ -499,11 +368,11 @@
         });
 
         // --- FUNCIONES ACCESIBLES GLOBALMENTE ---
-        window.openModal = openModal;
-        window.closeModal = closeModal;
+        window.openDetailModal = openDetailModal;
+        window.closeDetailModal = closeDetailModal;
 
 
-        // Inicializar la Galería y Auth (CORRECCIÓN FINAL: Bloque movido al final del script)
+        // --- INICIALIZACIÓN ---
         document.addEventListener('DOMContentLoaded', () => {
             // Ocultar elementos al cargar para una transición suave
             mainFooter.classList.add('translate-y-full');
@@ -511,17 +380,14 @@
             
             // Cargar datos
             loadWorks(); 
+            
+            // Verificar sesión de administrador
+            checkAdminStatus();
         });
 
         // Event Listeners de Filtro
         searchInput.addEventListener("input", applyFilters);
         filterYear.addEventListener("change", applyFilters);
-        filterCategory.addEventListener("change", applyFilters);
-        
-        // El listener de filterSeries se adjunta de forma segura aquí
-        if (filterSeries) {
-            filterSeries.addEventListener("change", applyFilters);
-        }
 
     </script>
 </body>

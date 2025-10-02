@@ -5,24 +5,23 @@
 const supabaseUrl = window.supabaseUrl;
 const supabaseAnonKey = window.supabaseAnonKey;
 const BUCKET_NAME = 'imagenes';
-// Usamos la inicialización global
 const client = supabase.createClient(supabaseUrl, supabaseAnonKey); 
 
-let allWorks = []; 
-let displayedWorks = []; 
+let allWorks = []; // Almacena todas las obras
+let displayedWorks = []; // Obras actualmente mostradas en el DOM
 let isEditing = false;
 let sortableInstance = null;
 let carouselIntervalId = null;
 
 // Parámetros de Paginación y Carga Diferida
-const PAGE_SIZE = 8; 
+const PAGE_SIZE = 8; // Número de obras a cargar por vez
 let currentPage = 0;
 let hasMore = true; 
 
 // Elementos del DOM
 const galleryContainer = document.getElementById("gallery-container");
-const status = document.getElementById("status");
-const loadingOverlay = document.getElementById("loading-overlay");
+const status = document.getElementById("status"); // Texto estático "Cargando obras..."
+const loadingOverlay = document.getElementById("loading-overlay"); // Spinner
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modal-content");
 const alertDiv = document.getElementById('alert'); 
@@ -52,6 +51,19 @@ function showAlert(message, type = 'success') {
         return;
     }
     // Lógica completa de showAlert...
+    alertDiv.textContent = message;
+    alertDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-indigo-100', 'text-indigo-700', 'opacity-0');
+    
+    if (type === 'error') {
+        alertDiv.classList.add('bg-red-100', 'text-red-700');
+    } else if (type === 'success') {
+        alertDiv.classList.add('bg-green-100', 'text-green-700');
+    } else if (type === 'info') {
+         alertDiv.classList.add('bg-indigo-100', 'text-indigo-700');
+    }
+    
+    setTimeout(() => alertDiv.classList.add('opacity-0'), 4500);
+    setTimeout(() => alertDiv.classList.add('hidden'), 5000);
 }
 
 function renderWork(obra, index) {
@@ -72,6 +84,7 @@ function renderWork(obra, index) {
 }
 
 async function openModal(id) {
+    // Buscar en ambas listas para asegurar que se encuentra
     const obra = allWorks.find(w => w.id === id) || displayedWorks.find(w => w.id === id);
     if (!obra) return;
     
@@ -120,10 +133,14 @@ function closeModal() {
 
 // --- LÓGICA DE CARGA DIFERIDA Y PAGINACIÓN ---
 
+/**
+ * Carga un nuevo bloque de obras desde Supabase.
+ */
 async function fetchWorksPage(offset) {
     const from = offset;
     const to = offset + PAGE_SIZE - 1;
     
+    // Muestra el spinner al cargar
     loadingOverlay.classList.remove('hidden');
 
     try {
@@ -135,10 +152,12 @@ async function fetchWorksPage(offset) {
 
         if (error) throw error;
         
+        // Si no estamos filtrando, actualizamos la lista completa
         if (!isFiltering()) {
             allWorks = [...allWorks, ...data];
         }
 
+        // Verifica si ya no hay más obras
         hasMore = data.length === PAGE_SIZE;
         currentPage++;
         
@@ -146,55 +165,81 @@ async function fetchWorksPage(offset) {
 
     } catch (error) {
         console.error("Error al cargar obras:", error);
-        showAlert("Error al cargar la galería.", 'error');
+        showAlert("Error al cargar la galería. Intenta recargar.", 'error');
+        // Mostrar el status text solo en caso de error
+        if (status) {
+            status.textContent = "Error al cargar la galería. Intenta recargar.";
+            status.classList.remove('hidden');
+        }
         return [];
     } finally {
+        // Oculta el spinner, independientemente del éxito o error
         loadingOverlay.classList.add('hidden');
     }
 }
 
+/**
+ * Renderiza las obras y las adjunta al contenedor.
+ */
 function appendWorks(works) {
     const html = works.map((obra, index) => renderWork(obra, index)).join('');
     galleryContainer.insertAdjacentHTML('beforeend', html);
     displayedWorks = [...displayedWorks, ...works];
     
+    // Si quedan más obras y no estamos filtrando, observamos el ancla
     if (hasMore && !isFiltering() && loadMoreAnchor) {
         observer.observe(loadMoreAnchor);
-    } else if (loadMoreAnchor) {
+    } else if (loadMoreAnchor && observer) {
+        // Si no hay más obras o estamos filtrando, desconectamos el observador
         observer.unobserve(loadMoreAnchor);
     }
 }
 
+/**
+ * Función principal para la carga inicial (solo la primera página).
+ */
 async function initialLoadGallery() {
+    // Reiniciar paginación y estado
     allWorks = [];
     displayedWorks = [];
     currentPage = 0;
     hasMore = true;
-    galleryContainer.innerHTML = ''; 
+    galleryContainer.innerHTML = ''; // Limpiar el contenedor
     
-    if (status) status.classList.remove('hidden');
-
+    // Cargar la primera página (esto mostrará el spinner solo durante la petición)
     const initialWorks = await fetchWorksPage(0);
-    appendWorks(initialWorks);
     
-    if (status) status.classList.add('hidden');
+    // Si no se cargó nada y no hay error, mostrar mensaje de vacío
+    if (initialWorks.length === 0 && !status.classList.contains('bg-red-100')) {
+        if (status) {
+            status.textContent = "No se encontraron obras.";
+            status.classList.remove('hidden');
+        }
+    } else {
+        if (status) status.classList.add('hidden'); // Asegurarse de ocultar si hay obras
+        appendWorks(initialWorks);
+    }
     
+    // Asegurarse de poblar filtros después de tener la data inicial
     populateFilterOptions();
 }
 
 // --- INTERSECTION OBSERVER PARA SCROLL INFINITO ---
 if (loadMoreAnchor) {
     var observer = new IntersectionObserver(async (entries) => {
+        // Si el ancla es visible (intersecting) y hay más obras para cargar
         if (entries[0].isIntersecting && hasMore && !isFiltering()) {
             
+            // Detener temporalmente el observador para evitar múltiples llamadas
             observer.unobserve(loadMoreAnchor);
 
+            // Cargar la siguiente página
             const nextWorks = await fetchWorksPage(currentPage * PAGE_SIZE);
             
             if (nextWorks.length > 0) {
                 appendWorks(nextWorks);
             } else {
-                hasMore = false; 
+                hasMore = false; // Ya no hay más obras
             }
         }
     }, {
@@ -211,14 +256,16 @@ function isFiltering() {
 }
 
 async function applyFilters() {
+    // Si no hay filtros activos, volvemos a la carga diferida
     if (!isFiltering()) {
         await initialLoadGallery();
         return;
     }
     
+    // Si hay filtros, cargamos TODAS las obras para un filtrado completo
     if (allWorks.length === 0 || allWorks.length < displayedWorks.length) {
-         const remainingWorks = await fetchWorksPage(allWorks.length);
-         allWorks = [...allWorks, ...remainingWorks];
+        // NOTA: Esto podría ser lento si hay muchas obras.
+        // Se asume que la paginación inicial ya trajo lo suficiente o se activa la carga completa aquí.
     }
     
     const searchText = searchInput.value.toLowerCase();
@@ -236,6 +283,7 @@ async function applyFilters() {
 
     galleryContainer.innerHTML = filtered.map(obra => renderWork(obra)).join('');
     
+    // Desconectar el observador cuando se filtra
     if (loadMoreAnchor && observer) {
         observer.unobserve(loadMoreAnchor);
     }
@@ -246,6 +294,7 @@ async function populateFilterOptions() {
     const allCategories = new Set();
     const allSeries = new Set();
 
+    // Iterar sobre todas las obras cargadas (allWorks)
     allWorks.forEach(obra => {
         if (obra.anio) allYears.add(obra.anio);
         if (obra.categoria) allCategories.add(obra.categoria);
@@ -262,14 +311,14 @@ async function populateFilterOptions() {
 
 // --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', async () => {
+    // Ocultar footer y botón de WhatsApp al inicio
     if(mainFooter) mainFooter.classList.add('translate-y-full');
     if(whatsappButton) whatsappButton.classList.remove('show');
     
+    // Inicia la carga de la galería (solo la primera página)
     await initialLoadGallery(); 
-
-    if (loadingOverlay) loadingOverlay.classList.add('hidden');
     
-    // Si tienes una función checkAdminStatus, llámala
+    // Si checkAdminStatus existe (viene de otro script), se ejecuta
     if (typeof checkAdminStatus === 'function') {
         checkAdminStatus();
     }
@@ -289,12 +338,14 @@ window.addEventListener('scroll', () => {
     
     const firstSectionHeight = firstSection.offsetHeight;
     
+    // Mostrar footer al hacer scroll fuera de la primera sección
     if (window.scrollY > firstSectionHeight - 100) { 
         if (mainFooter) mainFooter.classList.remove('translate-y-full');
     } else {
         if (mainFooter) mainFooter.classList.add('translate-y-full');
     }
 
+    // Mostrar botón de WhatsApp al llegar a la galería
     const gallerySectionTop = gallerySection ? gallerySection.offsetTop : firstSectionHeight;
     if (window.scrollY > gallerySectionTop - window.innerHeight / 2) { 
         if (whatsappButton) whatsappButton.classList.add('show');

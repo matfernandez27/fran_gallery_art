@@ -48,6 +48,13 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(250, 235, 240, 0.95);
             display: flex; justify-content: center; align-items: center; z-index: 1000;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .lds-ring {
+            display: inline-block;
+            position: relative;
+            width: 80px;
+            height: 80px;
         }
         .lds-ring div { 
             box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; 
@@ -55,6 +62,14 @@
             border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; 
             border-color: #DE3B89 transparent transparent transparent;
         }
+        @keyframes lds-ring {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .lds-ring div:nth-child(1) { animation-delay: -0.45s; }
+        .lds-ring div:nth-child(2) { animation-delay: -0.3s; }
+        .lds-ring div:nth-child(3) { animation-delay: -0.15s; }
+
         
         /* --- ESTILOS DEL CARRUSEL DE FONDO (DINÁMICO) --- */
         #carousel-header {
@@ -116,19 +131,12 @@
         .whatsapp-float-btn:hover { transform: scale(1.1); }
 
         /* --- ESTILOS DE ZOOM INTERACTIVO (MANTENIDOS) --- */
-        .zoom-container {
-            position: relative; overflow: hidden; cursor: crosshair; 
+        .image-zoom-container { /* Renombrado para evitar conflictos */
+            position: relative; overflow: hidden;
         }
         .zoom-image {
-            width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s ease-in-out; 
-            transform: scale(1); transform-origin: center center;
-        }
-        .zoom-container:hover .zoom-image { transform: scale(2.5); }
-        .zoom-icon {
-            position: absolute; top: 10px; left: 10px;
-            background: rgba(255, 255, 255, 0.5); color: #333333; 
-            padding: 8px; border-radius: 50%; z-index: 10;
-            border: 1px solid #E0E0E0;
+            width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s ease-out;
+            transform-origin: center center;
         }
 
         /* Estilo para el modo de ordenamiento */
@@ -154,13 +162,13 @@
 </head>
 <body class="bg-bg-principal text-text-dark font-sans min-h-screen">
     
-    <div id="loading-overlay" class="loading-overlay hidden">
+    <div id="loading-overlay" class="loading-overlay">
         <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
     </div>
 
     <div id="alert" class="hidden" role="alert"></div>
 
-    <a id="whatsapp-btn" href="https://wa.me/+5492805032663?text=Hola,%20quisiera%20consultar%20sobre%20una%20obra%20de%20la%20galería." 
+    <a id="whatsapp-btn" href="https://wa.me/5492805032663?text=Hola,%20quisiera%20consultar%20sobre%20una%20obra%20de%20la%20galería." 
         target="_blank" 
         class="whatsapp-float-btn bg-whatsapp text-white">
         <svg fill="#FFF" viewBox="0 0 24 24" width="28" height="28" class="whatsapp-icon"><path d="M12 2C6.48 2 2 6.48 2 12c0 3.25 1.5 6.2 3.88 8.1l-1.38 5.02L7.6 21.62C9.5 22.18 11.08 22 12 22c5.52 0 10-4.48 10-10C22 6.48 17.52 2 12 2zM17.43 15.4c-.09-.15-.36-.24-.77-.42-.42-.18-2.52-1.24-2.91-1.38-.39-.14-.67-.21-.95.21-.28.42-1.09 1.38-1.34 1.66-.25.28-.5.31-.92.21-.42-.1-.71-.34-1.27-.64-.47-.25-1.07-.65-2.03-1.89-.75-.98-1.25-1.95-1.38-2.2-.14-.25-.02-.38.11-.5.1-.11.23-.26.35-.4.12-.14.16-.25.25-.42.09-.17.04-.32-.02-.45-.06-.13-.57-1.36-.78-1.87-.2-.5-.41-.42-.56-.42-.15 0-.33-.02-.51-.02-.18 0-.47.07-.72.35-.25.28-.95.93-.95 2.27 0 1.34.97 2.64 1.1 2.82.13.18 1.92 3.03 4.6 4.24 2.68 1.21 2.68.85 2.97.8.29-.05.95-.39 1.08-.77.13-.38.13-.7.09-.77z"/></svg>
@@ -212,7 +220,7 @@
                     <a href="biografia-completa.html" 
                         class="mt-4 text-pantone-magenta font-semibold hover:text-text-dark transition-colors duration-300 text-sm self-start inline-flex items-center space-x-2">
                         <span>LEER BIOGRAFÍA COMPLETA</span>
-                        <svg xmlns="http://www.w.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                         </svg>
                     </a>
@@ -247,9 +255,6 @@
                     
                     <select id="filter-category" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
                         <option value="">Categoría</option>
-                        <option value="grabado">Grabado</option>
-                        <option value="dibujo">Dibujo</option>
-                        <option value="pintura">Pintura</option>
                     </select>
 
                     <select id="filter-series" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
@@ -262,19 +267,19 @@
                 </div>
                 
                 <div id="admin-controls" class="hidden flex gap-2">
-                    <button id="edit-toggle" class="p-3 rounded-sm bg-border-light hover:bg-pantone-magenta transition duration-300 text-text-dark hover:text-white text-sm">
-                        Activar Edición
-                    </button>
-                    <button id="save-order-button" class="hidden p-3 rounded-sm bg-green-600 hover:bg-green-700 text-white transition duration-300 text-sm" disabled>
-                        Guardar Orden
-                    </button>
+                    <a href="./admin.html" id="edit-toggle" class="p-3 rounded-sm bg-border-light hover:bg-pantone-magenta transition duration-300 text-text-dark hover:text-white text-sm">
+                        Panel Admin
+                    </a>
                 </div>
             </div>
             
-            <p id="status" class="text-center text-red-500 font-semibold mb-8"></p>
-
             <div id="gallery-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 </div>
+            
+            <div id="load-more-trigger" class="py-10 flex justify-center items-center">
+                 <div class="lds-ring hidden"><div></div><div></div><div></div><div></div></div>
+            </div>
+
         </div>
     </section>
 

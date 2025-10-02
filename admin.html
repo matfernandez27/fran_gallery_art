@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-    <script src="config.js"></script> 
+    <script src="config.js"></script>
     
     <style>
         /* Estilos de Utilidad */
@@ -15,19 +15,19 @@
             position: fixed; top: 4px; left: 50%; transform: translateX(-50%);
             padding: 1rem; border-radius: 0.375rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             z-index: 50;
-            width: 90%; /* Ajuste para móviles */
-            max-width: 400px; /* Ancho máximo para desktop */
+            width: 90%; 
+            max-width: 400px; 
         }
         .drag-handle {
             cursor: grab;
             transition: color 0.2s;
         }
         .drag-handle:hover {
-            color: #DE3B89; /* Color de acento de tu web */
+            color: #DE3B89; 
         }
         .sortable-ghost {
             opacity: 0.4;
-            background-color: #fce8f0; /* Color claro para indicar movimiento */
+            background-color: #fce8f0; 
             border: 2px dashed #DE3B89;
         }
     </style>
@@ -122,11 +122,19 @@
         </div>
 
         <div class="bg-white p-6 rounded-lg shadow-xl">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-semibold text-gray-700">Listado de Obras</h3>
-                <button id="save-order-button" class="hidden px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-300" disabled>
-                    Guardar Orden
-                </button>
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b pb-4">
+                <h3 class="text-xl font-semibold text-gray-700 mb-3 md:mb-0">Listado de Obras</h3>
+                <div class="flex items-center space-x-3 w-full md:w-auto">
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        placeholder="Buscar por Título o Técnica..." 
+                        class="p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 w-full md:w-64"
+                    >
+                    <button id="save-order-button" class="hidden px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-300" disabled>
+                        Guardar Orden
+                    </button>
+                </div>
             </div>
             
             <div id="works-list" class="space-y-3">
@@ -154,7 +162,6 @@
 
     <script>
         // Inicialización de Supabase y constantes
-        // *** CORRECCIÓN CLAVE: Nombre del bucket actualizado a 'imagenes' ***
         const BUCKET_NAME = 'imagenes'; 
 
         const client = supabase.createClient(window.supabaseUrl, window.supabaseAnonKey);
@@ -175,6 +182,7 @@
         const currentImagesContainer = document.getElementById('current-images-container');
         const alertDiv = document.getElementById('alert');
         const submitButton = document.getElementById('submit-button');
+        const searchInput = document.getElementById('search-input'); // <-- Nuevo
 
 
         // --- FUNCIONES DE UTILIDAD ---
@@ -193,7 +201,6 @@
             setTimeout(() => alertDiv.classList.add('hidden'), 5000);
         }
 
-        // FUNCIÓN MEJORADA: Usa la función nativa de Supabase para obtener la URL pública
         function getPublicUrl(path) {
             const { data } = client.storage
                 .from(BUCKET_NAME)
@@ -246,6 +253,12 @@
         async function loadWorks() {
             worksList.innerHTML = '<p class="text-gray-500">Cargando obras...</p>';
             try {
+                // Si el campo de búsqueda tiene texto, no cargamos, esperamos a que el usuario termine de escribir.
+                if (searchInput.value) {
+                    filterWorks();
+                    return;
+                }
+                
                 const { data, error } = await client
                     .from('productos')
                     .select('*')
@@ -256,7 +269,6 @@
                 
                 currentWorks = data.map(p => ({
                     ...p,
-                    // Asegurar que el array de imágenes sea un objeto manejable
                     imagenes: Array.isArray(p.imagenes) ? p.imagenes : [] 
                 }));
                 
@@ -268,11 +280,34 @@
                 worksList.innerHTML = '<p class="text-red-500">Error al cargar el listado de obras.</p>';
             }
         }
+        
+        // --- LÓGICA DE FILTRADO (BUSCADOR) ---
+        function filterWorks() {
+            const searchTerm = searchInput.value.toLowerCase();
+
+            if (!searchTerm) {
+                renderWorksList(currentWorks);
+                return;
+            }
+
+            const filtered = currentWorks.filter(obra => {
+                const titleMatch = obra.titulo.toLowerCase().includes(searchTerm);
+                const techniqueMatch = obra.tecnica.toLowerCase().includes(searchTerm);
+                
+                return titleMatch || techniqueMatch;
+            });
+
+            if (filtered.length === 0) {
+                worksList.innerHTML = '<p class="text-center text-gray-500 py-8">No se encontraron obras que coincidan con la búsqueda.</p>';
+            } else {
+                renderWorksList(filtered);
+            }
+        }
+        searchInput.addEventListener('input', filterWorks); // Conectar la función al input
 
         function renderWorksList(works) {
             worksList.innerHTML = '';
             works.forEach(obra => {
-                // Se usa getPublicUrl, que usa el BUCKET_NAME CORREGIDO
                 const mainImage = obra.imagenes[0] ? getPublicUrl(obra.imagenes[0].path) : 'https://placehold.co/60x60?text=NO+IMG';
 
                 const item = document.createElement('div');
@@ -307,7 +342,12 @@
         
         // --- LÓGICA DE ORDENAMIENTO (SortableJS) ---
         function enableSorting() {
-            new Sortable(worksList, {
+            // Se asegura de destruir cualquier instancia anterior de Sortable
+            if (worksList.sortable) {
+                worksList.sortable.destroy();
+            }
+            
+            worksList.sortable = new Sortable(worksList, { // Almacenar la instancia en una propiedad del elemento
                 handle: '.drag-handle',
                 animation: 150,
                 ghostClass: 'sortable-ghost',
@@ -331,7 +371,7 @@
                 const cardElements = worksList.querySelectorAll('[data-id]');
                 const newOrder = Array.from(cardElements).map((card, index) => ({
                     id: parseInt(card.dataset.id),
-                    orden: index + 1 // El orden empieza en 1
+                    orden: index + 1 
                 }));
 
                 const updatePromises = newOrder.map(item =>
@@ -346,7 +386,6 @@
                 showAlert("Orden actualizado exitosamente!", 'success');
                 saveOrderButton.classList.add('hidden');
                 
-                // Actualizar la lista local y recargar la lista
                 await loadWorks();
 
             } catch (error) {
@@ -384,7 +423,6 @@
 
                 isEditMode = true;
                 
-                // 1. Llenar los campos (usando los IDs CORREGIDOS)
                 document.getElementById('form-title').textContent = 'Editar Obra';
                 document.getElementById('form-id').value = workToEdit.id;
                 document.getElementById('form-titulo').value = workToEdit.titulo || '';
@@ -396,11 +434,9 @@
                 document.getElementById('form-descripcion').value = workToEdit.descripcion || '';
                 submitButton.textContent = 'Actualizar Obra';
                 
-                // 2. Mostrar imágenes actuales
                 renderCurrentImages(workToEdit.imagenes);
             }
             
-            // Forzar scroll al formulario
             obraFormContainer.scrollIntoView({ behavior: 'smooth' });
         }
         window.openForm = openForm;
@@ -468,15 +504,13 @@
                         
                         newImages.push({ 
                             path: uploadData.path, 
-                            // Aquí usamos el path para que getPublicUrl lo pueda procesar después de guardar
                         });
                     }
                 }
                 
-                // Para las nuevas imágenes, debemos obtener la URL pública si es un array de objetos con path
                 const finalImagesArray = [...imagesToKeep, ...newImages].map(img => ({
                     path: img.path,
-                    url: getPublicUrl(img.path) // Obtener la URL pública antes de guardar en la DB
+                    url: getPublicUrl(img.path) 
                 }));
                 
                 // 2. Preparar datos de la DB
@@ -488,7 +522,7 @@
                     categoria: document.getElementById('form-categoria').value,
                     serie: document.getElementById('form-serie').value,
                     descripcion: document.getElementById('form-descripcion').value,
-                    imagenes: finalImagesArray // Guardar el array de imágenes actualizado
+                    imagenes: finalImagesArray 
                 };
 
                 // 3. Insertar o Actualizar
@@ -496,7 +530,6 @@
                 if (id) {
                     dbResponse = await client.from('productos').update(dataToSave).eq('id', id).select();
                 } else {
-                    // Si es nueva obra, establecemos el 'orden' al final de la lista (+1)
                     dataToSave.orden = currentWorks.length + 1; 
                     dbResponse = await client.from('productos').insert(dataToSave).select();
                 }
@@ -542,10 +575,9 @@
                 
                 // 3. Actualizar la interfaz (DOM y workToEdit local)
                 elementToRemove.remove();
-                workToEdit.imagenes = updatedImages; // Actualizar el objeto local
+                workToEdit.imagenes = updatedImages; 
                 showAlert('Imagen eliminada correctamente.', 'success');
 
-                // Si no quedan imágenes, ocultar el contenedor de imágenes actuales
                 if (updatedImages.length === 0) {
                      currentImagesContainer.classList.add('hidden');
                 }
@@ -594,10 +626,7 @@
 
                 // 3. Éxito
                 showAlert("Obra y archivos eliminados exitosamente!", 'success');
-                // Remover el elemento del DOM inmediatamente
                 document.getElementById(`obra-item-${id}`).remove(); 
-                
-                // Remover del array local
                 currentWorks = currentWorks.filter(w => w.id !== id);
 
             } catch (error) {

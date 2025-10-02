@@ -23,372 +23,262 @@
             transition: color 0.2s;
         }
         .drag-handle:hover {
-            color: #DE3B89; 
+            color: #DE3B89; /* Color magenta */
         }
         .sortable-ghost {
             opacity: 0.4;
-            background-color: #fce8f0; 
-            border: 2px dashed #DE3B89;
+            background-color: #f3f4f6;
         }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
     
-    <div id="alert" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 p-4 text-sm rounded-lg shadow-xl z-50" role="alert"></div>
+    <div id="alert" class="hidden" role="alert"></div>
 
-    <header id="admin-header" class="bg-white shadow hidden">
-        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-gray-800">Panel de Administración</h1>
-            <div class="flex space-x-4">
-                <button id="add-obra-button" onclick="openForm()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
-                    + Agregar Obra
-                </button>
-                <button id="logout-button" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
-                    Cerrar Sesión
-                </button>
-            </div>
+    <header class="bg-white shadow-md p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-gray-800">Panel de Obras (Admin)</h1>
+            <div id="auth-controls" class="flex items-center space-x-4">
+                </div>
         </div>
     </header>
 
-    <main class="container mx-auto px-6 py-8">
+    <main id="admin-main" class="container mx-auto p-6 hidden">
         
-        <div id="obra-form-container" class="bg-white p-6 rounded-lg shadow-xl mb-8 hidden">
-            <h2 id="form-title" class="text-3xl font-light text-gray-800 mb-6 border-b pb-2">Nueva Obra</h2>
-            <form id="obra-form" enctype="multipart/form-data">
-                <input type="hidden" id="form-id" name="id">
+        <div class="mb-6 flex justify-between items-center bg-white p-4 rounded-lg shadow">
+            <button onclick="openForm('add')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-sm transition duration-300">
+                + Agregar Nueva Obra
+            </button>
+            <input type="text" id="search-input" placeholder="Buscar por Título o Técnica..." 
+                   class="p-2 border border-gray-300 rounded-sm w-1/3 focus:ring-indigo-500 focus:border-indigo-500 transition duration-300">
+        </div>
+        
+        <div class="mb-6 bg-yellow-100 border-l-4 border-yellow-500 p-4 text-sm text-yellow-700">
+            <p class="font-bold">Modo Edición de Orden:</p>
+            <p>Arrastra y suelta las obras para cambiar su posición en la galería principal.</p>
+        </div>
+        
+        <div class="mb-6 flex items-center space-x-4">
+            <button id="save-order-button" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-sm transition duration-300 disabled:opacity-50" disabled>
+                Guardar Orden
+            </button>
+            <p id="order-status" class="text-sm text-gray-600"></p>
+        </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="space-y-4">
-                        <label class="block">
-                            <span class="text-gray-700">Título:</span>
-                            <input type="text" id="form-titulo" name="titulo" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
-                        </label>
-                        <div class="grid grid-cols-2 gap-4">
-                            <label class="block">
-                                <span class="text-gray-700">Año:</span>
-                                <input type="number" id="form-anio" name="anio" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
-                            </label>
-                            <label class="block">
-                                <span class="text-gray-700">Categoría:</span>
-                                <select id="form-categoria" name="categoria" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
-                                    <option value="grabado">Grabado</option>
-                                    <option value="dibujo">Dibujo</option>
-                                    <option value="pintura">Pintura</option>
-                                    <option value="otro">Otro</option>
-                                </select>
-                            </label>
-                        </div>
-                        <label class="block">
-                            <span class="text-gray-700">Técnica:</span>
-                            <input type="text" id="form-tecnica" name="tecnica" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
-                        </label>
-                        <label class="block">
-                            <span class="text-gray-700">Medidas:</span>
-                            <input type="text" id="form-medidas" name="medidas" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
-                        </label>
-                        <label class="block">
-                            <span class="text-gray-700">Serie (Opcional):</span>
-                            <input type="text" id="form-serie" name="serie" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
-                        </label>
+        <div id="works-list" class="bg-white shadow rounded-lg divide-y divide-gray-200">
+            <p id="loading-status" class="p-4 text-center text-gray-500">Cargando obras...</p>
+        </div>
+    </main>
+
+    <div id="obra-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" onclick="event.stopPropagation()">
+            <h2 id="form-title" class="text-2xl font-bold mb-6 border-b pb-2">Agregar Nueva Obra</h2>
+            
+            <form id="obra-form" class="space-y-4">
+                <input type="hidden" id="obra-id" name="id">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="titulo" class="block text-sm font-medium text-gray-700">Título</label>
+                        <input type="text" id="titulo" name="titulo" required class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
                     </div>
-
-                    <div class="space-y-4">
-                        <label class="block">
-                            <span class="text-gray-700">Descripción:</span>
-                            <textarea id="form-descripcion" name="descripcion" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2"></textarea>
-                        </label>
-                        
-                        <div class="grid grid-cols-3 gap-4 border-t pt-4">
-                            <label class="block">
-                                <span class="text-gray-700">Precio (ARS):</span>
-                                <input type="number" id="form-price" name="price" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
-                            </label>
-                            
-                            <label class="inline-flex items-center mt-6">
-                                <input type="checkbox" id="form-is-available" name="is_available" class="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50">
-                                <span class="ml-2 text-gray-700">Disponible</span>
-                            </label>
-                            
-                            <label class="inline-flex items-center mt-6">
-                                <input type="checkbox" id="form-show-price" name="show_price" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                                <span class="ml-2 text-gray-700">Mostrar Precio</span>
-                            </label>
-                        </div>
-                        
-                        <label class="block border-t pt-4">
-                            <span class="text-gray-700">Imágenes (Máx. 4, la primera será la principal):</span>
-                            <input type="file" id="image-files" name="imageFiles" multiple accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                        </label>
-                        
-                        <div id="current-images-container" class="mt-4 border-t pt-4 hidden">
-                            <p class="text-gray-700 mb-2">Imágenes Actuales (Click para eliminar):</p>
-                            <div id="current-images-list" class="flex flex-wrap gap-3">
-                                </div>
-                        </div>
+                    <div>
+                        <label for="anio" class="block text-sm font-medium text-gray-700">Año</label>
+                        <input type="number" id="anio" name="anio" class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
+                    </div>
+                    <div>
+                        <label for="categoria" class="block text-sm font-medium text-gray-700">Categoría</label>
+                        <input type="text" id="categoria" name="categoria" class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
+                    </div>
+                    <div>
+                        <label for="tecnica" class="block text-sm font-medium text-gray-700">Técnica</label>
+                        <input type="text" id="tecnica" name="tecnica" class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
+                    </div>
+                    <div>
+                        <label for="medidas" class="block text-sm font-medium text-gray-700">Medidas</label>
+                        <input type="text" id="medidas" name="medidas" class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
+                    </div>
+                    <div>
+                        <label for="serie" class="block text-sm font-medium text-gray-700">Serie (Opcional)</label>
+                        <input type="text" id="serie" name="serie" class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
                     </div>
                 </div>
 
-                <div class="mt-6 border-t pt-6 flex justify-end space-x-3">
-                    <button type="button" onclick="resetForm()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-300">
+                <div>
+                    <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción</label>
+                    <textarea id="descripcion" name="descripcion" rows="3" class="mt-1 block w-full border border-gray-300 rounded-sm p-2"></textarea>
+                </div>
+                <div>
+                    <label for="price" class="block text-sm font-medium text-gray-700">Precio (ARS - Solo números)</label>
+                    <input type="number" id="price" name="price" class="mt-1 block w-full border border-gray-300 rounded-sm p-2">
+                </div>
+
+                <div class="flex items-center space-x-6 pt-2">
+                    <div class="flex items-center">
+                        <input id="is_available" name="is_available" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                        <label for="is_available" class="ml-2 block text-sm text-gray-900">Disponible</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input id="show_price" name="show_price" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                        <label for="show_price" class="ml-2 block text-sm text-gray-900">Mostrar Precio</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input id="es_carrusel" name="es_carrusel" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                        <label for="es_carrusel" class="ml-2 block text-sm text-gray-900">Mostrar en Carrusel (Home)</label>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+
+                <div id="current-images" class="space-y-3">
+                    <h3 class="text-lg font-semibold text-gray-700">Imágenes Actuales</h3>
+                    <p id="no-images-text" class="text-sm text-gray-500">No hay imágenes cargadas para esta obra.</p>
+                </div>
+
+                <div>
+                    <label for="image-files" class="block text-sm font-medium text-gray-700">Subir Nuevas Imágenes (Máx. 4)</label>
+                    <input type="file" id="image-files" name="image-files" multiple accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                </div>
+
+
+                <div class="pt-4 flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-sm transition duration-300">
                         Cancelar
                     </button>
-                    <button type="submit" id="submit-button" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-300">
+                    <button type="submit" id="form-submit-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-sm transition duration-300">
                         Guardar Obra
                     </button>
                 </div>
             </form>
         </div>
+    </div>
 
-        <div class="bg-white p-6 rounded-lg shadow-xl">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b pb-4">
-                <h3 class="text-xl font-semibold text-gray-700 mb-3 md:mb-0">Listado de Obras</h3>
-                <div class="flex items-center space-x-3 w-full md:w-auto">
-                    <input 
-                        type="text" 
-                        id="search-input" 
-                        placeholder="Buscar por Título o Técnica..." 
-                        class="p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 w-full md:w-64"
-                    >
-                    <button id="save-order-button" class="hidden px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-300" disabled>
-                        Guardar Orden
-                    </button>
-                </div>
-            </div>
-            
-            <div id="works-list" class="space-y-3">
-                </div>
-        </div>
-
-        <div id="login-container" class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-xl hidden">
-            <h2 class="text-3xl font-light text-gray-800 mb-6 text-center">Acceso de Administrador</h2>
-            <form id="login-form" class="space-y-4">
-                <label class="block">
-                    <span class="text-gray-700">Email:</span>
-                    <input type="email" id="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                </label>
-                <label class="block">
-                    <span class="text-gray-700">Contraseña:</span>
-                    <input type="password" id="password" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                </label>
-                <button type="submit" class="w-full py-2 px-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition duration-300">
-                    Iniciar Sesión
-                </button>
-            </form>
-        </div>
-
-    </main>
 
     <script>
-        const BUCKET_NAME = 'imagenes'; // Nombre de tu bucket
-        const TABLE_NAME = 'productos'; // Nombre de tu tabla
+        // --- CONFIGURACIÓN DE SUPABASE ---
+        const supabaseUrl = window.supabaseUrl;
+        const supabaseAnonKey = window.supabaseAnonKey;
+        const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
+        
+        // !!! CORRECCIÓN CRÍTICA DE TABLA
+        const TABLE_NAME = 'productos'; 
+        const BUCKET_NAME = 'imagenes';
+        
+        let currentWorks = []; 
+        let currentEditingObraId = null;
 
-        const client = supabase.createClient(window.supabaseUrl, window.supabaseAnonKey);
-
-        let currentWorks = [];
-        let isEditMode = false;
-        let workToEdit = null;
-
+        // --- REFERENCIAS DOM ---
+        const authControls = document.getElementById('auth-controls');
+        const adminMain = document.getElementById('admin-main');
         const worksList = document.getElementById('works-list');
-        const loginContainer = document.getElementById('login-container');
-        const adminHeader = document.getElementById('admin-header');
-        const obraFormContainer = document.getElementById('obra-form-container');
+        const loadingStatus = document.getElementById('loading-status');
+        const obraModal = document.getElementById('obra-modal');
         const obraForm = document.getElementById('obra-form');
-        const logoutButton = document.getElementById('logout-button');
+        const formTitle = document.getElementById('form-title');
         const saveOrderButton = document.getElementById('save-order-button');
-        const currentImagesContainer = document.getElementById('current-images-container');
-        const currentImagesList = document.getElementById('current-images-list');
-        const alertDiv = document.getElementById('alert');
-        const submitButton = document.getElementById('submit-button');
         const searchInput = document.getElementById('search-input');
 
+        // --- UTILIDADES ---
 
-        // --- FUNCIONES DE UTILIDAD ---
         function showAlert(message, type = 'success') {
+            const alertDiv = document.getElementById('alert');
             alertDiv.textContent = message;
-            alertDiv.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 p-4 text-sm rounded-lg shadow-xl z-50';
-            
+            alertDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
             if (type === 'error') {
                 alertDiv.classList.add('bg-red-100', 'text-red-700');
-            } else if (type === 'success') {
+            } else {
                 alertDiv.classList.add('bg-green-100', 'text-green-700');
-            } else { 
-                 alertDiv.classList.add('bg-indigo-100', 'text-indigo-700');
             }
-            
             setTimeout(() => alertDiv.classList.add('hidden'), 5000);
         }
 
         function getPublicUrl(path) {
-            const { data } = client.storage
-                .from(BUCKET_NAME)
-                .getPublicUrl(path);
+            const { data } = client.storage.from(BUCKET_NAME).getPublicUrl(path);
             return data.publicUrl;
         }
-        window.getPublicUrl = getPublicUrl;
 
+        // --- LÓGICA DE AUTENTICACIÓN ---
 
-        // --- AUTENTICACIÓN ---
         async function checkAuth() {
-            const { data: { session } } = await client.auth.getSession();
-            if (session) {
-                adminHeader.classList.remove('hidden');
-                loginContainer.classList.add('hidden');
+            const { data: { user } } = await client.auth.getUser();
+
+            if (user) {
+                renderAuthControls(user.email);
+                adminMain.classList.remove('hidden');
                 loadWorks();
             } else {
-                adminHeader.classList.add('hidden');
-                loginContainer.classList.remove('hidden');
+                // Redirigir al login si no está autenticado
+                window.location.href = './login.html'; 
             }
-        }
-
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-
-            const { error } = await client.auth.signInWithPassword({ email, password });
-
-            if (error) {
-                showAlert(`Error de login: ${error.message}`, 'error');
-            } else {
-                showAlert('Inicio de sesión exitoso.', 'success');
-                checkAuth();
-            }
-        });
-
-        logoutButton.addEventListener('click', async () => {
-            await client.auth.signOut();
-            showAlert('Sesión cerrada correctamente.', 'success');
-            checkAuth();
-        });
-
-
-        // --- CARGA Y RENDERIZADO ---
-        async function loadWorks() {
-            worksList.innerHTML = '<p class="text-gray-500">Cargando obras...</p>';
-            try {
-                const { data, error } = await client
-                    .from(TABLE_NAME)
-                    .select('*')
-                    .order('orden', { ascending: true })
-                    .order('anio', { ascending: false });
-
-                if (error) throw error;
-                
-                currentWorks = data.map(p => ({
-                    ...p,
-                    imagenes: Array.isArray(p.imagenes) ? p.imagenes : [] 
-                }));
-                
-                renderWorksList(currentWorks);
-                enableSorting();
-
-            } catch (error) {
-                console.error("Error al cargar obras:", error);
-                worksList.innerHTML = '<p class="text-red-500">Error al cargar el listado de obras.</p>';
-            }
-        }
-
-        function renderWorksList(works) {
-            worksList.innerHTML = '';
-            works.forEach(obra => {
-                const mainImage = obra.imagenes[0] ? getPublicUrl(obra.imagenes[0].path) : 'https://placehold.co/60x60?text=NO+IMG';
-
-                const statusColor = obra.is_available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
-                const statusText = obra.is_available ? 'Disponible' : 'Vendida';
-                
-                const item = document.createElement('div');
-                item.id = `obra-item-${obra.id}`;
-                item.dataset.id = obra.id;
-                item.className = 'bg-gray-50 border border-gray-200 p-4 rounded-lg flex items-center justify-between shadow-sm hover:shadow-md transition duration-300';
-                
-                item.innerHTML = `
-                    <div class="flex items-center space-x-4">
-                        <span class="drag-handle text-gray-400 hover:text-indigo-600 mr-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-                        </span>
-                        <img src="${mainImage}" alt="${obra.titulo}" class="w-16 h-16 object-cover rounded-md border border-gray-300" onerror="this.onerror=null;this.src='https://placehold.co/60x60?text=FALLO'">
-                        <div>
-                            <p class="text-lg font-semibold text-gray-800">${obra.titulo}</p>
-                            <p class="text-sm text-gray-500">${obra.tecnica} | ${obra.anio}</p>
-                            <span class="text-xs font-medium px-2 py-0.5 rounded-full ${statusColor}">${statusText}</span>
-                            ${obra.show_price ? `<span class="text-xs ml-2 text-indigo-600">($${(obra.price || 0).toLocaleString('es-AR')})</span>` : ''}
-                        </div>
-                    </div>
-                    <div class="space-x-2">
-                        <button onclick="editObra(${obra.id})" class="px-3 py-1 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition duration-300">
-                            Editar
-                        </button>
-                        <button onclick="deleteObra(${obra.id}, this)" class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition duration-300">
-                            Eliminar
-                        </button>
-                    </div>
-                `;
-                worksList.appendChild(item);
-            });
         }
         
-        function filterWorks() {
-            const searchTerm = searchInput.value.toLowerCase();
-            if (!searchTerm) {
-                renderWorksList(currentWorks);
-                return;
-            }
-            const filtered = currentWorks.filter(obra => {
-                const titleMatch = (obra.titulo || '').toLowerCase().includes(searchTerm);
-                const techniqueMatch = (obra.tecnica || '').toLowerCase().includes(searchTerm);
-                return titleMatch || techniqueMatch;
-            });
-            worksList.innerHTML = filtered.length === 0 
-                ? '<p class="text-center text-gray-500 py-8">No se encontraron obras que coincidan con la búsqueda.</p>'
-                : '';
-            renderWorksList(filtered);
+        function renderAuthControls(email) {
+            authControls.innerHTML = `
+                <span class="text-sm text-gray-600 hidden md:block">Admin: ${email}</span>
+                <button id="logout-button" class="bg-red-500 hover:bg-red-600 text-white text-sm font-semibold py-2 px-3 rounded-sm transition duration-300">
+                    Cerrar Sesión
+                </button>
+            `;
+            document.getElementById('logout-button').addEventListener('click', logout);
         }
-        searchInput.addEventListener('input', filterWorks);
 
+        async function logout() {
+            const { error } = await client.auth.signOut();
+            if (error) {
+                showAlert("Error al cerrar sesión.", 'error');
+            } else {
+                window.location.href = './login.html';
+            }
+        }
 
-        // --- ORDENAMIENTO (SortableJS) ---
-        function enableSorting() {
-             if (worksList.sortable) { worksList.sortable.destroy(); }
-            
-            worksList.sortable = new Sortable(worksList, {
-                handle: '.drag-handle',
+        // --- GESTIÓN DE ORDENAMIENTO (SORTABLEJS) ---
+
+        let sortableInstance = null;
+
+        function initializeSortable() {
+            if (sortableInstance) {
+                sortableInstance.destroy();
+            }
+
+            sortableInstance = Sortable.create(worksList, {
                 animation: 150,
+                handle: '.drag-handle',
                 ghostClass: 'sortable-ghost',
                 onEnd: function (evt) {
-                    if (evt.oldIndex !== evt.newIndex) {
-                        saveOrderButton.classList.remove('hidden', 'bg-red-500');
-                        saveOrderButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-                        saveOrderButton.disabled = false;
-                        saveOrderButton.textContent = "Guardar Orden (Cambios Pendientes)";
-                    }
+                    saveOrderButton.disabled = false;
+                    saveOrderButton.classList.remove('hidden');
+                    document.getElementById('order-status').textContent = 'Orden modificado. ¡No olvides guardar!';
                 },
             });
         }
-
+        
         saveOrderButton.addEventListener('click', async () => {
-            saveOrderButton.disabled = true;
             saveOrderButton.textContent = "Guardando...";
+            saveOrderButton.disabled = true;
 
             try {
-                const cardElements = worksList.querySelectorAll('[data-id]');
-                const newOrder = Array.from(cardElements).map((card, index) => ({
-                    id: parseInt(card.dataset.id),
-                    orden: index + 1 
+                const newOrder = Array.from(worksList.children).map((item, index) => ({
+                    id: item.getAttribute('data-id'),
+                    position: index + 1
                 }));
 
-                const updatePromises = newOrder.map(item =>
-                    client.from(TABLE_NAME).update({ orden: item.orden }).eq('id', item.id)
+                const updatePromises = newOrder.map(item => 
+                    // !!! CORRECCIÓN: Usar TABLE_NAME y la columna 'orden'
+                    client.from(TABLE_NAME).update({ orden: item.position }).eq('id', item.id)
                 );
                 
                 const results = await Promise.all(updatePromises);
                 
+                // Verificar si alguna promesa falló
                 const failed = results.some(r => r.error);
                 if (failed) throw new Error('Falló la actualización de una o más posiciones.');
 
                 showAlert("Orden actualizado exitosamente!", 'success');
                 saveOrderButton.classList.add('hidden');
-                
-                await loadWorks();
+                document.getElementById('order-status').textContent = 'Orden guardado.';
+
+                // Actualizar el orden localmente
+                currentWorks = currentWorks.sort((a, b) => newOrder.findIndex(i => i.id === a.id) - newOrder.findIndex(i => i.id === b.id));
 
             } catch (error) {
                 console.error("Error al guardar el orden:", error);
@@ -400,206 +290,346 @@
         });
 
 
-        // --- FORMULARIO (CRUD) ---
-        function resetForm() {
-            obraForm.reset();
-            document.getElementById('form-id').value = '';
-            document.getElementById('form-title').textContent = 'Nueva Obra';
-            currentImagesContainer.classList.add('hidden');
-            currentImagesList.innerHTML = '';
-            submitButton.textContent = 'Guardar Obra';
-            obraFormContainer.classList.add('hidden');
-            workToEdit = null;
-            isEditMode = false;
-            // Asegurar que el checkbox de disponibilidad esté en TRUE por defecto al resetear
-            document.getElementById('form-is-available').checked = true;
-            document.getElementById('form-show-price').checked = false;
-        }
-        window.resetForm = resetForm;
+        // --- LÓGICA DE DATOS (CRUD) ---
 
-
-        function openForm(id = null) {
-            resetForm(); 
-            obraFormContainer.classList.remove('hidden');
+        async function loadWorks() {
+            loadingStatus.textContent = 'Cargando obras...';
+            worksList.innerHTML = '';
             
-            if (id) {
-                workToEdit = currentWorks.find(w => w.id === id);
-                if (!workToEdit) return;
+            try {
+                const { data, error } = await client
+                    .from(TABLE_NAME) // !!! USA TABLE_NAME
+                    .select("id, titulo, tecnica, anio, orden, imagenes, is_available")
+                    .order("orden", { ascending: true })
+                    .order("anio", { ascending: false });
 
-                isEditMode = true;
+                if (error) throw error;
                 
-                document.getElementById('form-title').textContent = 'Editar Obra';
-                document.getElementById('form-id').value = workToEdit.id;
-                document.getElementById('form-titulo').value = workToEdit.titulo || '';
-                document.getElementById('form-anio').value = workToEdit.anio || '';
-                document.getElementById('form-tecnica').value = workToEdit.tecnica || '';
-                document.getElementById('form-medidas').value = workToEdit.medidas || '';
-                document.getElementById('form-categoria').value = workToEdit.categoria || 'grabado';
-                document.getElementById('form-serie').value = workToEdit.serie || '';
-                document.getElementById('form-descripcion').value = workToEdit.descripcion || '';
+                currentWorks = data;
+                renderWorksList(data);
                 
-                // NUEVOS CAMPOS: Carga de valores
-                document.getElementById('form-price').value = workToEdit.price || '';
-                document.getElementById('form-is-available').checked = workToEdit.is_available !== false; // TRUE por defecto
-                document.getElementById('form-show-price').checked = workToEdit.show_price === true; // FALSE por defecto
-                
-                submitButton.textContent = 'Actualizar Obra';
-                renderCurrentImages(workToEdit.imagenes);
+                loadingStatus.classList.add('hidden');
+                initializeSortable(); // Inicializar Sortable después de cargar
+
+            } catch (error) {
+                console.error("Error al cargar las obras:", error);
+                loadingStatus.textContent = `Error al cargar: ${error.message}`;
             }
-            
-            obraFormContainer.scrollIntoView({ behavior: 'smooth' });
         }
-        window.openForm = openForm;
-        window.editObra = openForm; 
-        
-        function renderCurrentImages(images) {
-            currentImagesList.innerHTML = '';
-            if (images.length === 0) {
-                currentImagesContainer.classList.add('hidden');
+
+        function renderWorksList(works) {
+            worksList.innerHTML = '';
+            
+            if (works.length === 0) {
+                worksList.innerHTML = '<p class="p-4 text-center text-gray-500">No hay obras registradas. ¡Agrega una!</p>';
                 return;
             }
 
-            currentImagesContainer.classList.remove('hidden');
-            images.forEach(img => {
-                const imgElement = document.createElement('div');
-                imgElement.className = 'relative group cursor-pointer';
-                imgElement.innerHTML = `
-                    <img src="${getPublicUrl(img.path)}" data-path="${img.path}" class="w-20 h-20 object-cover rounded-md border-2 border-gray-300 group-hover:border-red-500 transition-colors">
-                    <span class="absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity" title="Click para eliminar">
-                        &times;
-                    </span>
+            works.forEach(obra => {
+                const mainImage = obra.imagenes && obra.imagenes.length > 0 ? getPublicUrl(obra.imagenes[0].path) : './img/placeholder.jpg';
+                const statusColor = obra.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+
+                worksList.innerHTML += `
+                    <div id="obra-item-${obra.id}" data-id="${obra.id}" class="p-4 flex items-center justify-between hover:bg-gray-50 transition duration-150">
+                        <div class="flex items-center space-x-4 flex-grow">
+                            <span class="drag-handle text-gray-400 hover:text-indigo-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                            </span>
+                            <img src="${mainImage}" alt="${obra.titulo}" class="w-12 h-12 object-cover rounded-sm shadow" onerror="this.onerror=null;this.src='./img/placeholder.jpg';">
+                            <div>
+                                <p class="font-semibold text-gray-800">${obra.titulo} (${obra.anio})</p>
+                                <p class="text-sm text-gray-500">${obra.tecnica}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <span class="px-2 py-0.5 rounded-full text-xs font-medium ${statusColor}">
+                                ${obra.is_available ? 'Disponible' : 'Vendido'}
+                            </span>
+                            <button onclick="editObra('${obra.id}')" class="text-blue-600 hover:text-blue-800">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.794.793-2.828-2.828.793-.793zm-5.464 5.464a.5.5 0 000 .707l3.22 3.22a.5.5 0 00.707 0l2.5-2.5-3.927-3.927-2.5 2.5z" /><path fill-rule="evenodd" d="M14.707 5.293a1 1 0 010 1.414l-8 8A1 1 0 015.293 14L13.293 6a1 1 0 011.414 0zM4 16a2 2 0 002 2h10a2 2 0 002-2v-2a1 1 0 10-2 0v2H6v-2a1 1 0 10-2 0v2z" clip-rule="evenodd" /></svg>
+                            </button>
+                            <button onclick="deleteObra('${obra.id}', this)" class="text-red-600 hover:text-red-800">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1zm1 4a1 1 0 000 2h4a1 1 0 100-2H8z" clip-rule="evenodd" /></svg>
+                            </button>
+                        </div>
+                    </div>
                 `;
-                imgElement.addEventListener('click', () => deleteImageFromWork(workToEdit.id, img.path, imgElement));
-                currentImagesList.appendChild(imgElement);
             });
         }
 
+        function filterWorks() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const filteredWorks = currentWorks.filter(obra => 
+                obra.titulo.toLowerCase().includes(searchTerm) ||
+                obra.tecnica.toLowerCase().includes(searchTerm)
+            );
+            renderWorksList(filteredWorks);
+            // No se reinicia el sortable aquí, ya que solo es un filtro visual
+        }
 
-        // --- LÓGICA DE SUBIDA/ACTUALIZACIÓN ---
-        obraForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('form-id').value;
-            const files = document.getElementById('image-files').files;
+        searchInput.addEventListener('input', filterWorks);
 
-            if (!isEditMode && files.length === 0) {
-                showAlert("Debe subir al menos una imagen para una nueva obra.", 'error');
+
+        // --- LÓGICA DE FORMULARIO MODAL ---
+
+        function openForm(mode, id = null) {
+            resetForm();
+            if (mode === 'add') {
+                formTitle.textContent = "Agregar Nueva Obra";
+                currentEditingObraId = null;
+            } else if (mode === 'edit' && id) {
+                formTitle.textContent = "Editar Obra Existente";
+                currentEditingObraId = id;
+                loadObraToForm(id);
+            }
+            obraModal.classList.remove('hidden');
+            obraModal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            obraModal.classList.add('hidden');
+            obraModal.classList.remove('flex');
+            document.body.style.overflow = '';
+            resetForm();
+        }
+        
+        function resetForm() {
+            obraForm.reset();
+            document.getElementById('obra-id').value = '';
+            document.getElementById('current-images').innerHTML = '<p id="no-images-text" class="text-sm text-gray-500">No hay imágenes cargadas para esta obra.</p>';
+            document.getElementById('image-files').value = '';
+        }
+
+        async function loadObraToForm(id) {
+            const obra = currentWorks.find(w => w.id === id);
+            if (!obra) {
+                showAlert("Error: Obra no encontrada para edición.", 'error');
+                closeModal();
                 return;
             }
 
-            submitButton.disabled = true;
-            submitButton.textContent = id ? 'Actualizando...' : 'Guardando...';
+            document.getElementById('obra-id').value = obra.id;
+            document.getElementById('titulo').value = obra.titulo || '';
+            document.getElementById('anio').value = obra.anio || '';
+            document.getElementById('categoria').value = obra.categoria || '';
+            document.getElementById('tecnica').value = obra.tecnica || '';
+            document.getElementById('medidas').value = obra.medidas || '';
+            document.getElementById('serie').value = obra.serie || '';
+            document.getElementById('descripcion').value = obra.descripcion || '';
+            document.getElementById('price').value = obra.price || ''; 
+            
+            document.getElementById('is_available').checked = obra.is_available || false;
+            document.getElementById('show_price').checked = obra.show_price || false; 
+            document.getElementById('es_carrusel').checked = obra.es_carrusel || false; 
+
+            renderCurrentImages(obra.imagenes || []);
+        }
+
+        function renderCurrentImages(images) {
+            const container = document.getElementById('current-images');
+            container.innerHTML = `<h3 class="text-lg font-semibold text-gray-700">Imágenes Actuales (${images.length})</h3>`;
+            
+            if (images.length === 0) {
+                container.innerHTML += '<p id="no-images-text" class="text-sm text-gray-500">No hay imágenes cargadas para esta obra.</p>';
+                return;
+            }
+
+            const imageHtml = images.map(img => `
+                <div id="img-${img.path.replace(/[^a-zA-Z0-9]/g, '-')}" class="flex items-center space-x-3 p-2 border rounded-sm">
+                    <img src="${getPublicUrl(img.path)}" class="w-12 h-12 object-cover rounded-sm">
+                    <span class="text-sm truncate">${img.path.split('/').pop()}</span>
+                    <button type="button" onclick="deleteImage('${img.path}', '${currentEditingObraId}')" class="text-red-500 hover:text-red-700 ml-auto p-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+            `).join('');
+            
+            container.innerHTML += imageHtml;
+        }
+
+        // --- MANEJO DE IMÁGENES ---
+
+        async function uploadImages(files) {
+            const fileArray = Array.from(files).slice(0, 4); 
+            const uploadPromises = fileArray.map(file => {
+                const filePath = `${client.auth.session().user.id}/${Date.now()}-${file.name}`;
+                return client.storage
+                    .from(BUCKET_NAME)
+                    .upload(filePath, file);
+            });
+
+            const results = await Promise.all(uploadPromises);
+            
+            const newImageObjects = results
+                .filter(res => !res.error)
+                .map(res => ({
+                    path: res.data.path,
+                    url: getPublicUrl(res.data.path)
+                }));
+            
+            const failedCount = results.filter(res => res.error).length;
+            if (failedCount > 0) {
+                 showAlert(`ADVERTENCIA: Falló la subida de ${failedCount} imagen(es).`, 'error');
+            }
+
+            return newImageObjects;
+        }
+
+        async function deleteImage(imagePath, obraId) {
+            if (!confirm("¿Estás seguro de que quieres eliminar esta imagen?")) return;
+
+            const button = event.currentTarget;
+            button.disabled = true;
+            button.innerHTML = '<svg class="animate-spin h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+
 
             try {
-                let imagesToKeep = workToEdit ? workToEdit.imagenes.filter(img => !img.deleted) : [];
-                let newImages = [];
-                let currentImageCount = imagesToKeep.length;
-                const maxImages = 4;
+                // 1. Eliminar del Storage
+                const { error: storageError } = await client.storage
+                    .from(BUCKET_NAME)
+                    .remove([imagePath]);
+
+                if (storageError) throw new Error("Error al borrar del Storage: " + storageError.message);
+
+                // 2. Eliminar de la columna 'imagenes' en la DB
+                const obraIndex = currentWorks.findIndex(w => w.id === obraId);
+                if (obraIndex === -1) throw new Error("Obra no encontrada localmente.");
+
+                const currentImages = currentWorks[obraIndex].imagenes || [];
+                const newImages = currentImages.filter(img => img.path !== imagePath);
+
+                const { error: dbError } = await client
+                    .from(TABLE_NAME) // !!! USA TABLE_NAME
+                    .update({ imagenes: newImages })
+                    .eq('id', obraId);
+
+                if (dbError) throw new Error("Error al actualizar la DB: " + dbError.message);
+
+                // 3. Actualización local y UI
+                currentWorks[obraIndex].imagenes = newImages;
+                document.getElementById(`img-${imagePath.replace(/[^a-zA-Z0-9]/g, '-')}`).remove();
+                showAlert("Imagen eliminada exitosamente!", 'success');
                 
-                // 1. Subir Nuevos Archivos
-                if (files.length > 0) {
-                    if (currentImageCount + files.length > maxImages) {
-                         throw new Error(`Solo se permiten un máximo de ${maxImages} imágenes por obra (actuales: ${currentImageCount}, intentando subir: ${files.length}).`);
-                    }
-
-                    for (let i = 0; i < files.length; i++) {
-                        const file = files[i];
-                        const pathId = id ? id : Date.now(); 
-                        const filePath = `${pathId}/${file.name.replace(/\s/g, '_')}`;
-
-                        const { data: uploadData, error: uploadError } = await client.storage
-                            .from(BUCKET_NAME)
-                            .upload(filePath, file);
-
-                        if (uploadError) throw uploadError;
-                        
-                        newImages.push({ path: uploadData.path });
+                // Actualizar la lista principal (miniatura)
+                const obraItem = document.getElementById(`obra-item-${obraId}`);
+                if (obraItem) {
+                    const imgElement = obraItem.querySelector('img');
+                    if (newImages.length > 0) {
+                        imgElement.src = getPublicUrl(newImages[0].path);
+                    } else {
+                        imgElement.src = './img/placeholder.jpg';
                     }
                 }
-                
-                const finalImagesArray = [...imagesToKeep, ...newImages].map(img => ({
-                    path: img.path,
-                    url: getPublicUrl(img.path) 
-                }));
-                
-                // 2. Preparar datos de la DB
-                const dataToSave = {
-                    titulo: document.getElementById('form-titulo').value,
-                    anio: parseInt(document.getElementById('form-anio').value),
-                    tecnica: document.getElementById('form-tecnica').value,
-                    medidas: document.getElementById('form-medidas').value,
-                    categoria: document.getElementById('form-categoria').value,
-                    serie: document.getElementById('form-serie').value,
-                    descripcion: document.getElementById('form-descripcion').value,
-                    imagenes: finalImagesArray,
-                    // NUEVOS VALORES
-                    price: parseFloat(document.getElementById('form-price').value) || null,
-                    is_available: document.getElementById('form-is-available').checked,
-                    show_price: document.getElementById('form-show-price').checked,
-                };
 
-                // 3. Insertar o Actualizar
-                let dbResponse;
+            } catch (error) {
+                console.error(error);
+                showAlert(error.message, 'error');
+            }
+        }
+
+
+        // --- MANEJO DE SUBMIT DEL FORMULARIO ---
+
+        obraForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitButton = document.getElementById('form-submit-button');
+            submitButton.textContent = "Procesando...";
+            submitButton.disabled = true;
+
+            const formData = new FormData(obraForm);
+            const id = formData.get('id');
+            const newFiles = document.getElementById('image-files').files;
+            
+            try {
+                // 1. Subir nuevas imágenes (si las hay)
+                const newImages = await uploadImages(newFiles);
+                
+                // 2. Obtener imágenes actuales de la obra que se está editando
+                let finalImages = [];
                 if (id) {
-                    dbResponse = await client.from(TABLE_NAME).update(dataToSave).eq('id', id).select();
+                    const existingObra = currentWorks.find(w => w.id === id);
+                    if (existingObra) {
+                        finalImages = existingObra.imagenes || [];
+                    }
+                }
+                
+                // 3. Combinar las imágenes (máximo 4)
+                finalImages = [...finalImages.filter(img => img.path), ...newImages].slice(0, 4);
+
+                // 4. Preparar datos para la DB
+                const payload = {
+                    titulo: formData.get('titulo'),
+                    anio: parseInt(formData.get('anio')) || null,
+                    categoria: formData.get('categoria'),
+                    tecnica: formData.get('tecnica'),
+                    medidas: formData.get('medidas'),
+                    serie: formData.get('serie'),
+                    descripcion: formData.get('descripcion'),
+                    price: parseFloat(formData.get('price')) || null,
+                    is_available: formData.get('is_available') === 'on',
+                    show_price: formData.get('show_price') === 'on',
+                    es_carrusel: formData.get('es_carrusel') === 'on',
+                    imagenes: finalImages,
+                };
+                
+                // 5. Insertar o Actualizar
+                let response;
+                if (id) {
+                    // Update
+                    response = await client.from(TABLE_NAME).update(payload).eq('id', id).select(); // !!! USA TABLE_NAME
                 } else {
-                    dataToSave.orden = currentWorks.length + 1; 
-                    dbResponse = await client.from(TABLE_NAME).insert(dataToSave).select();
+                    // Insert - Obtener el orden máximo para colocar la nueva obra al final
+                    const maxOrder = currentWorks.length > 0 ? Math.max(...currentWorks.map(w => w.orden)) : 0;
+                    payload.orden = maxOrder + 1;
+                    response = await client.from(TABLE_NAME).insert(payload).select(); // !!! USA TABLE_NAME
                 }
 
-                if (dbResponse.error) throw dbResponse.error;
+                if (response.error) throw response.error;
                 
                 showAlert(`Obra ${id ? 'actualizada' : 'creada'} exitosamente.`, 'success');
-                
-                resetForm();
-                loadWorks(); 
+                closeModal();
+                loadWorks(); // Recargar la lista para reflejar los cambios
 
             } catch (error) {
                 console.error("Error al guardar la obra:", error);
-                showAlert(`Error: ${error.message}. Verifique el formulario.`, 'error');
+                showAlert(`Error: ${error.message}`, 'error');
             } finally {
+                submitButton.textContent = id ? "Guardar Obra" : "Agregar Obra";
                 submitButton.disabled = false;
-                submitButton.textContent = id ? 'Actualizar Obra' : 'Guardar Obra';
             }
         });
 
-        // --- ELIMINACIÓN DE IMÁGENES/OBRAS ---
-        async function deleteImageFromWork(workId, imagePath, elementToRemove) {
-            if (!confirm('¿Estás seguro de que quieres eliminar esta imagen?')) return;
-            try {
-                await client.storage.from(BUCKET_NAME).remove([imagePath]);
-                let updatedImages = workToEdit.imagenes.filter(img => img.path !== imagePath);
-                await client.from(TABLE_NAME).update({ imagenes: updatedImages }).eq('id', workId);
-                
-                elementToRemove.remove();
-                workToEdit.imagenes = updatedImages; 
-                showAlert('Imagen eliminada correctamente.', 'success');
-                if (updatedImages.length === 0) { currentImagesContainer.classList.add('hidden'); }
-            } catch (error) {
-                console.error("Error al eliminar imagen:", error);
-                showAlert(`Error al eliminar la imagen: ${error.message}`, 'error');
-            }
-        }
-        window.deleteImageFromWork = deleteImageFromWork; 
 
+        // --- LÓGICA DE ELIMINACIÓN ---
 
         async function deleteObra(id, button) {
-            if (!confirm('¿Estás seguro de que quieres eliminar esta obra COMPLETAMENTE?')) return;
-            
-            const originalText = button.textContent;
-            button.textContent = "Eliminando...";
+            if (!confirm("ADVERTENCIA: ¿Estás seguro de que quieres eliminar esta obra y todas sus imágenes asociadas? Esta acción es irreversible.")) {
+                return;
+            }
+
+            const originalText = button.innerHTML;
             button.disabled = true;
+            button.innerHTML = '<svg class="animate-spin h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
 
             try {
+                // 1. Obtener los paths de las imágenes antes de borrar
                 const obra = currentWorks.find(w => w.id === id);
                 if (!obra) throw new Error("Obra no encontrada localmente.");
 
-                const { error: dbError } = await client.from(TABLE_NAME).delete().eq('id', id);
+                // 2. Eliminar de la DB
+                const { error: dbError } = await client.from(TABLE_NAME).delete().eq('id', id); // !!! USA TABLE_NAME
                 if (dbError) throw dbError;
 
+                // 3. Eliminar archivos del Storage
                 const filePaths = obra.imagenes.map(img => img.path).filter(Boolean);
 
                 if (filePaths.length > 0) {
-                    const { error: storageError } = await client.storage.from(BUCKET_NAME).remove(filePaths);
+                    const { error: storageError } = await client.storage
+                        .from(BUCKET_NAME)
+                        .remove(filePaths);
+
                     if (storageError && storageError.statusCode !== '200') {
                         console.warn("Error al borrar imágenes del storage:", storageError);
                         showAlert(`Obra eliminada de la DB. ADVERTENCIA: Falló el borrado de ${filePaths.length} imagen(es) del Storage.`, 'error');
@@ -607,6 +637,7 @@
                     }
                 }
 
+                // 4. Éxito
                 showAlert("Obra y archivos eliminados exitosamente!", 'success');
                 document.getElementById(`obra-item-${id}`).remove(); 
                 currentWorks = currentWorks.filter(w => w.id !== id);
@@ -615,13 +646,21 @@
                 console.error(error);
                 showAlert(error.message, 'error');
             } finally {
-                button.textContent = originalText;
+                button.innerHTML = originalText;
                 button.disabled = false;
             }
         }
-        window.deleteObra = deleteObra;
         
-        checkAuth();
+        // --- FUNCIONES ACCESIBLES GLOBALMENTE ---
+        window.editObra = (id) => openForm('edit', id);
+        window.deleteObra = deleteObra;
+        window.deleteImage = deleteImage;
+        window.closeModal = closeModal;
+        window.openForm = openForm;
+
+
+        // Inicializar la aplicación
+        document.addEventListener('DOMContentLoaded', checkAuth);
     </script>
 </body>
 </html>

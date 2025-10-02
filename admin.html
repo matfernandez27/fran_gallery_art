@@ -25,106 +25,104 @@
         .drag-handle:hover {
             color: #DE3B89; /* Color de acento de tu web */
         }
-        .sortable-ghost {
-            opacity: 0.4;
-            background-color: #fce8f0; /* Color claro para indicar movimiento */
-            border: 2px dashed #DE3B89;
+        .obra-image {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 0.25rem;
+        }
+        /* ESTILO CORREGIDO PARA TRUNCAR TEXTO (donde estaba el error de la línea 36) */
+        .text-truncate-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
-    
-    <div id="alert" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 p-4 text-sm rounded-lg shadow-xl z-50" role="alert"></div>
+    <div id="alert" class="hidden transition-opacity duration-300 opacity-0"></div>
 
-    <header id="admin-header" class="bg-white shadow hidden">
-        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-gray-800">Panel de Administración</h1>
-            <div class="flex space-x-4">
-                <button id="add-obra-button" onclick="openForm()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
-                    + Agregar Obra
+    <div id="admin-header" class="bg-white shadow-md p-4 sticky top-0 z-10 hidden">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-semibold text-indigo-600">Admin Panel</h1>
+            <div class="space-x-4">
+                <button id="show-add-form-button" class="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition duration-300">
+                    + Nueva Obra
                 </button>
-                <button id="logout-button" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
+                <button id="logout-button" class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300">
                     Cerrar Sesión
                 </button>
             </div>
         </div>
-    </header>
+    </div>
 
-    <main class="container mx-auto px-6 py-8">
+    <main class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         
         <div id="obra-form-container" class="bg-white p-6 rounded-lg shadow-xl mb-8 hidden">
-            <h2 id="form-title" class="text-3xl font-light text-gray-800 mb-6 border-b pb-2">Nueva Obra</h2>
-            <form id="obra-form" enctype="multipart/form-data">
-                <input type="hidden" id="form-id" name="id">
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="space-y-4">
-                        <label class="block">
-                            <span class="text-gray-700">Título:</span>
-                            <input type="text" id="form-titulo" name="titulo" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
-                        </label>
-                        <div class="grid grid-cols-2 gap-4">
-                            <label class="block">
-                                <span class="text-gray-700">Año:</span>
-                                <input type="number" id="form-anio" name="anio" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
-                            </label>
-                            <label class="block">
-                                <span class="text-gray-700">Categoría:</span>
-                                <select id="form-categoria" name="categoria" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
-                                    <option value="grabado">Grabado</option>
-                                    <option value="dibujo">Dibujo</option>
-                                    <option value="pintura">Pintura</option>
-                                    <option value="otro">Otro</option>
-                                </select>
-                            </label>
-                        </div>
-                        <label class="block">
-                            <span class="text-gray-700">Técnica:</span>
-                            <input type="text" id="form-tecnica" name="tecnica" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
-                        </label>
-                        <label class="block">
-                            <span class="text-gray-700">Medidas:</span>
-                            <input type="text" id="form-medidas" name="medidas" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
-                        </label>
-                        <label class="block">
-                            <span class="text-gray-700">Serie (Opcional):</span>
-                            <input type="text" id="form-serie" name="serie" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
-                        </label>
-                    </div>
-
-                    <div class="space-y-4">
-                        <label class="block">
-                            <span class="text-gray-700">Descripción:</span>
-                            <textarea id="form-descripcion" name="descripcion" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2"></textarea>
-                        </label>
-                        <label class="block">
-                            <span class="text-gray-700">Imágenes (Máx. 4, la primera será la principal):</span>
-                            <input type="file" id="image-files" name="imageFiles" multiple accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                        </label>
-                        
-                        <div id="current-images-container" class="mt-4 border-t pt-4 hidden">
-                            <p class="text-gray-700 mb-2">Imágenes Actuales (Click para eliminar):</p>
-                            <div id="current-images-list" class="flex flex-wrap gap-3">
-                                </div>
-                        </div>
-                    </div>
+            <h2 id="form-title" class="text-3xl font-light text-gray-800 mb-6">Agregar Nueva Obra</h2>
+            <form id="obra-form" class="space-y-4">
+                <div>
+                    <label for="titulo" class="block text-sm font-medium text-gray-700">Título</label>
+                    <input type="text" id="titulo" name="titulo" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 </div>
 
-                <div class="mt-6 border-t pt-6 flex justify-end space-x-3">
-                    <button type="button" onclick="resetForm()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-300">
-                        Cancelar
-                    </button>
-                    <button type="submit" id="submit-button" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-300">
+                <div>
+                    <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción</label>
+                    <textarea id="descripcion" name="descripcion" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
+                </div>
+
+                <div>
+                    <label for="anio" class="block text-sm font-medium text-gray-700">Año</label>
+                    <input type="number" id="anio" name="anio" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" min="1900" max="2100">
+                </div>
+
+                <div>
+                    <label for="categoria" class="block text-sm font-medium text-gray-700">Categoría</label>
+                    <input type="text" id="categoria" name="categoria" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                </div>
+                
+                <div>
+                    <label for="serie" class="block text-sm font-medium text-gray-700">Serie (Ej: "Patagonia", "Grabados")</label>
+                    <input type="text" id="serie" name="serie" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                </div>
+
+
+                <div id="current-images-container" class="space-y-3 hidden">
+                    <h3 class="text-lg font-medium text-gray-700">Imágenes Actuales (Arrastrar para ordenar, click para eliminar)</h3>
+                    <div id="current-images-list" class="flex flex-wrap gap-4 p-3 border border-gray-300 rounded-md bg-gray-50">
+                        </div>
+                </div>
+
+                <div>
+                    <label for="imagenes" class="block text-sm font-medium text-gray-700">Nueva(s) Imagen(es)</label>
+                    <input type="file" id="imagenes" name="imagenes" multiple accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    <p class="mt-2 text-xs text-gray-500">Puedes subir una o más imágenes. En modo edición, estas se agregarán a las existentes.</p>
+                </div>
+
+                <div class="flex space-x-4">
+                    <button type="submit" id="submit-button" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300">
                         Guardar Obra
+                    </button>
+                    <button type="button" id="cancel-edit-button" class="w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300">
+                        Cancelar
                     </button>
                 </div>
             </form>
         </div>
 
-        <div class="bg-white p-6 rounded-lg shadow-xl">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-semibold text-gray-700">Listado de Obras</h3>
-                <button id="save-order-button" class="hidden px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-300" disabled>
+
+        <div id="works-container" class="bg-white p-6 rounded-lg shadow-xl hidden">
+            <h2 class="text-3xl font-light text-gray-800 mb-6">Listado de Obras</h2>
+            
+            <div id="search-container" class="mb-4 relative">
+                <input type="text" id="search-input" placeholder="Buscar por título, descripción, categoría o serie..." class="w-full py-2 pl-10 pr-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+            <div class="flex justify-end mb-4 space-x-3">
+                <button id="save-order-button" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-300" disabled>
                     Guardar Orden
                 </button>
             </div>
@@ -144,14 +142,13 @@
                     <span class="text-gray-700">Contraseña:</span>
                     <input type="password" id="password" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 </label>
-                <button type="submit" class="w-full py-2 px-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition duration-300">
-                    Iniciar Sesión
+                <button type="submit" class="w-full py-2 px-4 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700 transition duration-300">
+                    Ingresar
                 </button>
             </form>
         </div>
-
     </main>
 
-    <script src="./js/admin.js" defer></script>
+    <script src="admin.js"></script>
 </body>
 </html>

@@ -7,8 +7,6 @@ const BUCKET_NAME = 'imagenes';
 const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
 
 let productosCache = []; // Caché para guardar los detalles de las obras cargadas
-let isEditing = false; // El modo edición ya no se controla aquí
-let sortableInstance = null;
 let carouselIntervalId = null;
 
 // Variables para el scroll infinito
@@ -268,7 +266,7 @@ async function fetchAndPopulateFilters() {
         filterCategory.innerHTML = '<option value="">Categoría</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
         filterSeries.innerHTML = '<option value="">Serie</option>' + seriesList.map(s => `<option value="${s}">${s}</option>`).join('');
         
-        // Cargar carrusel
+        // Cargar carrusel de fondo
         const carouselUrls = allItems
             .filter(p => p.imagenes && p.imagenes.length > 0)
             .slice(0, 5)
@@ -286,55 +284,77 @@ window.openModal = (id) => {
     const obra = productosCache.find(p => p.id === id);
     if (!obra) return;
 
-    const imageCarousel = obra.images.map((img, index) => `
-        <div class="modal-carousel-item ${index === 0 ? 'active' : ''}" data-index="${index}">
-            <div class="image-zoom-container cursor-move" onmousemove="zoomImage(event, this)" onmouseleave="resetZoom(this)">
-                <img src="${img.url}" alt="${obra.title} - Imagen ${index + 1}" class="zoom-image w-full h-full object-contain transition-transform duration-300" />
+    // Lógica para la imagen principal y las miniaturas
+    const mainImageHTML = `
+        <div id="modal-main-image-container" class="w-full h-full flex items-center justify-center bg-bg-principal rounded-sm overflow-hidden">
+            <div class="image-zoom-container cursor-move w-full h-full" onmousemove="zoomImage(event, this)" onmouseleave="resetZoom(this)">
+                <img src="${obra.images.length > 0 ? obra.images[0].url : obra.mainImage}" alt="${obra.title} - Vista principal" class="zoom-image w-full h-full object-contain transition-transform duration-300" data-index="0" />
             </div>
-            <p class="text-xs text-center text-text-muted mt-2">${img.name || `Imagen ${index + 1}`}</p>
-        </div>`).join('');
+        </div>`;
+    
+    const thumbnailsHTML = obra.images.map((img, index) => `
+        <div class="thumbnail-item cursor-pointer p-1 border-2 ${index === 0 ? 'border-pantone-magenta' : 'border-transparent'} rounded-sm transition-all" 
+             onclick="switchModalImage('${img.url}', this)">
+            <img src="${img.url}" alt="Miniatura ${index + 1}" class="w-full h-full object-cover">
+        </div>
+    `).join('');
 
-    const navDots = obra.images.map((_, index) =>
-        `<button class="w-2 h-2 rounded-full bg-text-muted transition-colors duration-300 ${index === 0 ? 'bg-pantone-magenta' : ''}" onclick="goToSlide(${index})"></button>`
-    ).join('');
+    // Lógica para la descripción (movida a una variable para mayor claridad)
+    const descriptionHTML = `
+        <div class="mt-6 pt-4 border-t border-border-light text-text-muted">
+            <h4 class="text-md font-semibold text-text-dark mb-2">Descripción</h4>
+            <p class="font-light text-sm leading-relaxed">${obra.description || 'Sin descripción detallada.'}</p>
+        </div>`;
 
+    // Lógica de precio, disponibilidad y link de WhatsApp
     const priceText = obra.show_price ? formatPrice(obra.price) : 'Consultar';
     const availabilityText = obra.is_available ? 'Disponible' : 'Vendida';
     const availabilityClass = obra.is_available ? 'text-green-600' : 'text-red-500';
     const whatsappLink = `https://wa.me/5492805032663?text=Hola%2C%20estoy%20interesado%20en%20la%20obra%20%22${encodeURIComponent(obra.title)}%22%20(ID:%20${obra.id}).%20Me%20gustar%C3%ADa%20consultar%20sobre%20ella.`;
 
+    // Contenido completo del modal
     modalContent.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="image-column">
-                <div id="modal-image-carousel" class="relative overflow-hidden aspect-[4/3] bg-bg-principal">${imageCarousel}</div>
-                ${obra.images.length > 1 ? `<div class="carousel-nav flex justify-center space-x-2 mt-4">${navDots}</div>` : ''}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="image-column flex flex-col items-center">
+                <div class="aspect-[4/3] w-full">
+                    ${mainImageHTML}
+                </div>
+                ${obra.images.length > 1 ? `
+                    <div id="modal-thumbnails" class="grid grid-cols-5 gap-2 mt-4 w-full max-w-sm">
+                        ${thumbnailsHTML}
+                    </div>
+                ` : ''}
             </div>
+            
             <div class="info-column p-4 md:p-0">
                 <h2 class="text-3xl font-light text-text-dark mb-2">${obra.title}</h2>
                 <p class="text-xl font-semibold text-pantone-magenta mb-4">${obra.year || 'Año N/A'}</p>
-                <div class="space-y-3 mb-6">
-                    <p class="text-lg text-text-dark"><strong>Técnica:</strong> ${obra.technique || 'N/A'}</p>
-                    <p class="text-lg text-text-dark"><strong>Medidas:</strong> ${obra.size || 'N/A'}</p>
-                    <p class="text-lg text-text-dark"><strong>Serie:</strong> ${obra.serie || 'N/A'}</p>
-                    <p class="text-lg text-text-dark"><strong>Categoría:</strong> ${obra.category || 'N/A'}</p>
+                
+                <div class="space-y-3 mb-4 text-text-dark">
+                    <p><strong>Técnica:</strong> ${obra.technique || 'N/A'}</p>
+                    <p><strong>Medidas:</strong> ${obra.size || 'N/A'}</p>
+                    <p><strong>Serie:</strong> ${obra.serie || 'N/A'}</p>
+                    <p><strong>Categoría:</strong> ${obra.category || 'N/A'}</p>
                 </div>
+
+                ${obra.description ? descriptionHTML : ''}
+
                 <div class="mt-4 pt-4 border-t border-border-light">
-                    <p class="text-xl font-medium text-text-dark"><strong>Disponibilidad:</strong> <span class="font-semibold ${availabilityClass}">${availabilityText}</span></p>
-                    <p class="text-xl font-medium text-text-dark mt-2"><strong>Precio:</strong> <span class="${obra.show_price && obra.price ? 'font-bold' : 'font-semibold text-pantone-magenta'}">${priceText}</span></p>
+                    <p class="text-lg font-medium"><strong>Disponibilidad:</strong> <span class="font-semibold ${availabilityClass}">${availabilityText}</span></p>
+                    <p class="text-lg font-medium mt-2"><strong>Precio:</strong> <span class="${obra.show_price && obra.price ? 'font-bold' : 'font-semibold text-pantone-magenta'}">${priceText}</span></p>
                 </div>
+
                 <div class="mt-6">
                     <a href="${whatsappLink}" target="_blank" class="w-full inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-500 hover:bg-green-600 transition duration-300">
                         <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 2.25c-5.497 0-9.967 4.47-9.967 9.967 0 1.77.464 3.444 1.303 4.887l-1.37 5.293 5.422-1.343c1.433.784 3.067 1.196 4.612 1.196 5.497 0 9.967-4.47 9.967-9.967s-4.47-9.967-9.967-9.967zm4.394 13.927s-.272-.14-.567-.282c-.294-.142-.44-.224-.716-.546-.275-.322-.727-.373-1.04-.373-.243 0-.41.066-.64.066-.23 0-.41-.09-.64-.403s-.84-.817-1.025-1.127c-.184-.31-.383-.69-.533-1.02-.15-.33-.016-.496.096-.688.087-.15.195-.276.294-.418.099-.142.164-.268.229-.403.064-.135.032-.268-.008-.403-.04-.135-.383-.896-.513-1.226-.13-.33-.26-.27-.403-.27-.142 0-.306-.02-.47-.02-.164 0-.44.02-.67.02s-.64-.085-.947.88c-.307.965-1.19 1.77-1.19 1.77s-.184.18-.09.344c.09.164.887 1.25 1.127 1.545.24.295.49.567.817.896 1.11 1.096 2.09 1.488 2.68 1.638.18.04.403.04.587.04.282 0 .546-.108.73-.3.26-.282.59-.513.82-.744.23-.23.414-.49.627-.67l.112-.086c.099-.085.27-.224.513-.333.243-.11.455-.175.76-.108.306.066.567.31.676.474.108.164.19.344.19.587 0 .243-.09.474-.356.705-.26.23-.424.428-.56.59l-.09.09c-.066.065-.13.13-.19.19s-.14.07-.205.108c-.065.04-.15.1-.258.127-.108.027-.216.035-.34.035z"/></svg>
                         Consultar por esta obra
                     </a>
                 </div>
-                <div class="mt-6 pt-4 border-t border-border-light text-text-muted"><p class="font-light">${obra.description || 'Sin descripción detallada.'}</p></div>
             </div>
         </div>`;
 
     modal.classList.remove('hidden');
     document.body.classList.add('overflow-hidden');
-    initModalCarousel();
 };
 
 window.closeModal = (event) => {
@@ -343,25 +363,25 @@ window.closeModal = (event) => {
     document.body.classList.remove('overflow-hidden');
 };
 
-let currentSlide = 0;
-function initModalCarousel() {
-    currentSlide = 0;
-    // Lógica para manejar el carrusel dentro del modal...
-}
+// Nueva función para cambiar la imagen principal al hacer clic en una miniatura
+window.switchModalImage = (imageUrl, clickedElement) => {
+    const mainImage = document.querySelector('#modal-main-image-container .zoom-image');
+    if (mainImage) {
+        mainImage.src = imageUrl;
+        resetZoom(mainImage.parentElement); // Resetea el zoom al cambiar de imagen
+    }
 
-window.goToSlide = (index) => {
-    const items = document.querySelectorAll('#modal-image-carousel .modal-carousel-item');
-    const dots = document.querySelectorAll('.carousel-nav button');
-    if (index < 0 || index >= items.length) return;
-    
-    items[currentSlide].classList.remove('active');
-    dots[currentSlide].classList.replace('bg-pantone-magenta', 'bg-text-muted');
-    
-    currentSlide = index;
-    items[currentSlide].classList.add('active');
-    dots[currentSlide].classList.replace('bg-text-muted', 'bg-pantone-magenta');
+    // Actualiza el borde activo en las miniaturas
+    document.querySelectorAll('.thumbnail-item').forEach(thumb => {
+        thumb.classList.remove('border-pantone-magenta');
+        thumb.classList.add('border-transparent');
+    });
+    clickedElement.classList.add('border-pantone-magenta');
+    clickedElement.classList.remove('border-transparent');
 };
 
+
+// Funciones de Zoom (sin cambios)
 function zoomImage(event, container) {
     const img = container.querySelector('.zoom-image');
     const { left, top, width, height } = container.getBoundingClientRect();
@@ -372,7 +392,10 @@ function zoomImage(event, container) {
 }
 
 function resetZoom(container) {
-    container.querySelector('.zoom-image').style.transform = 'scale(1)';
+    const img = container.querySelector('.zoom-image');
+    if (img) {
+      img.style.transform = 'scale(1)';
+    }
 }
 
 

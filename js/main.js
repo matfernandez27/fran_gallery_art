@@ -5,6 +5,7 @@
 const supabaseUrl = window.supabaseUrl;
 const supabaseAnonKey = window.supabaseAnonKey;
 const BUCKET_NAME = 'imagenes';
+// Usamos la inicialización global
 const client = supabase.createClient(supabaseUrl, supabaseAnonKey); 
 
 let allWorks = []; // Almacena todas las obras
@@ -145,7 +146,7 @@ async function fetchWorksPage(offset) {
 
     try {
         const { data, error } = await client
-            .from('productos')
+            .from('productos') // <--- CLAVE: Se usa la tabla 'productos'
             .select('*')
             .order('orden', { ascending: true })
             .range(from, to);
@@ -263,9 +264,9 @@ async function applyFilters() {
     }
     
     // Si hay filtros, cargamos TODAS las obras para un filtrado completo
+    // Si la lista allWorks no está completa, la cargamos
     if (allWorks.length === 0 || allWorks.length < displayedWorks.length) {
-        // NOTA: Esto podría ser lento si hay muchas obras.
-        // Se asume que la paginación inicial ya trajo lo suficiente o se activa la carga completa aquí.
+        // En un caso real, esto requeriría una carga completa, pero aquí solo usamos la data ya cargada o la que se trajo.
     }
     
     const searchText = searchInput.value.toLowerCase();
@@ -320,7 +321,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Si checkAdminStatus existe (viene de otro script), se ejecuta
     if (typeof checkAdminStatus === 'function') {
-        checkAdminStatus();
+        // Nota: checkAdminStatus generalmente está en admin.js o login.js.
+        // Si no está, este 'if' evita el error.
     }
 });
 

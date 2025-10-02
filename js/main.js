@@ -145,7 +145,7 @@ async function fetchWorksPage(offset) {
 
     try {
         const { data, error } = await client
-            .from('obras')
+            .from('productos')
             .select('*')
             .order('orden', { ascending: true })
             .range(from, to);

@@ -57,7 +57,34 @@
             border-color: #DE3B89 transparent transparent transparent; /* pantone-magenta */
         }
         
-        /* Estilo del Botón Flotante de WhatsApp (MANTENIDO) */
+        /* --- ESTILOS DEL CARRUSEL DE FONDO (RESTAURADOS) --- */
+        #carousel-header {
+            position: relative;
+            overflow: hidden;
+        }
+        .carousel-item {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out; /* Transición más lenta para el fondo */
+        }
+        .carousel-item.active {
+            opacity: 1;
+        }
+        .carousel-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(250, 235, 240, 0.7); /* Capa translúcida para que el texto resalte */
+            z-index: 1;
+        }
+
+        /* Estilo del Botón Flotante de WhatsApp */
         .whatsapp-float-btn {
             position: fixed; bottom: 60px; right: 20px; width: 56px; height: 56px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
@@ -85,16 +112,15 @@
             border: 1px solid #E0E0E0;
         }
 
-        /* Estilo para el modo de ordenamiento (color de fantasma ajustado) */
+        /* Estilo para el modo de ordenamiento */
         .sortable-ghost {
             opacity: 0.4;
             background-color: #DE3B89; /* pantone-magenta para el fantasma */
             border: 2px dashed #333333; /* texto-dark para el borde */
         }
 
-        /* Estilo para el footer con degradado (ajustado para la nueva paleta) */
+        /* Estilo para el footer con degradado */
         .footer-gradient {
-            /* Degradado de un tono de magenta claro a blanco */
             background: linear-gradient(to right, #F5E5EC, #FFFFFF); 
         }
 
@@ -121,8 +147,14 @@
         <svg fill="#FFF" viewBox="0 0 24 24" width="28" height="28" class="whatsapp-icon"><path d="M12 2C6.48 2 2 6.48 2 12c0 3.25 1.5 6.2 3.88 8.1l-1.38 5.02L7.6 21.62C9.5 22.18 11.08 22 12 22c5.52 0 10-4.48 10-10C22 6.48 17.52 2 12 2zM17.43 15.4c-.09-.15-.36-.24-.77-.42-.42-.18-2.52-1.24-2.91-1.38-.39-.14-.67-.21-.95.21-.28.42-1.09 1.38-1.34 1.66-.25.28-.5.31-.92.21-.42-.1-.71-.34-1.27-.64-.47-.25-1.07-.65-2.03-1.89-.75-.98-1.25-1.95-1.38-2.2-.14-.25-.02-.38.11-.5.1-.11.23-.26.35-.4.12-.14.16-.25.25-.42.09-.17.04-.32-.02-.45-.06-.13-.57-1.36-.78-1.87-.2-.5-.41-.42-.56-.42-.15 0-.33-.02-.51-.02-.18 0-.47.07-.72.35-.25.28-.95.93-.95 2.27 0 1.34.97 2.64 1.1 2.82.13.18 1.92 3.03 4.6 4.24 2.68 1.21 2.68.85 2.97.8.29-.05.95-.39 1.08-.77.13-.38.13-.7.09-.77z"/></svg>
     </a>
 
-    <section class="min-h-screen flex items-center justify-center bg-bg-principal">
-        <div class="text-center max-w-4xl mx-auto px-6">
+    <section id="carousel-header" class="min-h-screen flex items-center justify-center bg-bg-principal">
+        
+        <div id="carousel-container" class="absolute inset-0">
+            </div>
+
+        <div class="carousel-overlay"></div>
+
+        <div class="text-center max-w-4xl mx-auto px-6 z-10">
             <h1 class="text-6xl md:text-8xl font-light text-text-dark mb-8 tracking-tight">
                 Francisco<br>
                 <span class="text-pantone-magenta">Fernández</span>
@@ -137,11 +169,20 @@
             </button>
         </div>
     </section>
-
     <section id="bio-section" class="py-20 bg-bg-card">
         <div class="max-w-6xl mx-auto px-6">
-            <div class="grid md:grid-cols-2 gap-16 items-center">
-                <div>
+            <div class="grid md:grid-cols-3 gap-16 items-start">
+                
+                <div class="md:col-span-1 flex justify-center sticky top-8">
+                    <div class="w-64 h-64 md:w-80 md:h-80 rounded-sm overflow-hidden border-2 border-pantone-magenta/50 shadow-2xl">
+                        <img src="./img/img_perfil.jpg" 
+                            alt="Retrato de Francisco Fernández, artista plástico de la Patagonia."
+                            class="w-full h-full object-cover"/>
+                    </div>
+                </div>
+
+                <div class="md:col-span-2 flex flex-col justify-start">
+                    
                     <div class="w-16 h-px bg-pantone-magenta mb-8"></div>
                     
                     <h3 class="text-2xl font-medium text-text-dark mb-6">Francisco Fernández</h3>
@@ -157,19 +198,11 @@
                     <p class="text-base text-text-muted leading-relaxed">
                         Cada pieza es un puente hacia lo inhóspito y lo íntimo. Su técnica no solo captura la dualidad de un paisaje vasto, sino que también ofrece una mirada profunda y reflexiva sobre el alma de ese territorio.
                     </p>
-
-                </div>
-                <div class="flex justify-center">
-                    <div class="w-80 h-80 rounded-sm overflow-hidden border-2 border-pantone-magenta/50 shadow-2xl">
-                        <img src="./img/img_perfil.jpg" 
-                            alt="Retrato de Francisco Fernández, artista plástico de la Patagonia."
-                            class="w-full h-full object-cover"/>
+                    
                     </div>
-                </div>
-                </div>
+            </div>
         </div>
     </section>
-
     <section id="gallery-section" class="py-20 bg-bg-principal">
         <div class="max-w-7xl mx-auto px-6">
             <div class="text-center mb-16">
@@ -269,7 +302,6 @@
         // Elementos de interacción dinámica
         const whatsappButton = document.getElementById('whatsapp-btn');
         const mainFooter = document.getElementById('main-footer');
-        // Usamos el punto de scroll de la galería para la visibilidad
         const gallerySection = document.getElementById('gallery-section');
 
 
@@ -303,6 +335,41 @@
         }
 
 
+        // --- LÓGICA DEL CARRUSEL DE FONDO (RESTAURADA) ---
+        const carouselImages = [
+            './img/carousel_1.jpg', // Reemplazar con las rutas correctas
+            './img/carousel_2.jpg',
+            './img/carousel_3.jpg'
+        ];
+        
+        const carouselContainer = document.getElementById('carousel-container');
+        let currentCarouselIndex = 0;
+
+        function renderCarouselItems() {
+            carouselContainer.innerHTML = carouselImages.map((url, index) => `
+                <div class="carousel-item ${index === 0 ? 'active' : ''}" style="background-image: url('${url}')"></div>
+            `).join('');
+        }
+
+        function nextCarouselItem() {
+            const items = document.querySelectorAll('.carousel-item');
+            if (items.length === 0) return;
+
+            items[currentCarouselIndex].classList.remove('active');
+            currentCarouselIndex = (currentCarouselIndex + 1) % items.length;
+            items[currentCarouselIndex].classList.add('active');
+        }
+
+        function initCarousel() {
+            if (carouselImages.length > 0) {
+                renderCarouselItems();
+                // Cambia la imagen cada 5 segundos
+                setInterval(nextCarouselItem, 5000); 
+            }
+        }
+        // --- FIN: LÓGICA DEL CARRUSEL DE FONDO ---
+
+
         // --- FUNCIONES CORE ---
         function normalize(p) {
             const images = p.imagenes || [];
@@ -330,12 +397,9 @@
 
             items.forEach(obra => {
                 const card = document.createElement("div");
-                // Asegurar que la tarjeta tenga el cursor pointer en modo normal
                 card.className = "bg-bg-card rounded-sm overflow-hidden cursor-pointer shadow-lg hover:shadow-xl transition duration-500 transform hover:-translate-y-1 group border border-border-light";
                 card.setAttribute('data-id', obra.id); 
                 card.setAttribute('onclick', `openModal(${obra.id})`);
-                
-                // Remover hover:rotate-1 ya que puede ser molesto
                 
                 card.innerHTML = `
                     <div class="aspect-[4/3] overflow-hidden">
@@ -354,7 +418,6 @@
             }
         }
         
-        // --- FUNCIÓN INITGALLERY MÁS ROBUSTA CON TRY/CATCH ---
         async function initGallery() {
             status.textContent = "Cargando obras...";
             loadingOverlay.classList.remove('hidden');
@@ -369,7 +432,6 @@
                 loadingOverlay.classList.add('hidden');
                 
                 if (error) {
-                    // Si hay un error de Supabase (ej: RLS o conexión), lanza una excepción
                     throw new Error(`Error de Supabase: ${error.message}`);
                 }
 
@@ -377,7 +439,6 @@
                 // Ordenar por 'orden', luego por 'anio' si 'orden' es el mismo o nulo
                 productos.sort((a, b) => {
                     if (a.order !== b.order) {
-                        // Tratar null/0 para 'orden' al final (o al inicio dependiendo de la preferencia. Aquí se prefiere el orden numérico bajo primero)
                         if (!a.order) return 1;
                         if (!b.order) return -1;
                         return a.order - b.order; 
@@ -393,14 +454,13 @@
                 const series = [...new Set(productos.map(a => a.serie).filter(s => s && s.trim() !== ''))].sort((a, b) => a.localeCompare(b));
                 filterSeries.innerHTML = '<option value="">Todas las series</option>' + series.map(s => `<option value="${s}">${s}</option>`).join('');
 
-                applyFilters(); // Aplicar filtros después de cargar, para que muestre el estado inicial
+                applyFilters(); 
                 status.textContent = "";
 
                 await checkAdminStatus(); 
             } catch (e) {
-                // Si algo falla, esconde la capa de carga y muestra el error en la pantalla.
                 loadingOverlay.classList.add('hidden');
-                status.textContent = `¡ERROR AL CARGAR LA GALERÍA! Verifique su archivo config.js o las Políticas RLS de Supabase. Detalle: ${e.message}`;
+                status.textContent = `¡ERROR AL CARGAR LA GALERÍA! Detalle: ${e.message}`;
                 console.error("Error crítico al cargar initGallery:", e);
             }
         }
@@ -425,7 +485,7 @@
             renderGallery(filtered);
         }
 
-        // --- LÓGICA DE REORDENAMIENTO (MANTENIDA) ---
+        // --- LÓGICA DE REORDENAMIENTO ---
         function enableSorting() {
             if (sortableInstance) {
                 sortableInstance.destroy();
@@ -456,7 +516,7 @@
 
                 saveOrderButton.classList.remove('hidden');
                 galleryContainer.style.cursor = 'grab';
-                applyFilters(); // Re-renderizar para activar el Sortable
+                applyFilters(); 
             } else {
                 editToggleButton.textContent = 'Activar Edición';
                 editToggleButton.classList.replace('bg-red-500', 'bg-border-light');
@@ -470,7 +530,7 @@
                     sortableInstance.destroy();
                     sortableInstance = null;
                 }
-                initGallery(); // Recargar la galería en orden guardado al salir
+                initGallery(); 
             }
         });
 
@@ -486,12 +546,9 @@
             cardElements.forEach((card, index) => {
                 const obraId = parseInt(card.getAttribute('data-id'));
                 const newOrder = index + 1;
-                
-                // Solo necesitamos enviar el ID y el nuevo orden para el update
                 updates.push({ id: obraId, orden: newOrder });
             });
             
-            // Usamos update en lugar de upsert con un array de objetos ligeros
             const { error } = await client
                 .from('productos')
                 .upsert(updates); 
@@ -502,17 +559,14 @@
                 saveOrderButton.textContent = "Error al Guardar";
             } else {
                 status.textContent = "Orden guardado exitosamente!";
-                
-                // --- CORRECCIÓN CRÍTICA: Recargar la galería con el nuevo orden ---
                 await initGallery();
-                // -----------------------------------------------------------------
                 
                 saveOrderButton.textContent = "Orden Guardado";
                 saveOrderButton.classList.add('bg-green-600', 'hover:bg-green-700', 'text-white');
                 saveOrderButton.classList.remove('bg-gray-500', 'hover:bg-gray-600', 'bg-pantone-magenta'); 
             }
             
-            saveOrderButton.disabled = false; // Re-habilitar si es necesario, aunque en el flujo de edición es mejor que el botón quede en 'Guardado'
+            saveOrderButton.disabled = false; 
         });
 
 
@@ -546,7 +600,7 @@
             } else {
                 showAlert("¡Obra actualizada exitosamente!", 'success');
                 closeModal();
-                await initGallery(); // Recargar la galería para mostrar los cambios
+                await initGallery();
             }
 
             saveButton.textContent = "Guardar Cambios";
@@ -658,7 +712,6 @@
             
             modalContent.innerHTML = modalHtml;
 
-            // Lógica de Zoom y Thumbnails solo se aplica en modo lectura
             if (!isEditing) {
                 const zoomContainer = document.getElementById(`zoom-container-${id}`);
                 const mainImage = document.getElementById(`modal-main-image-${id}`);
@@ -668,34 +721,30 @@
                     zoomContainer.addEventListener('mouseleave', () => resetZoom(zoomContainer));
                 }
                 
-                // --- CORRECCIÓN DE THUMBNAILS ---
                 document.querySelectorAll(`#thumbnail-container-${id} img`).forEach(thumb => {
                     thumb.addEventListener('click', () => {
                         mainImage.src = thumb.getAttribute('data-url');
-                        resetZoom(zoomContainer); // Resetear zoom al cambiar de imagen
+                        resetZoom(zoomContainer);
                     });
                 });
             }
-
 
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
 
         function closeModal(event) {
-            // Se asegura de cerrar si se hace clic en el fondo oscuro o en el botón de cerrar.
             if (!event || event.target.id === 'modal' || event.target.tagName === 'BUTTON' || event.target.closest('button')) { 
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
             }
         }
         
-        // Asignar el listener de cerrar al botón de la X
         document.querySelector('#modal-container .flex.justify-end button').onclick = closeModal;
 
 
         
-        // --- LÓGICA DE ZOOM Y SCROLL (MANTENIDA) ---
+        // --- LÓGICA DE ZOOM Y SCROLL ---
         function handleZoom(event) {
             const container = event.currentTarget;
             const img = container.querySelector('.zoom-image');
@@ -718,7 +767,7 @@
             }
         }
 
-        const firstSection = document.querySelector('section.min-h-screen'); 
+        const firstSection = document.querySelector('section#carousel-header'); 
         
         window.addEventListener('scroll', () => {
             if (!firstSection) return;
@@ -733,7 +782,6 @@
             }
 
             // Lógica del Botón de WhatsApp
-            // Obtenemos la posición de la sección de galería dinámicamente
             const gallerySectionTop = gallerySection ? gallerySection.offsetTop : firstSectionHeight;
             if (window.scrollY > gallerySectionTop - window.innerHeight / 2) { 
                 whatsappButton.classList.add('show');
@@ -745,6 +793,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             mainFooter.classList.add('translate-y-full');
             whatsappButton.classList.remove('show');
+            initCarousel(); // Inicializa el Carrusel al cargar
         });
 
         // Event Listeners de Filtro

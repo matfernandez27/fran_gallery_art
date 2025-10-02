@@ -24,90 +24,259 @@
                     colors: {
                         'pantone-magenta': '#DE3B89', // PANTONE 17-2036 TPG/TCX (Acento)
                         'bg-principal': '#FAEBF0',    // Fondo Principal (Magenta muy pálido)
-                        'bg-card': '#FFFFFF',
-                        'text-dark': '#333333',
-                        'text-muted': '#666666',
-                        'border-light': '#E0E0E0',
-                        'whatsapp': '#25D366',
-                        'footer-gradient-start': 'rgba(250, 235, 240, 0.95)',
-                        'footer-gradient-end': 'rgba(250, 235, 240, 0.5)',
+                        'bg-card': '#FFFFFF',         // Fondo de Tarjetas/Secciones (Blanco puro)
+                        'text-dark': '#333333',       // Texto principal (Gris oscuro)
+                        'text-muted': '#666666',      // Texto secundario (Gris medio)
+                        'border-light': '#E0E0E0',    // Bordes y líneas divisorias (Gris claro)
+                        'whatsapp': '#25D366',        // Verde de WhatsApp
                     },
                     fontFamily: {
                         'sans': ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                },
-            },
-        };
+                    }
+                }
+            }
+        }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script> <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     
     <style>
-        /* Estilos de Utilidad */
-        .footer-gradient {
-            background: linear-gradient(to top, var(--bg-principal) 60%, var(--footer-gradient-end) 100%);
+        /* Estilos del Overlay de Carga (Spinner) */
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(250, 235, 240, 0.95);
+            display: flex; justify-content: center; align-items: center; z-index: 1000;
         }
-        .whatsapp-btn {
-            position: fixed;
-            bottom: 60px;
-            right: 20px;
-            z-index: 50;
+        .lds-ring div { 
+            box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; 
+            border: 8px solid #DE3B89;
+            border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; 
+            border-color: #DE3B89 transparent transparent transparent;
+        }
+        
+        /* --- ESTILOS DEL CARRUSEL DE FONDO (DINÁMICO) --- */
+        #carousel-header {
+            position: relative;
+            overflow: hidden;
+        }
+        .carousel-item {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-size: contain; 
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #F5E5EC; 
             opacity: 0;
-            transform: scale(0.8);
-            transition: opacity 0.3s, transform 0.3s;
+            transition: opacity 1.5s ease-in-out; 
+            transform: scale(1.05); 
         }
-        .whatsapp-btn.show {
+        .carousel-item.active {
             opacity: 1;
             transform: scale(1);
+        }
+        .carousel-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(250, 235, 240, 0.5); 
+            z-index: 1;
+        }
+        
+        /* --- ESTILOS DE LA BIOGRAFÍA: CORRECCIÓN DE POSICIÓN Y CENTRADO DE FOTO --- */
+        #bio-section .grid {
+            align-items: start;
+        }
+        
+        .bio-image-container {
+            display: flex; 
+            justify-content: center; 
+        }
+
+        .bio-image-focus {
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+            object-position: top center; 
+        }
+
+        /* Estilo del Botón Flotante de WhatsApp */
+        .whatsapp-float-btn {
+            position: fixed; bottom: 60px; right: 20px; width: 56px; height: 56px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            z-index: 50; transition: transform 0.3s ease-in-out, opacity 0.5s ease-in-out;
+            opacity: 0; 
+            pointer-events: none; 
+        }
+        .whatsapp-float-btn.show { opacity: 1; pointer-events: auto; }
+        .whatsapp-float-btn:hover { transform: scale(1.1); }
+
+        /* --- ESTILOS DE ZOOM INTERACTIVO (MANTENIDOS) --- */
+        .zoom-container {
+            position: relative; overflow: hidden; cursor: crosshair; 
+        }
+        .zoom-image {
+            width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s ease-in-out; 
+            transform: scale(1); transform-origin: center center;
+        }
+        .zoom-container:hover .zoom-image { transform: scale(2.5); }
+        .zoom-icon {
+            position: absolute; top: 10px; left: 10px;
+            background: rgba(255, 255, 255, 0.5); color: #333333; 
+            padding: 8px; border-radius: 50%; z-index: 10;
+            border: 1px solid #E0E0E0;
+        }
+
+        /* Estilo para el modo de ordenamiento */
+        .sortable-ghost {
+            opacity: 0.4;
+            background-color: #DE3B89; 
+            border: 2px dashed #333333; 
+        }
+
+        /* Estilo para el footer con degradado */
+        .footer-gradient {
+            background: linear-gradient(to right, #F5E5EC, #FFFFFF); 
+        }
+
+        /* Estilo de alerta flotante */
+        #alert {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 1001; 
+            padding: 1rem; border-radius: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            font-weight: 500;
         }
     </style>
 </head>
 <body class="bg-bg-principal text-text-dark font-sans min-h-screen">
+    
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+    </div>
 
-    <header class="shadow-md bg-bg-card fixed top-0 left-0 right-0 z-50">
-        </header>
+    <div id="alert" class="hidden" role="alert"></div>
 
-    <main>
-        <section id="carousel-header" class="relative pt-20">
-            </section>
+    <a id="whatsapp-btn" href="https://wa.me/+5492805032663?text=Hola,%20quisiera%20consultar%20sobre%20una%20obra%20de%20la%20galería." 
+        target="_blank" 
+        class="whatsapp-float-btn bg-whatsapp text-white">
+        <svg fill="#FFF" viewBox="0 0 24 24" width="28" height="28" class="whatsapp-icon"><path d="M12 2C6.48 2 2 6.48 2 12c0 3.25 1.5 6.2 3.88 8.1l-1.38 5.02L7.6 21.62C9.5 22.18 11.08 22 12 22c5.52 0 10-4.48 10-10C22 6.48 17.52 2 12 2zM17.43 15.4c-.09-.15-.36-.24-.77-.42-.42-.18-2.52-1.24-2.91-1.38-.39-.14-.67-.21-.95.21-.28.42-1.09 1.38-1.34 1.66-.25.28-.5.31-.92.21-.42-.1-.71-.34-1.27-.64-.47-.25-1.07-.65-2.03-1.89-.75-.98-1.25-1.95-1.38-2.2-.14-.25-.02-.38.11-.5.1-.11.23-.26.35-.4.12-.14.16-.25.25-.42.09-.17.04-.32-.02-.45-.06-.13-.57-1.36-.78-1.87-.2-.5-.41-.42-.56-.42-.15 0-.33-.02-.51-.02-.18 0-.47.07-.72.35-.25.28-.95.93-.95 2.27 0 1.34.97 2.64 1.1 2.82.13.18 1.92 3.03 4.6 4.24 2.68 1.21 2.68.85 2.97.8.29-.05.95-.39 1.08-.77.13-.38.13-.7.09-.77z"/></svg>
+    </a>
 
-        <section id="gallery-section" class="py-16">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                
-                <div id="admin-controls" class="mb-4 text-center hidden">
-                    <button id="edit-toggle" class="bg-pantone-magenta text-white px-4 py-2 rounded">Modo Edición</button>
-                    <button id="save-order-button" class="bg-pantone-magenta text-white px-4 py-2 rounded hidden">Guardar Orden</button>
-                </div>
-                
-                <h2 class="text-4xl font-bold text-center text-text-dark mb-10">Galería</h2>
-
-                <div class="flex flex-wrap gap-4 mb-10 justify-center">
-                    <input type="text" id="search" placeholder="Buscar por título..." class="p-2 border border-border-light rounded-sm">
-                    <select id="filter-year" class="p-2 border border-border-light rounded-sm"><option value="">Año</option></select>
-                    <select id="filter-category" class="p-2 border border-border-light rounded-sm"><option value="">Categoría</option></select>
-                    <select id="filter-series" class="p-2 border border-border-light rounded-sm"><option value="">Serie</option></select>
-                </div>
-
-                <div id="gallery-container" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <div id="loading-overlay" class="col-span-full flex justify-center items-center py-12 hidden">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-pantone-magenta"></div>
-                    </div>
-                    <p id="status" class="col-span-full text-center text-text-muted hidden">Cargando obras...</p> 
-                    
-                </div>
-                
-                <div id="load-more-anchor" class="h-10"></div>
-                
-            </div>
-        </section>
-
-        <section id="bio-section" class="bg-bg-card py-16">
-            </section>
+    <section id="carousel-header" class="min-h-screen flex items-center justify-center bg-bg-principal">
         
-    </main>
+        <div id="carousel-container" class="absolute inset-0">
+            </div>
 
-    <a id="whatsapp-btn" href="https://wa.me/[NUMERO_DE_WHATSAPP]" target="_blank" class="whatsapp-btn bg-whatsapp p-3 rounded-full shadow-lg hover:bg-opacity-90 transition-all" aria-label="Contactar por WhatsApp">
-        </a>
+        <div class="carousel-overlay"></div>
+
+        <div class="text-center max-w-4xl mx-auto px-6 z-10">
+            <h1 class="text-6xl md:text-8xl font-light text-text-dark mb-8 tracking-tight">
+                Francisco<br>
+                <span class="text-pantone-magenta">Fernández</span>
+            </h1>
+            <p class="text-xl md:text-2xl text-text-muted font-light mb-12 max-w-2xl mx-auto">
+                Galería Personal
+            </p>
+            <div class="w-24 h-px bg-pantone-magenta mx-auto mb-12"></div>
+            <button onclick="document.getElementById('bio-section').scrollIntoView({behavior: 'smooth'})" 
+                    class="text-text-muted hover:text-pantone-magenta transition-colors duration-300 text-sm uppercase tracking-wider">
+                Explorar Galería
+            </button>
+        </div>
+    </section>
+    <section id="bio-section" class="py-20 bg-bg-card">
+        <div class="max-w-6xl mx-auto px-6">
+            
+            <div class="grid md:grid-cols-3 gap-16 items-start">
+                
+                <div class="md:col-span-2 flex flex-col justify-start">
+                    
+                    <div class="w-16 h-px bg-pantone-magenta mb-8"></div>
+                    
+                    <h3 class="text-2xl font-medium text-text-dark mb-6">Francisco Fernández</h3>
+                    
+                    <div id="bio-text-content">
+                        <p class="text-lg text-text-dark leading-relaxed mb-4">
+                            Nacido en Trelew, Chubut hace 33 años y residente en la Patagonia, Francisco Fernández se destaca por su activa participación en exhibiciones itinerantes a lo largo del país.
+                        </p>
+                        
+                        <p class="text-base text-text-muted leading-relaxed mb-6">
+                            Cada pieza es un puente hacia lo inhóspito y lo íntimo. Su técnica no solo captura la dualidad de un paisaje vasto, sino que también ofrece una mirada profunda y reflexiva sobre el alma de ese territorio.
+                        </p>
+                    </div>
+                    
+                    <a href="biografia-completa.html" 
+                        class="mt-4 text-pantone-magenta font-semibold hover:text-text-dark transition-colors duration-300 text-sm self-start inline-flex items-center space-x-2">
+                        <span>LEER BIOGRAFÍA COMPLETA</span>
+                        <svg xmlns="http://www.w.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </a>
+                </div>
+
+                <div class="md:col-span-1 md:order-last flex justify-center bio-image-container">
+                    <div class="w-64 h-64 md:w-80 md:h-80 rounded-sm overflow-hidden border-2 border-pantone-magenta/50 shadow-2xl">
+                        <img src="./img/img_perfil.jpg" 
+                            alt="Retrato de Francisco Fernández, artista plástico de la Patagonia."
+                            class="bio-image-focus"/>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+    <section id="gallery-section" class="py-20 bg-bg-principal">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-light text-text-dark mb-8">
+                    Catálogo de Obras
+                </h2>
+                <div class="w-16 h-px bg-pantone-magenta mx-auto"></div>
+            </div>
+
+            <div class="mb-8 flex flex-wrap gap-4 items-center justify-between bg-bg-card p-4 rounded-sm shadow-inner max-w-5xl mx-auto border border-border-light">
+                
+                <input id="search" type="search" placeholder="Buscar por título, técnica o descripción..."
+                    class="flex-1 min-w-0 md:min-w-[200px] p-3 rounded-sm border border-border-light shadow-sm focus:outline-none focus:ring-1 focus:ring-pantone-magenta bg-white text-text-dark transition-colors" />
+                
+                <div class="flex flex-wrap gap-4 justify-end">
+                    
+                    <select id="filter-category" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
+                        <option value="">Categoría</option>
+                        <option value="grabado">Grabado</option>
+                        <option value="dibujo">Dibujo</option>
+                        <option value="pintura">Pintura</option>
+                    </select>
+
+                    <select id="filter-series" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
+                        <option value="">Serie</option>
+                    </select>
+
+                    <select id="filter-year" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
+                        <option value="">Año</option>
+                    </select>
+                </div>
+                
+                <div id="admin-controls" class="hidden flex gap-2">
+                    <button id="edit-toggle" class="p-3 rounded-sm bg-border-light hover:bg-pantone-magenta transition duration-300 text-text-dark hover:text-white text-sm">
+                        Activar Edición
+                    </button>
+                    <button id="save-order-button" class="hidden p-3 rounded-sm bg-green-600 hover:bg-green-700 text-white transition duration-300 text-sm" disabled>
+                        Guardar Orden
+                    </button>
+                </div>
+            </div>
+            
+            <p id="status" class="text-center text-red-500 font-semibold mb-8"></p>
+
+            <div id="gallery-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                </div>
+        </div>
+    </section>
 
     <footer id="main-footer" class="fixed bottom-0 left-0 right-0 footer-gradient bg-opacity-95 backdrop-blur-sm border-t border-border-light p-3 z-40 translate-y-full transition-transform duration-500">
         <div class="max-w-7xl mx-auto flex justify-between items-center text-sm text-text-muted">
@@ -127,12 +296,11 @@
                <div class="flex justify-end p-4">
                 <button onclick="closeModal()" class="text-text-muted hover:text-pantone-magenta text-2xl">&times;</button>
             </div>
-            <div id="modal-content" class="px-6 pb-6 pt-0">
+            <div id="modal-content" class="p-6 pt-0">
                 </div>
         </div>
     </div>
 
-    <script src="config.js"></script> 
-    <script src="js/main.js" defer></script> 
+    <script src="./js/main.js" defer></script>
 </body>
 </html>

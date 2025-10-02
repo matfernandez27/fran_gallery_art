@@ -41,11 +41,14 @@ loginForm.addEventListener("submit", async (e) => {
 
     if (error) {
         showAlert(`Error de acceso: ${error.message}`, 'error');
-        loginButton.textContent = "Acceder";
-        loginButton.disabled = false;
     } else {
-        // Redirección manejada por checkAuth
+        showAlert("¡Acceso exitoso! Redirigiendo...", 'success');
+        setTimeout(() => {
+            window.location.href = './admin.html';
+        }, 1000);
     }
+    loginButton.textContent = "Acceder";
+    loginButton.disabled = false;
 });
 
 document.addEventListener('DOMContentLoaded', checkAuth);

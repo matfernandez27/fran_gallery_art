@@ -97,7 +97,25 @@
                             <span class="text-gray-700">Descripción:</span>
                             <textarea id="form-descripcion" name="descripcion" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2"></textarea>
                         </label>
-                        <label class="block">
+                        
+                        <div class="grid grid-cols-3 gap-4 border-t pt-4">
+                            <label class="block">
+                                <span class="text-gray-700">Precio (ARS):</span>
+                                <input type="number" id="form-price" name="price" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
+                            </label>
+                            
+                            <label class="inline-flex items-center mt-6">
+                                <input type="checkbox" id="form-is-available" name="is_available" class="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50">
+                                <span class="ml-2 text-gray-700">Disponible</span>
+                            </label>
+                            
+                            <label class="inline-flex items-center mt-6">
+                                <input type="checkbox" id="form-show-price" name="show_price" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <span class="ml-2 text-gray-700">Mostrar Precio</span>
+                            </label>
+                        </div>
+                        
+                        <label class="block border-t pt-4">
                             <span class="text-gray-700">Imágenes (Máx. 4, la primera será la principal):</span>
                             <input type="file" id="image-files" name="imageFiles" multiple accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                         </label>
@@ -161,8 +179,8 @@
     </main>
 
     <script>
-        // Inicialización de Supabase y constantes
-        const BUCKET_NAME = 'imagenes'; 
+        const BUCKET_NAME = 'imagenes'; // Nombre de tu bucket
+        const TABLE_NAME = 'productos'; // Nombre de tu tabla
 
         const client = supabase.createClient(window.supabaseUrl, window.supabaseAnonKey);
 
@@ -170,7 +188,6 @@
         let isEditMode = false;
         let workToEdit = null;
 
-        // Elementos del DOM
         const worksList = document.getElementById('works-list');
         const loginContainer = document.getElementById('login-container');
         const adminHeader = document.getElementById('admin-header');
@@ -178,23 +195,23 @@
         const obraForm = document.getElementById('obra-form');
         const logoutButton = document.getElementById('logout-button');
         const saveOrderButton = document.getElementById('save-order-button');
-        const currentImagesList = document.getElementById('current-images-list');
         const currentImagesContainer = document.getElementById('current-images-container');
+        const currentImagesList = document.getElementById('current-images-list');
         const alertDiv = document.getElementById('alert');
         const submitButton = document.getElementById('submit-button');
-        const searchInput = document.getElementById('search-input'); // <-- Nuevo
+        const searchInput = document.getElementById('search-input');
 
 
         // --- FUNCIONES DE UTILIDAD ---
         function showAlert(message, type = 'success') {
             alertDiv.textContent = message;
-            alertDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-indigo-100', 'text-indigo-700');
+            alertDiv.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 p-4 text-sm rounded-lg shadow-xl z-50';
             
             if (type === 'error') {
                 alertDiv.classList.add('bg-red-100', 'text-red-700');
             } else if (type === 'success') {
                 alertDiv.classList.add('bg-green-100', 'text-green-700');
-            } else { // info
+            } else { 
                  alertDiv.classList.add('bg-indigo-100', 'text-indigo-700');
             }
             
@@ -210,7 +227,7 @@
         window.getPublicUrl = getPublicUrl;
 
 
-        // --- LÓGICA DE AUTENTICACIÓN ---
+        // --- AUTENTICACIÓN ---
         async function checkAuth() {
             const { data: { session } } = await client.auth.getSession();
             if (session) {
@@ -239,28 +256,18 @@
         });
 
         logoutButton.addEventListener('click', async () => {
-            const { error } = await client.auth.signOut();
-            if (error) {
-                showAlert('Error al cerrar sesión.', 'error');
-            } else {
-                showAlert('Sesión cerrada correctamente.', 'success');
-                checkAuth();
-            }
+            await client.auth.signOut();
+            showAlert('Sesión cerrada correctamente.', 'success');
+            checkAuth();
         });
 
 
-        // --- LÓGICA DE CARGA Y RENDERIZADO DE OBRAS ---
+        // --- CARGA Y RENDERIZADO ---
         async function loadWorks() {
             worksList.innerHTML = '<p class="text-gray-500">Cargando obras...</p>';
             try {
-                // Si el campo de búsqueda tiene texto, no cargamos, esperamos a que el usuario termine de escribir.
-                if (searchInput.value) {
-                    filterWorks();
-                    return;
-                }
-                
                 const { data, error } = await client
-                    .from('productos')
+                    .from(TABLE_NAME)
                     .select('*')
                     .order('orden', { ascending: true })
                     .order('anio', { ascending: false });
@@ -280,36 +287,15 @@
                 worksList.innerHTML = '<p class="text-red-500">Error al cargar el listado de obras.</p>';
             }
         }
-        
-        // --- LÓGICA DE FILTRADO (BUSCADOR) ---
-        function filterWorks() {
-            const searchTerm = searchInput.value.toLowerCase();
-
-            if (!searchTerm) {
-                renderWorksList(currentWorks);
-                return;
-            }
-
-            const filtered = currentWorks.filter(obra => {
-                const titleMatch = obra.titulo.toLowerCase().includes(searchTerm);
-                const techniqueMatch = obra.tecnica.toLowerCase().includes(searchTerm);
-                
-                return titleMatch || techniqueMatch;
-            });
-
-            if (filtered.length === 0) {
-                worksList.innerHTML = '<p class="text-center text-gray-500 py-8">No se encontraron obras que coincidan con la búsqueda.</p>';
-            } else {
-                renderWorksList(filtered);
-            }
-        }
-        searchInput.addEventListener('input', filterWorks); // Conectar la función al input
 
         function renderWorksList(works) {
             worksList.innerHTML = '';
             works.forEach(obra => {
                 const mainImage = obra.imagenes[0] ? getPublicUrl(obra.imagenes[0].path) : 'https://placehold.co/60x60?text=NO+IMG';
 
+                const statusColor = obra.is_available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+                const statusText = obra.is_available ? 'Disponible' : 'Vendida';
+                
                 const item = document.createElement('div');
                 item.id = `obra-item-${obra.id}`;
                 item.dataset.id = obra.id;
@@ -324,7 +310,8 @@
                         <div>
                             <p class="text-lg font-semibold text-gray-800">${obra.titulo}</p>
                             <p class="text-sm text-gray-500">${obra.tecnica} | ${obra.anio}</p>
-                            <p class="text-xs text-gray-400">Orden: ${obra.orden || 'N/A'}</p>
+                            <span class="text-xs font-medium px-2 py-0.5 rounded-full ${statusColor}">${statusText}</span>
+                            ${obra.show_price ? `<span class="text-xs ml-2 text-indigo-600">($${(obra.price || 0).toLocaleString('es-AR')})</span>` : ''}
                         </div>
                     </div>
                     <div class="space-x-2">
@@ -340,24 +327,39 @@
             });
         }
         
-        // --- LÓGICA DE ORDENAMIENTO (SortableJS) ---
-        function enableSorting() {
-            // Se asegura de destruir cualquier instancia anterior de Sortable
-            if (worksList.sortable) {
-                worksList.sortable.destroy();
+        function filterWorks() {
+            const searchTerm = searchInput.value.toLowerCase();
+            if (!searchTerm) {
+                renderWorksList(currentWorks);
+                return;
             }
+            const filtered = currentWorks.filter(obra => {
+                const titleMatch = (obra.titulo || '').toLowerCase().includes(searchTerm);
+                const techniqueMatch = (obra.tecnica || '').toLowerCase().includes(searchTerm);
+                return titleMatch || techniqueMatch;
+            });
+            worksList.innerHTML = filtered.length === 0 
+                ? '<p class="text-center text-gray-500 py-8">No se encontraron obras que coincidan con la búsqueda.</p>'
+                : '';
+            renderWorksList(filtered);
+        }
+        searchInput.addEventListener('input', filterWorks);
+
+
+        // --- ORDENAMIENTO (SortableJS) ---
+        function enableSorting() {
+             if (worksList.sortable) { worksList.sortable.destroy(); }
             
-            worksList.sortable = new Sortable(worksList, { // Almacenar la instancia en una propiedad del elemento
+            worksList.sortable = new Sortable(worksList, {
                 handle: '.drag-handle',
                 animation: 150,
                 ghostClass: 'sortable-ghost',
                 onEnd: function (evt) {
                     if (evt.oldIndex !== evt.newIndex) {
-                        saveOrderButton.classList.remove('hidden');
+                        saveOrderButton.classList.remove('hidden', 'bg-red-500');
+                        saveOrderButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
                         saveOrderButton.disabled = false;
                         saveOrderButton.textContent = "Guardar Orden (Cambios Pendientes)";
-                        saveOrderButton.classList.remove('bg-red-500');
-                        saveOrderButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
                     }
                 },
             });
@@ -375,7 +377,7 @@
                 }));
 
                 const updatePromises = newOrder.map(item =>
-                    client.from('productos').update({ orden: item.orden }).eq('id', item.id)
+                    client.from(TABLE_NAME).update({ orden: item.orden }).eq('id', item.id)
                 );
                 
                 const results = await Promise.all(updatePromises);
@@ -398,7 +400,7 @@
         });
 
 
-        // --- LÓGICA DEL FORMULARIO (CRUD) ---
+        // --- FORMULARIO (CRUD) ---
         function resetForm() {
             obraForm.reset();
             document.getElementById('form-id').value = '';
@@ -409,6 +411,9 @@
             obraFormContainer.classList.add('hidden');
             workToEdit = null;
             isEditMode = false;
+            // Asegurar que el checkbox de disponibilidad esté en TRUE por defecto al resetear
+            document.getElementById('form-is-available').checked = true;
+            document.getElementById('form-show-price').checked = false;
         }
         window.resetForm = resetForm;
 
@@ -432,8 +437,13 @@
                 document.getElementById('form-categoria').value = workToEdit.categoria || 'grabado';
                 document.getElementById('form-serie').value = workToEdit.serie || '';
                 document.getElementById('form-descripcion').value = workToEdit.descripcion || '';
-                submitButton.textContent = 'Actualizar Obra';
                 
+                // NUEVOS CAMPOS: Carga de valores
+                document.getElementById('form-price').value = workToEdit.price || '';
+                document.getElementById('form-is-available').checked = workToEdit.is_available !== false; // TRUE por defecto
+                document.getElementById('form-show-price').checked = workToEdit.show_price === true; // FALSE por defecto
+                
+                submitButton.textContent = 'Actualizar Obra';
                 renderCurrentImages(workToEdit.imagenes);
             }
             
@@ -502,9 +512,7 @@
 
                         if (uploadError) throw uploadError;
                         
-                        newImages.push({ 
-                            path: uploadData.path, 
-                        });
+                        newImages.push({ path: uploadData.path });
                     }
                 }
                 
@@ -522,16 +530,20 @@
                     categoria: document.getElementById('form-categoria').value,
                     serie: document.getElementById('form-serie').value,
                     descripcion: document.getElementById('form-descripcion').value,
-                    imagenes: finalImagesArray 
+                    imagenes: finalImagesArray,
+                    // NUEVOS VALORES
+                    price: parseFloat(document.getElementById('form-price').value) || null,
+                    is_available: document.getElementById('form-is-available').checked,
+                    show_price: document.getElementById('form-show-price').checked,
                 };
 
                 // 3. Insertar o Actualizar
                 let dbResponse;
                 if (id) {
-                    dbResponse = await client.from('productos').update(dataToSave).eq('id', id).select();
+                    dbResponse = await client.from(TABLE_NAME).update(dataToSave).eq('id', id).select();
                 } else {
                     dataToSave.orden = currentWorks.length + 1; 
-                    dbResponse = await client.from('productos').insert(dataToSave).select();
+                    dbResponse = await client.from(TABLE_NAME).insert(dataToSave).select();
                 }
 
                 if (dbResponse.error) throw dbResponse.error;
@@ -550,38 +562,18 @@
             }
         });
 
-
-        // --- LÓGICA DE ELIMINACIÓN DE IMÁGENES/OBRAS ---
+        // --- ELIMINACIÓN DE IMÁGENES/OBRAS ---
         async function deleteImageFromWork(workId, imagePath, elementToRemove) {
             if (!confirm('¿Estás seguro de que quieres eliminar esta imagen?')) return;
-
             try {
-                // 1. Eliminar del Storage
-                const { error: storageError } = await client.storage
-                    .from(BUCKET_NAME)
-                    .remove([imagePath]);
-
-                if (storageError) throw storageError;
-
-                // 2. Actualizar la DB (remover la imagen del array 'imagenes')
+                await client.storage.from(BUCKET_NAME).remove([imagePath]);
                 let updatedImages = workToEdit.imagenes.filter(img => img.path !== imagePath);
-
-                const { error: dbError } = await client
-                    .from('productos')
-                    .update({ imagenes: updatedImages })
-                    .eq('id', workId);
+                await client.from(TABLE_NAME).update({ imagenes: updatedImages }).eq('id', workId);
                 
-                if (dbError) throw dbError;
-                
-                // 3. Actualizar la interfaz (DOM y workToEdit local)
                 elementToRemove.remove();
                 workToEdit.imagenes = updatedImages; 
                 showAlert('Imagen eliminada correctamente.', 'success');
-
-                if (updatedImages.length === 0) {
-                     currentImagesContainer.classList.add('hidden');
-                }
-
+                if (updatedImages.length === 0) { currentImagesContainer.classList.add('hidden'); }
             } catch (error) {
                 console.error("Error al eliminar imagen:", error);
                 showAlert(`Error al eliminar la imagen: ${error.message}`, 'error');
@@ -601,22 +593,13 @@
                 const obra = currentWorks.find(w => w.id === id);
                 if (!obra) throw new Error("Obra no encontrada localmente.");
 
-                // 1. Eliminar el registro de la DB
-                const { error: dbError } = await client
-                    .from('productos')
-                    .delete()
-                    .eq('id', id);
-
+                const { error: dbError } = await client.from(TABLE_NAME).delete().eq('id', id);
                 if (dbError) throw dbError;
 
-                // 2. Eliminar archivos del Storage
                 const filePaths = obra.imagenes.map(img => img.path).filter(Boolean);
 
                 if (filePaths.length > 0) {
-                    const { error: storageError } = await client.storage
-                        .from(BUCKET_NAME)
-                        .remove(filePaths);
-
+                    const { error: storageError } = await client.storage.from(BUCKET_NAME).remove(filePaths);
                     if (storageError && storageError.statusCode !== '200') {
                         console.warn("Error al borrar imágenes del storage:", storageError);
                         showAlert(`Obra eliminada de la DB. ADVERTENCIA: Falló el borrado de ${filePaths.length} imagen(es) del Storage.`, 'error');
@@ -624,7 +607,6 @@
                     }
                 }
 
-                // 3. Éxito
                 showAlert("Obra y archivos eliminados exitosamente!", 'success');
                 document.getElementById(`obra-item-${id}`).remove(); 
                 currentWorks = currentWorks.filter(w => w.id !== id);
@@ -639,7 +621,6 @@
         }
         window.deleteObra = deleteObra;
         
-        // Inicializar
         checkAuth();
     </script>
 </body>

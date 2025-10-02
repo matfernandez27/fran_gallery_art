@@ -100,7 +100,7 @@ function renderWorksList(works) {
                 <h3 class="text-lg font-semibold text-gray-900">${obra.titulo}</h3>
                 <p class="text-sm text-gray-500 mb-1">
                     Año: ${obra.anio || 'N/A'} | Cat.: ${obra.categoria || 'N/A'} | Serie: ${obra.serie || 'N/A'}
-                    ${obra.is_available ? '<span class="text-green-600 font-medium ml-2">(Disponible)</span>' : '<span class="text-red-500 font-medium ml-2">(Vendida)</span>'}
+                    ${obra.is_available ? '<span class="text-green-600 font-medium ml-2">Disponible</span>' : '<span class="text-red-500 font-medium ml-2">Vendida</span>'}
                 </p>
                 <p class="text-sm text-gray-700 text-truncate-2">${obra.descripcion || 'Sin descripción.'}</p>
             </div>

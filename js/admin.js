@@ -13,12 +13,13 @@ const adminHeader = document.getElementById('admin-header');
 const obraFormContainer = document.getElementById('obra-form-container');
 const obraForm = document.getElementById('obra-form');
 const logoutButton = document.getElementById('logout-button');
-const saveOrderButton = document.getElementById('save-order-button');
+// ELIMINADO: const saveOrderButton = document.getElementById('save-order-button');
 const currentImagesList = document.getElementById('current-images-list');
 const currentImagesContainer = document.getElementById('current-images-container');
 const alertDiv = document.getElementById('alert');
 const submitButton = document.getElementById('submit-button');
 const searchInput = document.getElementById('search-input');
+
 
 // --- FUNCIONES DE UTILIDAD ---
 function showAlert(message, type = 'success') {
@@ -84,7 +85,6 @@ function renderWorksList(works) {
         item.dataset.id = obra.id;
         item.className = 'bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex items-start space-x-4';
         
-        // CORRECCIÓN: Usar la función auxiliar para obtener la URL pública
         const imageUrl = obra.imagenes && obra.imagenes.length > 0 
             ? getPublicImageUrl(obra.imagenes[0].path)
             : 'https://via.placeholder.com/100x100?text=No+Image';
@@ -166,41 +166,6 @@ async function fetchWorks() {
     }
 }
 
-async function saveOrder() {
-    saveOrderButton.textContent = "Guardando...";
-    saveOrderButton.disabled = true;
-
-    try {
-        const orderUpdates = Array.from(worksList.children).map((item, index) => ({
-            id: parseInt(item.dataset.id),
-            orden: index // Nuevo orden basado en la posición en la lista
-        }));
-
-        const { error } = await client
-            .from('productos')
-            .upsert(orderUpdates); 
-
-        if (error) throw error;
-
-        // Actualizar el orden en el array local para mantener sincronización
-        orderUpdates.forEach(update => {
-            const index = currentWorks.findIndex(w => w.id === update.id);
-            if (index !== -1) {
-                currentWorks[index].orden = update.orden;
-            }
-        });
-        currentWorks.sort((a, b) => a.orden - b.orden);
-
-        showAlert("Orden guardado exitosamente!", 'success');
-        saveOrderButton.classList.add('hidden'); // Ocultar después de guardar
-    } catch (error) {
-        console.error("Error al guardar el orden:", error);
-        showAlert("Error al guardar el orden: " + error.message, 'error');
-    } finally {
-        saveOrderButton.textContent = "Guardar Orden";
-    }
-}
-
 // Lógica de Supabase para subir una imagen
 async function uploadImage(file, workId) {
     const fileExtension = file.name.split('.').pop();
@@ -228,7 +193,6 @@ async function handleSubmit(event) {
     try {
         const data = new FormData(obraForm);
         
-        // --- INCLUSIÓN DE NUEVOS CAMPOS DE CONTROL DE VENTA ---
         const priceValue = data.get('price');
         const obraData = {
             titulo: data.get('titulo') || '',
@@ -238,12 +202,10 @@ async function handleSubmit(event) {
             serie: data.get('serie') || '', 
             tecnica: data.get('tecnica') || '',
             medidas: data.get('medidas') || '',
-            // Nuevos campos
             price: priceValue ? parseFloat(priceValue) : null,
             is_available: data.get('is_available') === 'on', // Checkbox
             show_price: data.get('show_price') === 'on' // Checkbox
         };
-        // -----------------------------------------------------
 
         const imageFiles = data.getAll('imagenes').filter(file => file.name);
 
@@ -252,18 +214,15 @@ async function handleSubmit(event) {
         if (isEditMode) {
             // --- MODO EDICIÓN ---
             
-            // 1. Manejar borrado y reordenamiento de imágenes actuales
             const existingImagesJSON = currentImagesList.dataset.currentImages;
             let existingImages = existingImagesJSON ? JSON.parse(existingImagesJSON) : [];
             
-            // 2. Subir nuevas imágenes (si hay)
             let newImages = [];
             if (imageFiles.length > 0) {
                 const uploadPromises = imageFiles.map(file => uploadImage(file, workToEdit.id));
                 newImages = await Promise.all(uploadPromises);
             }
 
-            // Combinar las imágenes existentes (ya reordenadas/filtradas en la UI) con las nuevas
             const updatedImages = [...existingImages, ...newImages];
             
             const { data: updateData, error: updateError } = await client
@@ -283,7 +242,6 @@ async function handleSubmit(event) {
             const lastOrder = currentWorks.length > 0 ? Math.max(...currentWorks.map(w => w.orden)) : -1;
             obraData.orden = lastOrder + 1;
 
-            // 2. Insertar la obra primero para obtener el ID
             const { data: insertData, error: insertError } = await client
                 .from('productos')
                 .insert([obraData])
@@ -293,20 +251,18 @@ async function handleSubmit(event) {
             if (insertError) throw insertError;
             result = insertData;
             
-            // 3. Subir imágenes si existen, usando el ID recién creado
             let uploadedImages = [];
             if (imageFiles.length > 0) {
                 const uploadPromises = imageFiles.map(file => uploadImage(file, result.id));
                 uploadedImages = await Promise.all(uploadPromises);
                 
-                // 4. Actualizar la obra con la información de las imágenes
                 const { error: updateImagesError } = await client
                     .from('productos')
                     .update({ imagenes: uploadedImages })
                     .eq('id', result.id);
 
                 if (updateImagesError) throw updateImagesError;
-                result.imagenes = uploadedImages; // Actualizar el objeto resultado con las imágenes
+                result.imagenes = uploadedImages; 
             }
         }
         
@@ -347,12 +303,10 @@ function resetForm() {
 
 function showAddForm() {
     resetForm();
-    // Asegurarse de que el input de categoría se seleccione a un valor por defecto si es necesario
     const categorySelect = document.getElementById('categoria');
     if (categorySelect && categorySelect.options.length > 0) {
         categorySelect.value = categorySelect.options[0].value;
     }
-    // Asegurarse de que los checkboxes estén por defecto en false/unchecked (el reset lo hace)
     
     obraFormContainer.classList.remove('hidden');
     document.getElementById('works-container').classList.add('hidden');
@@ -376,30 +330,23 @@ window.editWork = (id) => {
     workToEdit = obra;
     isEditMode = true;
     
-    // 1. Llenar campos de texto y selección
     document.getElementById('form-title').textContent = "Editar Obra";
     submitButton.textContent = "Guardar Cambios";
     document.getElementById('titulo').value = obra.titulo || '';
     document.getElementById('descripcion').value = obra.descripcion || '';
     document.getElementById('anio').value = obra.anio || '';
-    // ESTOS CAMPOS FUERON EL ORIGEN DEL ERROR SI NO ESTABAN EN EL HTML:
     document.getElementById('tecnica').value = obra.tecnica || '';
     document.getElementById('medidas').value = obra.medidas || '';
-    // -------------------------------------------------------------
     document.getElementById('categoria').value = obra.categoria || '';
     document.getElementById('serie').value = obra.serie || '';
 
-    // 2. Llenar nuevos campos de Control de Venta
     document.getElementById('price').value = obra.price || '';
     document.getElementById('is_available').checked = obra.is_available || false;
     document.getElementById('show_price').checked = obra.show_price || false;
 
-
-    // 3. Mostrar contenedor de imágenes actuales
     currentImagesContainer.classList.remove('hidden');
     renderCurrentImages(obra.imagenes);
 
-    // 4. Mostrar el formulario
     obraFormContainer.classList.remove('hidden');
     document.getElementById('works-container').classList.add('hidden');
     document.getElementById('show-add-form-button').classList.add('hidden');
@@ -408,11 +355,9 @@ window.editWork = (id) => {
 function renderCurrentImages(images) {
     currentImagesList.innerHTML = '';
     
-    // Guardar el estado actual en el dataset (importante para el submit)
     currentImagesList.dataset.currentImages = JSON.stringify(images);
 
     images.forEach(img => {
-        // CORRECCIÓN: Usar la función auxiliar para obtener la URL pública
         const imageUrl = getPublicImageUrl(img.path);
         
         const imgItem = document.createElement('div');
@@ -427,7 +372,6 @@ function renderCurrentImages(images) {
             </div>
         `;
         
-        // Manejar el click para eliminar (solo visualmente por ahora)
         imgItem.addEventListener('click', (e) => removeCurrentImage(e, img.path));
         
         currentImagesList.appendChild(imgItem);
@@ -454,10 +398,7 @@ function updateCurrentImagesData() {
         path: item.dataset.path,
         name: item.dataset.name
     }));
-    // Sobrescribir el dataset con la nueva lista de imágenes (ordenada o filtrada)
     currentImagesList.dataset.currentImages = JSON.stringify(updatedImages);
-    // No hace falta mostrar el botón de orden aquí, ya que el cambio se guarda con el formulario
-    // saveOrderButton.classList.remove('hidden'); 
 }
 
 window.deleteWork = async (id, button) => {
@@ -517,6 +458,39 @@ window.deleteWork = async (id, button) => {
 
 let sortableInstance = null;
 
+async function saveNewOrder(evt) {
+    // FUNCIÓN PARA GUARDAR AUTOMÁTICAMENTE EL ORDEN AL SOLTAR UN ITEM
+    const orderUpdates = Array.from(worksList.children).map((item, index) => ({
+        id: parseInt(item.dataset.id),
+        orden: index 
+    }));
+    
+    try {
+        // Mapea los updates a la estructura que requiere Supabase (objeto con id y orden)
+        const updates = orderUpdates.map(u => ({ id: u.id, orden: u.orden }));
+
+        const { error } = await client
+            .from('productos')
+            .upsert(updates); 
+
+        if (error) throw error;
+
+        // Actualizar el array local para mantener sincronización
+        updates.forEach(update => {
+            const index = currentWorks.findIndex(w => w.id === update.id);
+            if (index !== -1) {
+                currentWorks[index].orden = update.orden;
+            }
+        });
+        currentWorks.sort((a, b) => a.orden - b.orden);
+
+        showAlert("Orden actualizado automáticamente.", 'success');
+    } catch (error) {
+        console.error("Error al guardar el orden:", error);
+        showAlert("Error al guardar el orden: " + error.message, 'error');
+    }
+}
+
 function initSortable() {
     if (sortableInstance) {
         sortableInstance.destroy();
@@ -524,13 +498,9 @@ function initSortable() {
     
     sortableInstance = new Sortable(worksList, {
         animation: 150,
-        handle: '.drag-handle', // Solo el handle para arrastrar
-        ghostClass: 'bg-indigo-100', // Clase para el elemento fantasma
-        onEnd: function (evt) {
-            // Un item ha sido movido
-            saveOrderButton.classList.remove('hidden');
-            saveOrderButton.disabled = false;
-        }
+        handle: '.drag-handle', 
+        ghostClass: 'bg-indigo-100', 
+        onEnd: saveNewOrder // Llamar a la función de guardado automático
     });
 }
 
@@ -580,17 +550,15 @@ document.addEventListener('DOMContentLoaded', checkAuth);
 obraForm.addEventListener('submit', handleSubmit);
 document.getElementById('login-form').addEventListener('submit', handleLogin);
 logoutButton.addEventListener('click', handleLogout);
-saveOrderButton.addEventListener('click', saveOrder);
+// ELIMINADO: saveOrderButton.addEventListener('click', saveOrder);
 document.getElementById('show-add-form-button').addEventListener('click', showAddForm);
 document.getElementById('cancel-edit-button').addEventListener('click', showWorksList);
 
-// Listener para el buscador
 searchInput.addEventListener('input', filterWorks);
 
 
-// Listener para manejar cambios de autenticación en tiempo real
 client.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        setTimeout(checkAuth, 100); 
+        setTimeout(checkAuth, 100);
     }
 });

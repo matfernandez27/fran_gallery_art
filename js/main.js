@@ -34,6 +34,12 @@ const whatsappButton = document.getElementById('whatsapp-btn');
 const mainFooter = document.getElementById('main-footer');
 const gallerySection = document.getElementById('gallery-section');
 
+// VARIABLES PARA SCROLL INFINITO
+let page = 0;
+const PAGE_SIZE = 12;
+let hasMore = true;
+let isLoading = false;
+
 
 // --- FUNCIONES DE UTILIDAD ---
 function showAlert(message, type = 'success') {
@@ -144,26 +150,37 @@ function normalize(p) {
     };
 }
 
-function renderGallery(items) {
-    galleryContainer.innerHTML = '';
-    if (items.length === 0) {
+/**
+ * Renderiza un conjunto de obras, agregándolas al contenedor de la galería.
+ * @param {Array} items - Obras a renderizar.
+ * @param {boolean} append - Si es true, las agrega al final; si es false, reemplaza el contenido.
+ */
+function renderGallery(items, append = true) {
+    if (!append) {
+        galleryContainer.innerHTML = '';
+        productos = [];
+    }
+
+    if (items.length === 0 && productos.length === 0) {
         galleryContainer.innerHTML = '<p class="col-span-full text-center text-text-muted">No se encontraron obras que coincidan con los filtros.</p>';
+        status.textContent = ''; // Limpiar mensaje de status si no hay obras
         return;
     }
 
     items.forEach(obra => {
+        productos.push(obra); // Agregar al array principal
         const card = document.createElement("div");
         card.className = "bg-bg-card rounded-sm overflow-hidden cursor-pointer shadow-lg hover:shadow-xl transition duration-500 transform hover:-translate-y-1 group border border-border-light";
         card.setAttribute('data-id', obra.id); 
         card.setAttribute('onclick', `openModal(${obra.id})`);
         
-        // --- BLOQUE DE TARJETA ACTUALIZADO CON PRECIO Y DISPONIBILIDAD ---
+        // --- Bloque de Tarjeta con Precio y Disponibilidad solicitados ---
         const formattedPrice = obra.show_price && obra.price
             ? formatPrice(obra.price)
             : 'Consultar';
             
         const priceDisplayClass = obra.show_price && obra.price ? 'font-bold text-text-dark' : 'text-pantone-magenta font-semibold';
-        const availabilityText = obra.is_available ? 'Disponible' : 'Vendida'; // <- MODIFICADO
+        const availabilityText = obra.is_available ? 'Disponible' : 'Vendida'; // <- CORREGIDO
         const availabilityClass = obra.is_available ? 'text-green-600' : 'text-red-500';
 
         card.innerHTML = `
@@ -188,7 +205,6 @@ function renderGallery(items) {
                 </div>
             </div>
         `;
-        // --- FIN BLOQUE DE TARJETA ACTUALIZADO ---
         galleryContainer.appendChild(card);
     });
 
@@ -197,77 +213,189 @@ function renderGallery(items) {
     }
 }
 
-async function fetchGallery() {
+/**
+ * Carga el siguiente lote de obras desde Supabase.
+ */
+async function loadMoreWorks() {
+    if (!hasMore || isLoading) return;
+
+    isLoading = true;
     status.textContent = "Cargando obras...";
     loadingOverlay.classList.remove('hidden');
+
     try {
+        const from = page * PAGE_SIZE;
+        const to = from + PAGE_SIZE - 1;
+
         const { data, error } = await client
             .from('productos')
             .select('*')
             .order('orden', { ascending: true })
-            .order('anio', { ascending: false });
+            .order('anio', { ascending: false })
+            .range(from, to);
         
         loadingOverlay.classList.add('hidden');
+        isLoading = false;
 
         if (error) {
             throw new Error(`Error de Supabase: ${error.message}`);
         }
-
-        productos = data.map(normalize);
         
-        // Renderizar el carrusel de fondo con las 5 primeras imágenes disponibles
-        const carouselUrls = productos
-            .filter(p => p.images.length > 0)
-            .slice(0, 5)
-            .map(p => p.mainImage);
-            
-        renderCarouselItems(carouselUrls);
+        const newWorks = data.map(normalize);
+        renderGallery(newWorks, true); // Agregar al final
         
-        applyFilters(); // Renderiza la galería completa o filtrada/ordenada por defecto
+        if (newWorks.length < PAGE_SIZE) {
+            hasMore = false;
+            status.textContent = "Fin de la galería.";
+        } else {
+            page++;
+            status.textContent = "";
+        }
 
     } catch (error) {
         console.error("Error al cargar la galería:", error);
-        status.textContent = "Error al cargar la galería.";
+        status.textContent = "Error al cargar más obras.";
         loadingOverlay.classList.add('hidden');
+        isLoading = false;
+    }
+}
+
+
+/**
+ * Inicializa la galería cargando los filtros y el primer lote de obras.
+ */
+async function initGallery() {
+    // Carga inicial solo para obtener datos de filtros y carrusel
+    try {
+        const { data: allData, error } = await client
+            .from('productos')
+            .select('*')
+            .order('orden', { ascending: true })
+            .order('anio', { ascending: false });
+
+        if (error) throw error;
+        
+        const allWorks = allData.map(normalize);
+        
+        // 1. Renderizar el carrusel de fondo con las 5 primeras imágenes disponibles
+        const carouselUrls = allWorks
+            .filter(p => p.images.length > 0)
+            .slice(0, 5)
+            .map(p => p.mainImage);
+        renderCarouselItems(carouselUrls);
+        
+        // 2. Poblar opciones de filtro
+        populateFilterOptions(allWorks);
+
+    } catch (error) {
+        console.error("Error al inicializar la galería:", error);
+    }
+    
+    // 3. Cargar el primer lote de obras (restablecer paginación)
+    page = 0;
+    hasMore = true;
+    galleryContainer.innerHTML = '';
+    productos = [];
+    
+    // Desactivar temporalmente el scroll infinito mientras se aplican filtros
+    // La función applyFilters llamará a loadFilteredWorks, que manejará la paginación de los filtros
+    
+    if (searchInput.value || filterYear.value || filterCategory.value || filterSeries.value) {
+        // Si hay filtros preestablecidos, cargar filtrado
+        applyFilters(); 
+    } else {
+        // Carga inicial sin filtros
+        loadMoreWorks();
+    }
+}
+
+/**
+ * Carga obras aplicando filtros y reiniciando la paginación.
+ */
+async function loadFilteredWorks() {
+    isLoading = true;
+    status.textContent = "Filtrando obras...";
+    loadingOverlay.classList.remove('hidden');
+
+    try {
+        let query = client.from('productos')
+            .select('*')
+            .order('orden', { ascending: true })
+            .order('anio', { ascending: false });
+        
+        const searchText = searchInput.value.toLowerCase().trim();
+        const year = filterYear.value;
+        const category = filterCategory.value;
+        const series = filterSeries.value;
+
+        // Construir la consulta con filtros (solo filtros directos)
+        if (year) query = query.eq('anio', parseInt(year));
+        if (category) query = query.eq('categoria', category);
+        if (series) query = query.eq('serie', series);
+        
+        // Si hay texto de búsqueda, obtenemos todo y filtramos localmente (por ser un filtro en múltiples campos)
+        if (searchText) {
+            const { data, error } = await query;
+            if (error) throw error;
+
+            let filteredItems = data.map(normalize).filter(obra => 
+                obra.title.toLowerCase().includes(searchText) ||
+                obra.description.toLowerCase().includes(searchText) ||
+                obra.technique.toLowerCase().includes(searchText)
+            );
+            
+            // Renderiza todo lo filtrado (el scroll infinito no aplica bien con filtros de texto combinados con paginación)
+            renderGallery(filteredItems, false);
+            hasMore = false; // Deshabilitar scroll infinito en modo filtrado complejo
+            status.textContent = filteredItems.length > 0 ? '' : 'No se encontraron obras que coincidan con los filtros.';
+            
+        } else {
+            // Si no hay filtro de texto, usamos paginación de Supabase para los filtros simples
+            const from = page * PAGE_SIZE;
+            const to = from + PAGE_SIZE - 1;
+            
+            const { data, error } = await query.range(from, to);
+            if (error) throw error;
+
+            const newWorks = data.map(normalize);
+            renderGallery(newWorks, page !== 0); 
+
+            if (newWorks.length < PAGE_SIZE) {
+                hasMore = false;
+                status.textContent = "Fin de la galería.";
+            } else {
+                page++;
+                status.textContent = "";
+            }
+        }
+    } catch (error) {
+        console.error("Error al cargar obras filtradas:", error);
+        status.textContent = "Error al filtrar obras.";
+    } finally {
+        loadingOverlay.classList.add('hidden');
+        isLoading = false;
     }
 }
 
 
 function applyFilters() {
-    let filteredItems = [...productos];
-    const query = searchInput.value.toLowerCase().trim();
-    const year = filterYear.value;
-    const category = filterCategory.value;
-    const series = filterSeries.value;
-
-    if (query) {
-        filteredItems = filteredItems.filter(obra => 
-            obra.title.toLowerCase().includes(query) ||
-            obra.description.toLowerCase().includes(query) ||
-            obra.technique.toLowerCase().includes(query)
-        );
-    }
-
-    if (year) {
-        filteredItems = filteredItems.filter(obra => obra.year == year);
-    }
-
-    if (category) {
-        filteredItems = filteredItems.filter(obra => obra.category === category);
-    }
-
-    if (series) {
-        filteredItems = filteredItems.filter(obra => obra.serie === series);
-    }
-
-    renderGallery(filteredItems);
+    // Reiniciar paginación al aplicar nuevos filtros
+    page = 0;
+    hasMore = true;
+    galleryContainer.innerHTML = '';
+    productos = [];
+    loadFilteredWorks();
 }
 
-function populateFilterOptions() {
-    const years = [...new Set(productos.map(p => p.year).filter(y => y))].sort((a, b) => b - a);
-    const categories = [...new Set(productos.map(p => p.category).filter(c => c))].sort();
-    const seriesList = [...new Set(productos.map(p => p.serie).filter(s => s))].sort();
+function populateFilterOptions(allWorks) {
+    const years = [...new Set(allWorks.map(p => p.year).filter(y => y))].sort((a, b) => b - a);
+    const categories = [...new Set(allWorks.map(p => p.category).filter(c => c))].sort();
+    const seriesList = [...new Set(allWorks.map(p => p.serie).filter(s => s))].sort();
 
+    filterYear.innerHTML = '<option value="">Todos</option>';
+    filterCategory.innerHTML = '<option value="">Todas</option>';
+    filterSeries.innerHTML = '<option value="">Todas</option>';
+    
     years.forEach(year => filterYear.innerHTML += `<option value="${year}">${year}</option>`);
     categories.forEach(cat => filterCategory.innerHTML += `<option value="${cat}">${cat}</option>`);
     seriesList.forEach(ser => filterSeries.innerHTML += `<option value="${ser}">${ser}</option>`);
@@ -300,7 +428,7 @@ window.openModal = (id) => {
         ? formatPrice(obra.price) // <- USA LA FUNCIÓN CREADA
         : 'Consultar';
         
-    const availabilityText = obra.is_available ? 'Disponible' : 'Vendida'; // <- MODIFICADO
+    const availabilityText = obra.is_available ? 'Disponible' : 'Vendida'; // <- CORREGIDO
     const availabilityClass = obra.is_available ? 'text-green-600' : 'text-red-500';
 
     const whatsappLink = `https://wa.me/5491100000000?text=Hola%2C%20estoy%20interesado%20en%20la%20obra%20%22${encodeURIComponent(obra.title)}%22%20(ID:%20${obra.id}).%20Me%20gustar%C3%ADa%20consultar%20el%20precio%20y%2Fo%20disponibilidad.`;
@@ -364,21 +492,7 @@ window.closeModal = (event) => {
     modal.classList.add('hidden');
     document.body.classList.remove('overflow-hidden');
     
-    // Resetear el carrusel
-    const items = document.querySelectorAll('#modal-image-carousel .modal-carousel-item');
-    items.forEach((item, index) => {
-        item.classList.remove('active');
-        if (index === 0) item.classList.add('active');
-    });
-    const dots = document.querySelectorAll('.carousel-nav button');
-    dots.forEach((dot, index) => {
-        dot.classList.remove('bg-pantone-magenta');
-        dot.classList.remove('bg-text-muted');
-        if (index === 0) dot.classList.add('bg-pantone-magenta');
-        else dot.classList.add('bg-text-muted');
-    });
-    
-    // Resetear zoom
+    // Resetear el carrusel y zoom
     const zoomContainers = document.querySelectorAll('.image-zoom-container');
     zoomContainers.forEach(resetZoom);
 };
@@ -387,12 +501,10 @@ let currentSlide = 0;
 
 function initModalCarousel() {
     currentSlide = 0;
-    // Asegurar que solo el primer elemento esté activo
     const items = document.querySelectorAll('#modal-image-carousel .modal-carousel-item');
     items.forEach((item, index) => {
         item.classList.toggle('active', index === 0);
     });
-    // Asegurar que solo el primer dot esté activo
     const dots = document.querySelectorAll('.carousel-nav button');
     dots.forEach((dot, index) => {
         dot.classList.toggle('bg-pantone-magenta', index === 0);
@@ -405,12 +517,10 @@ window.goToSlide = (index) => {
     const dots = document.querySelectorAll('.carousel-nav button');
     
     if (index >= 0 && index < items.length) {
-        // Ocultar actual
         items[currentSlide].classList.remove('active');
         dots[currentSlide].classList.remove('bg-pantone-magenta');
         dots[currentSlide].classList.add('bg-text-muted');
         
-        // Mostrar nueva
         currentSlide = index;
         items[currentSlide].classList.add('active');
         dots[currentSlide].classList.add('bg-pantone-magenta');
@@ -512,17 +622,14 @@ if (editToggleButton) {
                 sortableInstance.destroy();
                 sortableInstance = null;
             }
-            // Si salimos de edición y hay cambios sin guardar, preguntar.
-            if (!saveOrderButton.disabled) {
-                 // Aquí se podría poner un confirm, pero por simplicidad lo dejamos sin guardar automáticamente al salir
-            }
             saveOrderButton.disabled = true;
-            applyFilters(); // Para restaurar el orden si no se guardó
+            // Al salir, recargamos el primer lote por si hubo cambios de orden no guardados
+            initGallery(); 
         }
     });
 }
 
-// Listener para el botón guardar orden (SOLO EN INDEX.HTML)
+// Listener para el botón guardar orden
 if (saveOrderButton) {
     saveOrderButton.addEventListener('click', saveOrder);
 }
@@ -535,17 +642,27 @@ window.addEventListener('scroll', () => {
     
     const firstSectionHeight = firstSection.offsetHeight;
     
+    // Controlar visibilidad del Footer
     if (window.scrollY > firstSectionHeight - 100) { 
         mainFooter.classList.remove('translate-y-full');
     } else {
         mainFooter.classList.add('translate-y-full');
     }
 
+    // Controlar visibilidad del botón de WhatsApp
     const gallerySectionTop = gallerySection ? gallerySection.offsetTop : firstSectionHeight;
     if (window.scrollY > gallerySectionTop - window.innerHeight / 2) { 
         whatsappButton.classList.add('show');
     } else {
         whatsappButton.classList.remove('show');
+    }
+    
+    // Lógica de Scroll Infinito
+    if (hasMore && !isLoading && !isEditing && !searchInput.value && (filterYear.value === '' && filterCategory.value === '' && filterSeries.value === '') ) {
+        const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+        if (scrollTop + clientHeight >= scrollHeight - 300) {
+            loadMoreWorks();
+        }
     }
 });
 
@@ -559,7 +676,6 @@ if (filterSeries) filterSeries.addEventListener('change', applyFilters);
 document.addEventListener('DOMContentLoaded', async () => {
     mainFooter.classList.add('translate-y-full');
     whatsappButton.classList.remove('show');
-    await fetchGallery();
-    populateFilterOptions();
+    await initGallery(); // Llamar a la nueva función de inicialización
     checkAdminStatus();
 });

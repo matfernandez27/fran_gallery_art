@@ -17,268 +17,215 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Configuración de colores personalizados (VIVO Y CLARO)
+        // Configuración de colores personalizados
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'pantone-magenta': '#DE3B89', // PANTONE 17-2036 TPG/TCX (Acento)
-                        'bg-principal': '#FAEBF0',    // Fondo Principal (Magenta muy pálido)
-                        'bg-card': '#FFFFFF',         // Fondo de Tarjetas/Secciones (Blanco puro)
-                        'text-dark': '#333333',       // Texto principal (Gris oscuro)
-                        'text-muted': '#666666',      // Texto secundario (Gris medio)
-                        'border-light': '#E0E0E0',    // Bordes y líneas divisorias (Gris claro)
-                        'whatsapp': '#25D366',        // Verde de WhatsApp
+                        'pantone-magenta': '#DE3B89', // PANTONE 17-2036 TPG/TCX (Principal)
+                        'bg-principal': '#F3F4F6', // Gris claro (Fondo principal)
+                        'bg-card': '#FFFFFF', // Blanco (Fondo de tarjetas y modal)
+                        'text-dark': '#1F2937', // Gris oscuro (Texto principal)
+                        'text-muted': '#6B7280', // Gris tenue (Texto secundario)
+                        'border-light': '#E5E7EB', // Gris muy claro (Bordes/separadores)
+                        'footer-gradient': 'rgba(255, 255, 255, 0.9)', // Para el footer semitransparente
                     },
                     fontFamily: {
-                        'sans': ['Inter', 'system-ui', 'sans-serif'],
-                    }
+                        'sans': ['Inter', 'ui-sans-serif', 'system-ui'],
+                        'serif': ['Playfair Display', 'serif'],
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        }
+                    },
+                    animation: {
+                        fadeIn: 'fadeIn 1s ease-out forwards',
+                    },
                 }
             }
         }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script> <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
     
     <style>
-        /* Estilos del Overlay de Carga (Spinner) */
-        .loading-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(250, 235, 240, 0.95);
-            display: flex; justify-content: center; align-items: center; z-index: 1000;
-        }
-        .lds-ring div { 
-            box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; 
-            border: 8px solid #DE3B89;
-            border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; 
-            border-color: #DE3B89 transparent transparent transparent;
-        }
-        
-        /* --- ESTILOS DEL CARRUSEL DE FONDO (DINÁMICO) --- */
-        #carousel-header {
-            position: relative;
-            overflow: hidden;
-        }
-        .carousel-item {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-size: contain; 
-            background-position: center;
-            background-repeat: no-repeat;
-            background-color: #F5E5EC; 
-            opacity: 0;
-            transition: opacity 1.5s ease-in-out; 
-            transform: scale(1.05); 
-        }
-        .carousel-item.active {
-            opacity: 1;
-            transform: scale(1);
-        }
-        .carousel-overlay {
+        /* Estilos específicos para el carrusel del header y el modal */
+        #carousel-container {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(250, 235, 240, 0.5); 
-            z-index: 1;
+            overflow: hidden;
+        }
+        .carousel-item {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 2s ease-in-out;
+        }
+        .carousel-item.active {
+            opacity: 1;
+        }
+
+        /* Estilos para el carrusel del modal */
+        #modal-image-carousel {
+            /* Asegura que el contenedor del carrusel ocupe el espacio */
+            position: relative;
+        }
+        .modal-carousel-item {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-carousel-item.active {
+            opacity: 1;
+            z-index: 10;
         }
         
-        /* --- ESTILOS DE LA BIOGRAFÍA: CORRECCIÓN DE POSICIÓN Y CENTRADO DE FOTO --- */
-        #bio-section .grid {
-            align-items: start;
-        }
-        
-        .bio-image-container {
-            display: flex; 
-            justify-content: center; 
-        }
-
-        .bio-image-focus {
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
-            object-position: top center; 
-        }
-
-        /* Estilo del Botón Flotante de WhatsApp */
-        .whatsapp-float-btn {
-            position: fixed; bottom: 60px; right: 20px; width: 56px; height: 56px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-            z-index: 50; transition: transform 0.3s ease-in-out, opacity 0.5s ease-in-out;
-            opacity: 0; 
-            pointer-events: none; 
-        }
-        .whatsapp-float-btn.show { opacity: 1; pointer-events: auto; }
-        .whatsapp-float-btn:hover { transform: scale(1.1); }
-
-        /* --- ESTILOS DE ZOOM INTERACTIVO (MANTENIDOS) --- */
-        .zoom-container {
-            position: relative; overflow: hidden; cursor: crosshair; 
-        }
-        .zoom-image {
-            width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s ease-in-out; 
-            transform: scale(1); transform-origin: center center;
-        }
-        .zoom-container:hover .zoom-image { transform: scale(2.5); }
-        .zoom-icon {
-            position: absolute; top: 10px; left: 10px;
-            background: rgba(255, 255, 255, 0.5); color: #333333; 
-            padding: 8px; border-radius: 50%; z-index: 10;
-            border: 1px solid #E0E0E0;
-        }
-
-        /* Estilo para el modo de ordenamiento */
-        .sortable-ghost {
-            opacity: 0.4;
-            background-color: #DE3B89; 
-            border: 2px dashed #333333; 
-        }
-
-        /* Estilo para el footer con degradado */
-        .footer-gradient {
-            background: linear-gradient(to right, #F5E5EC, #FFFFFF); 
-        }
-
-        /* Estilo de alerta flotante */
+        /* Estilos de Utilidad */
         #alert {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 1001; 
-            padding: 1rem; border-radius: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            font-weight: 500;
+            position: fixed; top: 4px; left: 50%; transform: translateX(-50%);
+            padding: 1rem; border-radius: 0.375rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+            width: 90%; 
+            max-width: 400px;
+        }
+
+        .whatsapp-btn {
+            transform: scale(0.9);
+            opacity: 0;
+            transition: all 0.5s ease;
+        }
+        .whatsapp-btn.show {
+            transform: scale(1);
+            opacity: 1;
         }
     </style>
 </head>
-<body class="bg-bg-principal text-text-dark font-sans min-h-screen">
+<body class="bg-bg-principal text-text-dark font-sans antialiased">
+
+    <div id="alert" class="hidden text-sm z-[9999]"></div>
     
-    <div id="loading-overlay" class="loading-overlay hidden">
-        <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
-    </div>
-
-    <div id="alert" class="hidden" role="alert"></div>
-
-    <a id="whatsapp-btn" href="https://wa.me/+5492805032663?text=Hola,%20quisiera%20consultar%20sobre%20una%20obra%20de%20la%20galería." 
-        target="_blank" 
-        class="whatsapp-float-btn bg-whatsapp text-white">
-        <svg fill="#FFF" viewBox="0 0 24 24" width="28" height="28" class="whatsapp-icon"><path d="M12 2C6.48 2 2 6.48 2 12c0 3.25 1.5 6.2 3.88 8.1l-1.38 5.02L7.6 21.62C9.5 22.18 11.08 22 12 22c5.52 0 10-4.48 10-10C22 6.48 17.52 2 12 2zM17.43 15.4c-.09-.15-.36-.24-.77-.42-.42-.18-2.52-1.24-2.91-1.38-.39-.14-.67-.21-.95.21-.28.42-1.09 1.38-1.34 1.66-.25.28-.5.31-.92.21-.42-.1-.71-.34-1.27-.64-.47-.25-1.07-.65-2.03-1.89-.75-.98-1.25-1.95-1.38-2.2-.14-.25-.02-.38.11-.5.1-.11.23-.26.35-.4.12-.14.16-.25.25-.42.09-.17.04-.32-.02-.45-.06-.13-.57-1.36-.78-1.87-.2-.5-.41-.42-.56-.42-.15 0-.33-.02-.51-.02-.18 0-.47.07-.72.35-.25.28-.95.93-.95 2.27 0 1.34.97 2.64 1.1 2.82.13.18 1.92 3.03 4.6 4.24 2.68 1.21 2.68.85 2.97.8.29-.05.95-.39 1.08-.77.13-.38.13-.7.09-.77z"/></svg>
-    </a>
-
-    <section id="carousel-header" class="min-h-screen flex items-center justify-center bg-bg-principal">
+    <section id="carousel-header" class="relative h-[85vh] min-h-[500px] flex items-end justify-center overflow-hidden shadow-2xl">
         
-        <div id="carousel-container" class="absolute inset-0">
+        <div id="carousel-container" class="filter grayscale contrast-125">
             </div>
 
-        <div class="carousel-overlay"></div>
+        <div class="absolute inset-0 bg-black opacity-40"></div>
 
-        <div class="text-center max-w-4xl mx-auto px-6 z-10">
-            <h1 class="text-6xl md:text-8xl font-light text-text-dark mb-8 tracking-tight">
-                Francisco<br>
-                <span class="text-pantone-magenta">Fernández</span>
+        <header class="relative z-10 text-center pb-16 pt-32 p-4">
+            <h1 class="text-6xl sm:text-7xl md:text-8xl font-serif font-bold text-white leading-tight mb-2 animation-fadeIn">
+                Francisco Fernández
             </h1>
-            <p class="text-xl md:text-2xl text-text-muted font-light mb-12 max-w-2xl mx-auto">
-                Galería Personal
+            <p class="text-xl sm:text-2xl font-light text-white opacity-90 animation-fadeIn delay-300">
+                Arte Patagónico y Grabado Contemporáneo
             </p>
-            <div class="w-24 h-px bg-pantone-magenta mx-auto mb-12"></div>
-            <button onclick="document.getElementById('bio-section').scrollIntoView({behavior: 'smooth'})" 
-                    class="text-text-muted hover:text-pantone-magenta transition-colors duration-300 text-sm uppercase tracking-wider">
-                Explorar Galería
-            </button>
+            <a href="#gallery-section" class="inline-block mt-8 px-8 py-3 bg-pantone-magenta text-white font-semibold rounded-md shadow-lg hover:bg-opacity-90 transition duration-300 transform hover:scale-105 animation-fadeIn delay-500">
+                Ver Galería
+            </a>
+        </header>
+
+        <div class="absolute bottom-5 left-1/2 transform -translate-x-1/2 z-10">
+            <svg class="w-8 h-8 text-white animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
         </div>
     </section>
-    <section id="bio-section" class="py-20 bg-bg-card">
-        <div class="max-w-6xl mx-auto px-6">
+
+    <section id="bio-section" class="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-bg-principal">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
             
-            <div class="grid md:grid-cols-3 gap-16 items-start">
-                
-                <div class="md:col-span-2 flex flex-col justify-start">
-                    
-                    <div class="w-16 h-px bg-pantone-magenta mb-8"></div>
-                    
-                    <h3 class="text-2xl font-medium text-text-dark mb-6">Francisco Fernández</h3>
-                    
-                    <div id="bio-text-content">
-                        <p class="text-lg text-text-dark leading-relaxed mb-4">
-                            Nacido en Trelew, Chubut hace 33 años y residente en la Patagonia, Francisco Fernández se destaca por su activa participación en exhibiciones itinerantes a lo largo del país.
-                        </p>
-                        
-                        <p class="text-base text-text-muted leading-relaxed mb-6">
-                            Cada pieza es un puente hacia lo inhóspito y lo íntimo. Su técnica no solo captura la dualidad de un paisaje vasto, sino que también ofrece una mirada profunda y reflexiva sobre el alma de ese territorio.
-                        </p>
-                    </div>
-                    
-                    <a href="biografia-completa.html" 
-                        class="mt-4 text-pantone-magenta font-semibold hover:text-text-dark transition-colors duration-300 text-sm self-start inline-flex items-center space-x-2">
-                        <span>LEER BIOGRAFÍA COMPLETA</span>
-                        <svg xmlns="http://www.w.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
+            <div class="lg:col-span-1 rounded-sm overflow-hidden shadow-xl aspect-[4/5] bg-bg-card flex items-center justify-center">
+                 <img src="[URL_IMAGEN_DE_FRANCISCO]" alt="Foto de Francisco Fernández" class="w-full h-full object-cover"> 
+            </div>
+
+            <div class="lg:col-span-2">
+                <h2 class="text-4xl font-serif font-bold text-text-dark mb-6 border-b-2 border-pantone-magenta/50 pb-3">
+                    Bio y Trayectoria
+                </h2>
+                <div class="space-y-6 text-lg text-text-muted">
+                    <p>
+                        Francisco Fernández (Argentina, 1985) es un artista visual cuya obra explora la compleja relación entre lo ancestral y la experiencia urbana contemporánea. Originario de la Patagonia, su trabajo se nutre de la inmensidad del paisaje y de la dualidad de sus raíces, manifestándose principalmente a través del **grabado**, el **dibujo** y la **pintura**.
+                    </p>
+                    <p>
+                        Su formación en Bellas Artes le proporcionó una base clásica que luego deconstruyó para desarrollar un estilo propio, caracterizado por el uso audaz de la línea, la textura y el color, destacando siempre el vibrante **Pantone Magenta** como firma visual.
+                    </p>
+                    <p>
+                        Ha participado en numerosas exposiciones colectivas e individuales, y sus obras forman parte de colecciones privadas en Latinoamérica y Europa. Francisco reside y trabaja actualmente en Buenos Aires, donde el pulso de la ciudad se integra como un elemento narrativo más a su imaginario patagónico.
+                    </p>
+                    <a href="mailto:ffran.arte@gmail.com" class="inline-flex items-center text-pantone-magenta font-semibold hover:text-text-dark transition-colors mt-4">
+                        Contacto y CV completo 
+                        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                     </a>
                 </div>
-
-                <div class="md:col-span-1 md:order-last flex justify-center bio-image-container">
-                    <div class="w-64 h-64 md:w-80 md:h-80 rounded-sm overflow-hidden border-2 border-pantone-magenta/50 shadow-2xl">
-                        <img src="./img/img_perfil.jpg" 
-                            alt="Retrato de Francisco Fernández, artista plástico de la Patagonia."
-                            class="bio-image-focus"/>
-                    </div>
-                </div>
-
             </div>
         </div>
     </section>
-    <section id="gallery-section" class="py-20 bg-bg-principal">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl md:text-5xl font-light text-text-dark mb-8">
-                    Catálogo de Obras
-                </h2>
-                <div class="w-16 h-px bg-pantone-magenta mx-auto"></div>
+    
+    <section id="gallery-section" class="py-16 sm:py-24 bg-bg-principal">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-4xl font-serif font-bold text-text-dark mb-12 text-center">
+                Galería de Obras
+            </h2>
+            
+            <div id="admin-controls" class="hidden flex justify-center space-x-4 mb-8">
+                <button id="edit-toggle" class="px-4 py-2 bg-text-dark text-white rounded-md hover:bg-text-dark/80 transition-colors">
+                    Modo Edición
+                </button>
+                <button id="save-order-button" class="hidden px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors" disabled>
+                    Guardar Orden
+                </button>
             </div>
 
-            <div class="mb-8 flex flex-wrap gap-4 items-center justify-between bg-bg-card p-4 rounded-sm shadow-inner max-w-5xl mx-auto border border-border-light">
+            <div class="flex flex-wrap justify-center gap-4 mb-12 p-4 bg-bg-card rounded-md shadow-inner border border-border-light">
                 
-                <input id="search" type="search" placeholder="Buscar por título, técnica o descripción..."
-                    class="flex-1 min-w-0 md:min-w-[200px] p-3 rounded-sm border border-border-light shadow-sm focus:outline-none focus:ring-1 focus:ring-pantone-magenta bg-white text-text-dark transition-colors" />
+                <input type="text" id="search" placeholder="Buscar por título o técnica" class="w-full sm:w-auto flex-grow max-w-sm px-4 py-2 border border-border-light rounded-md focus:ring-pantone-magenta focus:border-pantone-magenta text-text-dark bg-bg-principal">
                 
-                <div class="flex flex-wrap gap-4 justify-end">
-                    
-                    <select id="filter-category" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
-                        <option value="">Categoría</option>
-                        <option value="grabado">Grabado</option>
-                        <option value="dibujo">Dibujo</option>
-                        <option value="pintura">Pintura</option>
+                <select id="filter-year" class="px-4 py-2 border border-border-light rounded-md focus:ring-pantone-magenta focus:border-pantone-magenta text-text-dark bg-bg-principal">
+                    <option value="">Año</option>
                     </select>
-
-                    <select id="filter-series" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
-                        <option value="">Serie</option>
-                    </select>
-
-                    <select id="filter-year" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
-                        <option value="">Año</option>
-                    </select>
-                </div>
                 
-                <div id="admin-controls" class="hidden flex gap-2">
-                    <button id="edit-toggle" class="p-3 rounded-sm bg-border-light hover:bg-pantone-magenta transition duration-300 text-text-dark hover:text-white text-sm">
-                        Activar Edición
-                    </button>
-                    <button id="save-order-button" class="hidden p-3 rounded-sm bg-green-600 hover:bg-green-700 text-white transition duration-300 text-sm" disabled>
-                        Guardar Orden
-                    </button>
-                </div>
+                <select id="filter-category" class="px-4 py-2 border border-border-light rounded-md focus:ring-pantone-magenta focus:border-pantone-magenta text-text-dark bg-bg-principal">
+                    <option value="">Categoría</option>
+                    </select>
+                
+                <select id="filter-series" class="px-4 py-2 border border-border-light rounded-md focus:ring-pantone-magenta focus:border-pantone-magenta text-text-dark bg-bg-principal">
+                    <option value="">Serie</option>
+                    </select>
+                
             </div>
             
-            <p id="status" class="text-center text-red-500 font-semibold mb-8"></p>
-
             <div id="gallery-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 </div>
+            
+            <div id="status" class="text-center text-text-muted mt-12 text-lg font-light"></div>
+            
+            <div id="loading-overlay" class="hidden fixed inset-0 bg-bg-principal/70 backdrop-blur-sm z-50 flex items-center justify-center">
+                <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
+            </div>
+            
         </div>
     </section>
 
-    <footer id="main-footer" class="fixed bottom-0 left-0 right-0 footer-gradient bg-opacity-95 backdrop-blur-sm border-t border-border-light p-3 z-40 translate-y-full transition-transform duration-500">
+    <a id="whatsapp-btn" href="https://wa.me/5491100000000?text=Hola%2C%20estoy%20interesado%20en%20una%20obra." target="_blank" class="whatsapp-btn fixed bottom-20 right-4 bg-green-500 text-white p-3 rounded-full shadow-lg z-50 transition-all duration-500 opacity-0 show">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 2.25c-5.497 0-9.967 4.47-9.967 9.967 0 1.77.464 3.444 1.303 4.887l-1.37 5.293 5.422-1.343c1.433.784 3.067 1.196 4.612 1.196 5.497 0 9.967-4.47 9.967-9.967s-4.47-9.967-9.967-9.967zm4.394 13.927s-.272-.14-.567-.282c-.294-.142-.44-.224-.716-.546-.275-.322-.727-.373-1.04-.373-.243 0-.41.066-.64.066-.23 0-.41-.09-.64-.403s-.84-.817-1.025-1.127c-.184-.31-.383-.69-.533-1.02-.15-.33-.016-.496.096-.688.087-.15.195-.276.294-.418.099-.142.164-.268.229-.403.064-.135.032-.268-.008-.403-.04-.135-.383-.896-.513-1.226-.13-.33-.26-.27-.403-.27-.142 0-.306-.02-.47-.02-.164 0-.44.02-.67.02s-.64-.085-.947.88c-.307.965-1.19 1.77-1.19 1.77s-.184.18-.09.344c.09.164.887 1.25 1.127 1.545.24.295.49.567.817.896 1.11 1.096 2.09 1.488 2.68 1.638.18.04.403.04.587.04.282 0 .546-.108.73-.3.26-.282.59-.513.82-.744.23-.23.414-.49.627-.67l.112-.086c.099-.085.27-.224.513-.333.243-.11.455-.175.76-.108.306.066.567.31.676.474.108.164.19.344.19.587 0 .243-.09.474-.356.705-.26.23-.424.428-.56.59l-.09.09c-.066.065-.13.13-.19.19s-.14.07-.205.108c-.065.04-.15.1-.258.127-.108.027-.216.035-.34.035z"/></svg>
+    </a>
+
+    <footer id="main-footer" class="fixed bottom-0 left-0 w-full bg-footer-gradient bg-opacity-95 backdrop-blur-sm border-t border-border-light p-3 z-40 translate-y-full transition-transform duration-500">
         <div class="max-w-7xl mx-auto flex justify-between items-center text-sm text-text-muted">
             <div class="font-light">
                 © 2025 Francisco Fernández. Todos los derechos reservados.
@@ -291,16 +238,22 @@
         </div>
     </footer>
 
-    <div id="modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden items-center justify-center p-4" onclick="closeModal(event)">
-        <div id="modal-container" class="bg-bg-card rounded-sm shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
-               <div class="flex justify-end p-4">
-                <button onclick="closeModal()" class="text-text-muted hover:text-pantone-magenta text-2xl">&times;</button>
-            </div>
-            <div id="modal-content" class="p-6 pt-0">
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden **flex items-center justify-center** p-4" onclick="closeModal(event)">
+        <div id="modal-container" class="bg-bg-card rounded-sm shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative" onclick="event.stopPropagation()">
+            
+            <button onclick="closeModal()" class="absolute top-4 right-4 z-10 text-text-muted hover:text-pantone-magenta text-xl transition-colors p-1 rounded-full bg-bg-card/70 backdrop-blur-sm">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            
+            <div id="modal-content" class="p-4 sm:p-6">
                 </div>
+            
         </div>
     </div>
-
-    <script src="./js/main.js" defer></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script src="config.js"></script> 
+    <script src="js/main.js"></script>
 </body>
 </html>

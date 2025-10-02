@@ -410,7 +410,7 @@ window.openModal = (id) => {
     // Generar el carrusel de imágenes del modal
     const imageCarousel = obra.images.map((img, index) => `
         <div class="modal-carousel-item ${index === 0 ? 'active' : ''}" data-index="${index}">
-            <div class="image-zoom-container cursor-move" onmousemove="zoomImage(event, this)" onmouseleave="resetZoom(this)">
+            <div class="image-zoom-container cursor-move h-full w-full" onmousemove="zoomImage(event, this)" onmouseleave="resetZoom(this)">
                 <img 
                     src="${img.url}" 
                     alt="${obra.title} - Imagen ${index + 1}" 
@@ -442,9 +442,9 @@ window.openModal = (id) => {
     
     // Contenido del modal
     modalContent.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6"> 
-            <div class="image-column">
-                <div id="modal-image-carousel" class="relative overflow-hidden ${hasMultipleImages ? 'aspect-[4/3]' : 'aspect-square'} bg-bg-principal rounded-md">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-0"> 
+            <div class="image-column **aspect-[4/3] md:aspect-auto**">
+                <div id="modal-image-carousel" class="relative overflow-hidden h-full w-full bg-bg-principal rounded-md">
                     ${imageCarousel}
                 </div>
                 ${hasMultipleImages ? `
@@ -485,6 +485,8 @@ window.openModal = (id) => {
     `;
 
     modal.classList.remove('hidden');
+    // Se elimina esta línea para que el modal ya tenga la clase 'flex' y así se centre correctamente
+    // modal.classList.add('flex');
     document.body.classList.add('overflow-hidden');
     
     // Iniciar carrusel del modal
@@ -501,18 +503,17 @@ window.openModal = (id) => {
 };
 
 window.closeModal = (event) => {
-    // Si haces click directamente en el fondo negro (modal), ciérralo.
-    // Si haces click en la X, ciérralo.
-    if (event && event.target !== modal && !event.target.closest('#modal-container') && event.target.tagName !== 'BUTTON') {
-        return;
+    // Si el evento es un clic fuera del contenedor (directamente en el modal), ciérralo.
+    // O si se llama sin evento (desde el botón X).
+    if (!event || event.target === modal || event.target.closest('#modal-container') === null) {
+        modal.classList.add('hidden');
+        // modal.classList.remove('flex'); // Ya se maneja con 'hidden'
+        document.body.classList.remove('overflow-hidden');
+        
+        // Resetear el carrusel y zoom
+        const zoomContainers = document.querySelectorAll('.image-zoom-container');
+        zoomContainers.forEach(resetZoom);
     }
-    
-    modal.classList.add('hidden');
-    document.body.classList.remove('overflow-hidden');
-    
-    // Resetear el carrusel y zoom
-    const zoomContainers = document.querySelectorAll('.image-zoom-container');
-    zoomContainers.forEach(resetZoom);
 };
 
 let currentSlide = 0;

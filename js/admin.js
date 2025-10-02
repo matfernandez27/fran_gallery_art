@@ -6,6 +6,7 @@ const client = supabase.createClient(window.supabaseUrl, window.supabaseAnonKey)
 let currentWorks = [];
 let isEditMode = false;
 let workToEdit = null;
+let sortableInstance = null; // Instancia de SortableJS
 
 const worksList = document.getElementById('works-list');
 const loginContainer = document.getElementById('login-container');
@@ -17,8 +18,8 @@ const saveOrderButton = document.getElementById('save-order-button');
 const currentImagesList = document.getElementById('current-images-list');
 const currentImagesContainer = document.getElementById('current-images-container');
 const alertDiv = document.getElementById('alert');
-const submitButton = document.getElementById('submit-button');
 const searchInput = document.getElementById('search-input'); // Nuevo
+
 
 // --- FUNCIONES DE UTILIDAD ---
 function showAlert(message, type = 'success') {
@@ -33,405 +34,359 @@ function showAlert(message, type = 'success') {
         alertDiv.classList.add('bg-indigo-100', 'text-indigo-700');
     }
 
-    // Mostrar con transición
     setTimeout(() => {
-        alertDiv.classList.add('opacity-100');
-    }, 10);
-    
-    // Ocultar después de 5 segundos
-    setTimeout(() => {
-        alertDiv.classList.remove('opacity-100');
         alertDiv.classList.add('opacity-0');
-        setTimeout(() => {
+        alertDiv.addEventListener('transitionend', function handler() {
             alertDiv.classList.add('hidden');
-        }, 300); // Esperar a que termine la transición
-    }, 5000);
+            alertDiv.classList.remove('opacity-0'); // Reset para el siguiente show
+            alertDiv.removeEventListener('transitionend', handler);
+        });
+    }, 4000);
+}
+
+
+// --- LÓGICA DE VISTAS ---
+function showLoginView() {
+    loginContainer.classList.remove('hidden');
+    adminHeader.classList.add('hidden');
+    obraFormContainer.classList.add('hidden');
+    worksContainer.classList.add('hidden');
+    document.getElementById('works-container').classList.add('hidden');
 }
 
 function showAdminView() {
     loginContainer.classList.add('hidden');
     adminHeader.classList.remove('hidden');
     document.getElementById('works-container').classList.remove('hidden');
-    document.getElementById('show-add-form-button').classList.remove('hidden');
-}
-
-function showLoginView() {
-    loginContainer.classList.remove('hidden');
-    adminHeader.classList.add('hidden');
-    document.getElementById('works-container').classList.add('hidden');
-    obraFormContainer.classList.add('hidden');
-}
-
-// --- RENDERING Y GESTIÓN DE OBRAS ---
-
-function renderWorksList(works) {
-    worksList.innerHTML = '';
-    works.forEach(obra => {
-        const item = document.createElement('div');
-        item.id = `obra-item-${obra.id}`;
-        item.dataset.id = obra.id;
-        item.className = 'bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex items-start space-x-4';
-        
-        const imageUrl = obra.imagenes && obra.imagenes.length > 0 
-            ? `${client.storage.from(BUCKET_NAME).getPublicUrl(obra.imagenes[0].path).data.publicUrl}`
-            : 'https://via.placeholder.com/100x100?text=No+Image';
-
-        item.innerHTML = `
-            <div class="drag-handle p-2 self-center text-gray-400 hover:text-indigo-600 transition duration-200">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
-                </svg>
-            </div>
-            <img src="${imageUrl}" alt="${obra.titulo}" class="obra-image w-20 h-20 object-cover rounded-md flex-shrink-0">
-            <div class="flex-grow min-w-0">
-                <h3 class="text-lg font-semibold text-gray-900">${obra.titulo}</h3>
-                <p class="text-sm text-gray-500 mb-1">Año: ${obra.anio || 'N/A'} | Cat.: ${obra.categoria || 'N/A'} | Serie: ${obra.serie || 'N/A'}</p>
-                <p class="text-sm text-gray-700 text-truncate-2">${obra.descripcion || 'Sin descripción.'}</p>
-            </div>
-            <div class="flex flex-col space-y-2 ml-4 flex-shrink-0">
-                <button onclick="editWork(${obra.id})" class="px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-300">
-                    Editar
-                </button>
-                <button onclick="deleteWork(${obra.id}, this)" class="px-3 py-1 text-sm bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300">
-                    Eliminar
-                </button>
-            </div>
-        `;
-        worksList.appendChild(item);
-    });
-}
-
-/**
- * Filtra la lista de obras mostradas basándose en el valor del input de búsqueda.
- */
-function filterWorks() {
-    const query = searchInput.value.toLowerCase().trim();
-    
-    // Si la consulta está vacía, mostrar todas las obras que están actualmente en currentWorks
-    if (query === '') {
-        renderWorksList(currentWorks);
-        return;
-    }
-
-    const filteredWorks = currentWorks.filter(obra => {
-        const title = obra.titulo ? obra.titulo.toLowerCase() : '';
-        const description = obra.descripcion ? obra.descripcion.toLowerCase() : '';
-        const category = obra.categoria ? obra.categoria.toLowerCase() : '';
-        const series = obra.serie ? obra.serie.toLowerCase() : '';
-
-        return (
-            title.includes(query) ||
-            description.includes(query) ||
-            category.includes(query) ||
-            series.includes(query)
-        );
-    });
-
-    renderWorksList(filteredWorks);
-}
-
-
-// --- LÓGICA DE DATOS Y CONEXIÓN CON SUPABASE ---
-
-async function fetchWorks() {
-    try {
-        const { data, error } = await client
-            .from('productos')
-            .select('*')
-            .order('orden', { ascending: true }); 
-
-        if (error) throw error;
-
-        currentWorks = data || [];
-        renderWorksList(currentWorks);
-        initSortable(); // Reinicializar SortableJS con la lista cargada
-    } catch (error) {
-        console.error("Error al cargar obras:", error);
-        showAlert("Error al cargar las obras: " + error.message, 'error');
-    }
-}
-
-async function saveOrder() {
-    saveOrderButton.textContent = "Guardando...";
-    saveOrderButton.disabled = true;
-
-    try {
-        const orderUpdates = Array.from(worksList.children).map((item, index) => ({
-            id: parseInt(item.dataset.id),
-            orden: index // Nuevo orden basado en la posición en la lista
-        }));
-
-        const { error } = await client
-            .from('productos')
-            .upsert(orderUpdates); 
-            // NOTA: upsert requiere que la tabla tenga activado 'RLS' y el policy 'UPDATE'
-
-        if (error) throw error;
-
-        // Actualizar el orden en el array local para mantener sincronización
-        orderUpdates.forEach(update => {
-            const index = currentWorks.findIndex(w => w.id === update.id);
-            if (index !== -1) {
-                currentWorks[index].orden = update.orden;
-            }
-        });
-        currentWorks.sort((a, b) => a.orden - b.orden);
-
-        showAlert("Orden guardado exitosamente!", 'success');
-        saveOrderButton.classList.add('hidden'); // Ocultar después de guardar
-    } catch (error) {
-        console.error("Error al guardar el orden:", error);
-        showAlert("Error al guardar el orden: " + error.message, 'error');
-    } finally {
-        saveOrderButton.textContent = "Guardar Orden";
-        // saveOrderButton.disabled = false; // Se mantiene deshabilitado/oculto hasta nuevo cambio
-    }
-}
-
-// Lógica de Supabase para subir una imagen
-async function uploadImage(file, workId) {
-    const fileExtension = file.name.split('.').pop();
-    const fileName = `${workId}_${Date.now()}.${fileExtension}`;
-    const filePath = `obras/${fileName}`;
-
-    const { data, error } = await client.storage
-        .from(BUCKET_NAME)
-        .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false // No sobrescribir
-        });
-
-    if (error) throw error;
-
-    return { path: filePath, name: file.name };
-}
-
-
-async function handleSubmit(event) {
-    event.preventDefault();
-    submitButton.textContent = isEditMode ? "Guardando Cambios..." : "Creando Obra...";
-    submitButton.disabled = true;
-
-    try {
-        const data = new FormData(obraForm);
-        const obraData = {
-            titulo: data.get('titulo') || '',
-            descripcion: data.get('descripcion') || '',
-            anio: data.get('anio') ? parseInt(data.get('anio')) : null,
-            categoria: data.get('categoria') || '',
-            serie: data.get('serie') || '' // Campo 'serie' añadido
-        };
-
-        const imageFiles = data.getAll('imagenes').filter(file => file.name);
-
-        let result;
-        
-        if (isEditMode) {
-            // --- MODO EDICIÓN ---
-            
-            // 1. Manejar borrado y reordenamiento de imágenes actuales
-            const existingImagesJSON = currentImagesList.dataset.currentImages;
-            let existingImages = existingImagesJSON ? JSON.parse(existingImagesJSON) : [];
-            
-            // 2. Subir nuevas imágenes (si hay)
-            let newImages = [];
-            if (imageFiles.length > 0) {
-                const uploadPromises = imageFiles.map(file => uploadImage(file, workToEdit.id));
-                newImages = await Promise.all(uploadPromises);
-            }
-
-            // Combinar las imágenes existentes (ya reordenadas/filtradas en la UI) con las nuevas
-            const updatedImages = [...existingImages, ...newImages];
-            
-            const { data: updateData, error: updateError } = await client
-                .from('productos')
-                .update({ ...obraData, imagenes: updatedImages })
-                .eq('id', workToEdit.id)
-                .select()
-                .single();
-
-            if (updateError) throw updateError;
-            result = updateData;
-
-        } else {
-            // --- MODO CREACIÓN ---
-            
-            // 1. Obtener el último orden para el nuevo item
-            const lastOrder = currentWorks.length > 0 ? Math.max(...currentWorks.map(w => w.orden)) : -1;
-            obraData.orden = lastOrder + 1;
-
-            // 2. Insertar la obra primero para obtener el ID
-            const { data: insertData, error: insertError } = await client
-                .from('productos')
-                .insert([obraData])
-                .select()
-                .single();
-
-            if (insertError) throw insertError;
-            result = insertData;
-            
-            // 3. Subir imágenes si existen, usando el ID recién creado
-            let uploadedImages = [];
-            if (imageFiles.length > 0) {
-                const uploadPromises = imageFiles.map(file => uploadImage(file, result.id));
-                uploadedImages = await Promise.all(uploadPromises);
-                
-                // 4. Actualizar la obra con la información de las imágenes
-                const { error: updateImagesError } = await client
-                    .from('productos')
-                    .update({ imagenes: uploadedImages })
-                    .eq('id', result.id);
-
-                if (updateImagesError) throw updateImagesError;
-                result.imagenes = uploadedImages; // Actualizar el objeto resultado con las imágenes
-            }
-        }
-        
-        // Actualizar lista local y UI
-        if (isEditMode) {
-            currentWorks = currentWorks.map(w => w.id === result.id ? result : w);
-        } else {
-            currentWorks.push(result);
-            currentWorks.sort((a, b) => a.orden - b.orden);
-        }
-        renderWorksList(currentWorks);
-        
-        showAlert(`Obra ${isEditMode ? 'actualizada' : 'creada'} exitosamente!`, 'success');
-        resetForm();
-        showWorksList();
-
-    } catch (error) {
-        console.error("Error al procesar obra:", error);
-        showAlert("Error: " + error.message, 'error');
-    } finally {
-        submitButton.textContent = isEditMode ? "Guardar Cambios" : "Guardar Obra";
-        submitButton.disabled = false;
-    }
-}
-
-
-// --- LÓGICA DE FORMULARIO ---
-
-function resetForm() {
-    obraForm.reset();
-    isEditMode = false;
-    workToEdit = null;
-    document.getElementById('form-title').textContent = "Agregar Nueva Obra";
-    submitButton.textContent = "Guardar Obra";
-    currentImagesContainer.classList.add('hidden');
-    currentImagesList.innerHTML = '';
+    loadWorks();
 }
 
 function showAddForm() {
-    resetForm();
+    isEditMode = false;
+    workToEdit = null;
+    document.getElementById('form-title').textContent = 'Agregar Nueva Obra';
+    document.getElementById('submit-button').textContent = 'Guardar Obra';
+    obraForm.reset();
+    currentImagesContainer.classList.add('hidden');
     obraFormContainer.classList.remove('hidden');
     document.getElementById('works-container').classList.add('hidden');
-    document.getElementById('show-add-form-button').classList.add('hidden');
 }
 
 function showWorksList() {
+    // Implementa la función de reset (limpieza de formulario)
+    isEditMode = false;
+    workToEdit = null;
+    obraForm.reset();
+    document.getElementById('price').value = '';
+    document.getElementById('show_price').checked = false;
+    document.getElementById('is_available').checked = false;
+
     obraFormContainer.classList.add('hidden');
     document.getElementById('works-container').classList.remove('hidden');
-    document.getElementById('show-add-form-button').classList.remove('hidden');
-    filterWorks(); // Refrescar la lista, aplicando el filtro si lo hay
+    saveOrderButton.disabled = true;
+    searchInput.value = ''; // Limpiar buscador
+    filterWorks(); // Refrescar la lista con todas las obras
 }
 
 
-// --- EDICIÓN Y ELIMINACIÓN ---
+// --- LÓGICA DE DATOS Y RENDERIZADO ---
+async function loadWorks() {
+    // Carga las obras ordenadas por el campo 'orden'
+    const { data, error } = await client
+        .from('productos')
+        .select('*')
+        .order('orden', { ascending: true }); 
 
-window.editWork = (id) => {
-    const obra = currentWorks.find(w => w.id === id);
-    if (!obra) return;
+    if (error) {
+        console.error("Error al cargar obras:", error);
+        showAlert("Error al cargar las obras.", 'error');
+        return;
+    }
 
-    workToEdit = obra;
-    isEditMode = true;
-    
-    // 1. Llenar campos del formulario
-    document.getElementById('form-title').textContent = "Editar Obra";
-    submitButton.textContent = "Guardar Cambios";
-    document.getElementById('titulo').value = obra.titulo || '';
-    document.getElementById('descripcion').value = obra.descripcion || '';
-    document.getElementById('anio').value = obra.anio || '';
-    document.getElementById('categoria').value = obra.categoria || '';
-    document.getElementById('serie').value = obra.serie || ''; // Campo 'serie'
-
-    // 2. Mostrar contenedor de imágenes actuales
-    currentImagesContainer.classList.remove('hidden');
-    renderCurrentImages(obra.imagenes);
-
-    // 3. Mostrar el formulario
-    obraFormContainer.classList.remove('hidden');
-    document.getElementById('works-container').classList.add('hidden');
-    document.getElementById('show-add-form-button').classList.add('hidden');
+    currentWorks = data;
+    filterWorks(); // Renderiza todas las obras inicialmente
+    initSortable();
 }
 
-function renderCurrentImages(images) {
-    currentImagesList.innerHTML = '';
-    
-    // Guardar el estado actual en el dataset (importante para el submit)
-    currentImagesList.dataset.currentImages = JSON.stringify(images);
+// Función para renderizar la lista de obras (usada por loadWorks y filterWorks)
+function renderWorks(works) {
+    if (sortableInstance) {
+        sortableInstance.destroy();
+    }
+    worksList.innerHTML = ''; 
 
-    images.forEach(img => {
-        const imageUrl = `${client.storage.from(BUCKET_NAME).getPublicUrl(img.path).data.publicUrl}`;
+    if (works.length === 0) {
+        worksList.innerHTML = '<p class="text-center text-gray-500 py-4">No se encontraron obras.</p>';
+        return;
+    }
+
+    works.forEach(obra => {
+        const obraElement = document.createElement('div');
+        obraElement.id = `obra-item-${obra.id}`;
+        // Uso de clases para el drag and drop (arrastrar)
+        obraElement.className = 'flex items-center justify-between p-3 bg-white border border-gray-200 rounded-md shadow-sm hover:shadow-lg transition-shadow duration-200 cursor-default';
+        obraElement.dataset.id = obra.id;
+        obraElement.dataset.orden = obra.orden;
         
-        const imgItem = document.createElement('div');
-        imgItem.className = 'relative group w-24 h-24 cursor-pointer';
-        imgItem.dataset.path = img.path;
-        imgItem.dataset.name = img.name;
+        const info = document.createElement('div');
+        info.className = 'flex items-center min-w-0 flex-1';
+
+        // Icono de arrastre (drag handle)
+        const dragHandle = document.createElement('span');
+        dragHandle.className = 'drag-handle mr-3 text-gray-400 hover:text-indigo-600';
+        dragHandle.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>';
         
-        imgItem.innerHTML = `
-            <img src="${imageUrl}" alt="${img.name}" class="w-full h-full object-cover rounded-md border border-gray-300">
-            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 rounded-md">
-                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-            </div>
-        `;
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = `${obra.titulo} (${obra.anio}) - ${obra.categoria || 'Sin Cat.'}`;
+        titleSpan.className = 'font-medium text-gray-800 flex-1 truncate';
+
+        info.appendChild(dragHandle);
+        info.appendChild(titleSpan);
+
+
+        const actions = document.createElement('div');
+        actions.className = 'flex space-x-2 items-center ml-4';
         
-        // Manejar el click para eliminar (solo visualmente por ahora)
-        imgItem.addEventListener('click', (e) => removeCurrentImage(e, img.path));
+        // Botón de EDITAR
+        const editBtn = document.createElement('button');
+        editBtn.textContent = 'Editar';
+        editBtn.className = 'px-3 py-1 text-sm bg-indigo-500 text-white rounded hover:bg-indigo-600 transition';
+        editBtn.onclick = () => editWork(obra.id); 
+
+        // Botón de ELIMINAR
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Eliminar';
+        deleteBtn.className = 'px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition';
+        deleteBtn.onclick = (e) => deleteWork(obra.id, e.target); 
+
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
         
-        currentImagesList.appendChild(imgItem);
+        obraElement.appendChild(info);
+        obraElement.appendChild(actions);
+
+        worksList.appendChild(obraElement);
     });
-    
-    // Inicializar SortableJS para las imágenes actuales
-    new Sortable(currentImagesList, {
+    initSortable(); // Reinicializa SortableJS para la nueva lista
+}
+
+function initSortable() {
+    if (sortableInstance) {
+        sortableInstance.destroy();
+    }
+    sortableInstance = new Sortable(worksList, {
+        handle: '.drag-handle',
         animation: 150,
-        ghostClass: 'bg-indigo-200',
-        onEnd: updateCurrentImagesData
+        onEnd: function (evt) {
+            // Activar el botón de guardar orden si hubo un cambio
+            if (evt.oldIndex !== evt.newIndex) {
+                saveOrderButton.disabled = false;
+                saveOrderButton.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                saveOrderButton.classList.add('bg-green-600', 'hover:bg-green-700');
+            }
+        },
     });
 }
 
-function removeCurrentImage(event, path) {
-    event.stopPropagation();
-    const itemToRemove = event.currentTarget;
-    itemToRemove.remove();
-    updateCurrentImagesData(); // Actualizar el dataset después de la eliminación
-    showAlert("Imagen marcada para eliminación/reordenamiento. Confirma en 'Guardar Cambios'.", 'info');
+// Lógica de filtrado
+function filterWorks() {
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    
+    if (!searchTerm) {
+        renderWorks(currentWorks);
+        return;
+    }
+
+    const filtered = currentWorks.filter(obra => {
+        // Concatenar todos los campos de texto relevantes para la búsqueda
+        const searchableText = [
+            obra.titulo, 
+            obra.descripcion, 
+            obra.categoria, 
+            obra.serie, 
+            String(obra.anio) 
+        ].join(' ').toLowerCase();
+        
+        return searchableText.includes(searchTerm);
+    });
+
+    renderWorks(filtered);
 }
 
-function updateCurrentImagesData() {
-    const updatedImages = Array.from(currentImagesList.children).map(item => ({
-        path: item.dataset.path,
-        name: item.dataset.name
-    }));
-    // Sobrescribir el dataset con la nueva lista de imágenes (ordenada o filtrada)
-    currentImagesList.dataset.currentImages = JSON.stringify(updatedImages);
-    saveOrderButton.classList.remove('hidden'); 
-}
 
-window.deleteWork = async (id, button) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar esta obra y todas sus imágenes? Esta acción es irreversible.")) {
+// --- CRUD DE OBRA ---
+async function editWork(id) {
+    workToEdit = currentWorks.find(w => w.id === id);
+    if (!workToEdit) {
+        showAlert("Obra no encontrada.", 'error');
         return;
     }
     
+    isEditMode = true;
+    document.getElementById('form-title').textContent = `Editar Obra: ${workToEdit.titulo}`;
+    document.getElementById('submit-button').textContent = 'Actualizar Obra';
+
+    // Cargar datos de texto
+    document.getElementById('titulo').value = workToEdit.titulo;
+    document.getElementById('descripcion').value = workToEdit.descripcion;
+    document.getElementById('anio').value = workToEdit.anio;
+    document.getElementById('categoria').value = workToEdit.categoria || '';
+    document.getElementById('serie').value = workToEdit.serie || '';
+    
+    // Cargar datos de precio y disponibilidad (NUEVO)
+    document.getElementById('price').value = workToEdit.price || '';
+    document.getElementById('show_price').checked = workToEdit.show_price;
+    document.getElementById('is_available').checked = workToEdit.is_available;
+    
+    // Cargar imágenes actuales
+    renderCurrentImages(workToEdit.imagenes);
+    currentImagesContainer.classList.remove('hidden');
+
+    obraFormContainer.classList.remove('hidden');
+    document.getElementById('works-container').classList.add('hidden');
+}
+
+
+async function handleSubmit(e) {
+    e.preventDefault();
+
+    // El botón que dispara el submit (soluciona el error de ID duplicado)
+    const button = e.submitter; 
     const originalText = button.textContent;
-    button.textContent = "Eliminando...";
+    
+    // Deshabilitar y mostrar estado
+    button.textContent = isEditMode ? "Actualizando..." : "Guardando...";
     button.disabled = true;
+
+    // 1. Obtener datos del formulario
+    const formData = new FormData(obraForm);
+    const titulo = formData.get('titulo');
+    const descripcion = formData.get('descripcion');
+    const anio = parseInt(formData.get('anio'));
+    const categoria = formData.get('categoria');
+    const serie = formData.get('serie');
+    const newFiles = document.getElementById('imagenes').files;
+    
+    // --- OBTENER NUEVOS CAMPOS ---
+    const price = parseFloat(formData.get('price')) || null;
+    const show_price = formData.get('show_price') === 'on'; 
+    const is_available = formData.get('is_available') === 'on';
+    // ----------------------------
+
+
+    let existingImages = isEditMode ? workToEdit.imagenes : [];
+    let newImageUrls = [];
+
+    try {
+        // 2. Subir Nuevas Imágenes
+        if (newFiles.length > 0) {
+            showAlert(`Subiendo ${newFiles.length} imágenes...`, 'info');
+
+            for (let i = 0; i < newFiles.length; i++) {
+                const file = newFiles[i];
+                // Crear un path único
+                const timestamp = new Date().getTime();
+                const folder = workToEdit ? workToEdit.id : 'temp-upload'; // Usar ID o un temporal
+                const filePath = `${folder}/${timestamp}-${file.name.replace(/\s/g, '_')}`;
+
+                const { data, error } = await client.storage
+                    .from(BUCKET_NAME)
+                    .upload(filePath, file, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+
+                if (error) throw error;
+
+                // Obtener URL pública para almacenar en la DB
+                newImageUrls.push({
+                    path: data.path,
+                    url: client.storage.from(BUCKET_NAME).getPublicUrl(data.path).data.publicUrl,
+                    name: file.name
+                });
+            }
+        }
+
+        // 3. Combinar las listas de imágenes
+        // Si estamos editando, las imágenes existentes ya fueron reordenadas por el drag and drop del formulario
+        const finalImageList = [...existingImages, ...newImageUrls];
+
+        // 4. Preparar el objeto de datos para la DB
+        const obraData = {
+            titulo: titulo,
+            descripcion: descripcion,
+            anio: anio,
+            categoria: categoria,
+            serie: serie,
+            imagenes: finalImageList,
+            price: price,
+            show_price: show_price,
+            is_available: is_available
+        };
+
+        let dbResponse;
+
+        // 5. Insertar o Actualizar en la DB
+        if (isEditMode) {
+            dbResponse = await client
+                .from('productos')
+                .update(obraData)
+                .eq('id', workToEdit.id)
+                .select();
+        } else {
+            // Insertar con orden temporal 0
+            dbResponse = await client
+                .from('productos')
+                .insert([{ ...obraData, orden: 0 }]) 
+                .select(); 
+            
+            if (dbResponse.error) throw dbResponse.error;
+            
+            // Actualizar el orden con el ID después de la inserción
+            const newId = dbResponse.data[0].id;
+            const updateOrder = await client
+                .from('productos')
+                .update({ orden: newId })
+                .eq('id', newId);
+                
+            if (updateOrder.error) throw updateOrder.error;
+            
+            dbResponse.data[0].orden = newId; 
+        }
+
+        if (dbResponse.error) throw dbResponse.error;
+
+        showAlert(`Obra ${isEditMode ? 'actualizada' : 'creada'} exitosamente!`, 'success');
+        
+        // Limpiar formulario y recargar la lista
+        showWorksList(); // Llama a la función de limpieza y recarga
+
+    } catch (error) {
+        console.error("Error en la operación de obra:", error);
+        showAlert(`Error al guardar la obra: ${error.message}`, 'error');
+
+    } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+    }
+}
+
+
+// Función completa para DELETE WORK (necesaria para el panel)
+async function deleteWork(id, element) {
+    if (!confirm("¿Estás seguro de que quieres ELIMINAR PERMANENTEMENTE esta obra y todos sus archivos?")) {
+        return;
+    }
+    
+    const originalText = element.textContent;
+    element.textContent = "Eliminando...";
+    element.disabled = true;
 
     try {
         const obra = currentWorks.find(w => w.id === id);
         if (!obra) throw new Error("Obra no encontrada localmente.");
 
-        // 1. Eliminar de la Base de Datos
+        // 1. Eliminar de la base de datos
         const { error: dbError } = await client
             .from('productos')
             .delete()
@@ -439,7 +394,7 @@ window.deleteWork = async (id, button) => {
 
         if (dbError) throw dbError;
 
-        // 2. Eliminar del Storage
+        // 2. Eliminar imágenes del Storage
         const filePaths = obra.imagenes.map(img => img.path).filter(Boolean);
 
         if (filePaths.length > 0) {
@@ -447,76 +402,127 @@ window.deleteWork = async (id, button) => {
                 .from(BUCKET_NAME)
                 .remove(filePaths);
 
-            // Supabase a veces devuelve un error 404/200 incluso si se borra, manejamos la advertencia.
-            if (storageError && storageError.statusCode !== '200' && storageError.statusCode !== '404') {
+            if (storageError && storageError.statusCode !== '200') {
                 console.warn("Error al borrar imágenes del storage:", storageError);
+                // No lanzamos error para no detener el flujo, solo advertimos
                 showAlert(`Obra eliminada de la DB. ADVERTENCIA: Falló el borrado de ${filePaths.length} imagen(es) del Storage.`, 'error');
-                return; 
             }
         }
 
         showAlert("Obra y archivos eliminados exitosamente!", 'success');
         document.getElementById(`obra-item-${id}`).remove(); 
-        
-        // 3. Actualizar array local
         currentWorks = currentWorks.filter(w => w.id !== id);
-        filterWorks(); // Volver a filtrar/renderizar para asegurar consistencia
 
     } catch (error) {
         console.error(error);
         showAlert(error.message, 'error');
     } finally {
-        // En caso de error, restaurar botón (aunque si se elimina, no importa)
-        button.textContent = originalText;
-        button.disabled = false;
+        element.textContent = originalText;
+        element.disabled = false;
     }
 }
 
+// Función para renderizar y manejar la eliminación de imágenes en modo edición
+function renderCurrentImages(images) {
+    currentImagesList.innerHTML = '';
+    
+    // Si no hay imágenes, ocultar el contenedor
+    if (!images || images.length === 0) {
+        currentImagesContainer.classList.add('hidden');
+        return;
+    }
 
-// --- SORTABLEJS (DRAG & DROP) ---
+    images.forEach(img => {
+        const imgContainer = document.createElement('div');
+        imgContainer.className = 'relative group cursor-pointer w-20 h-20 rounded-md overflow-hidden shadow-md';
+        
+        const imgElement = document.createElement('img');
+        imgElement.src = img.url;
+        imgElement.className = 'w-full h-full object-cover obra-image';
+        
+        // Overlay de eliminación
+        const deleteOverlay = document.createElement('div');
+        deleteOverlay.className = 'absolute inset-0 bg-red-600 bg-opacity-70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300';
+        deleteOverlay.innerHTML = '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>';
+        
+        // Evento de eliminación
+        imgContainer.onclick = () => deleteImageFromWork(workToEdit.id, img.path, imgContainer);
 
-let sortableInstance = null;
+        imgContainer.appendChild(imgElement);
+        imgContainer.appendChild(deleteOverlay);
+        currentImagesList.appendChild(imgContainer);
+    });
 
-function initSortable() {
-    if (sortableInstance) {
-        sortableInstance.destroy();
+    currentImagesContainer.classList.remove('hidden');
+}
+
+async function deleteImageFromWork(workId, imagePath, element) {
+    if (!confirm(`¿Estás seguro de que quieres ELIMINAR PERMANENTEMENTE esta imagen? Esto también la borrará del Storage de Supabase.`)) {
+        return;
     }
     
-    sortableInstance = new Sortable(worksList, {
-        animation: 150,
-        handle: '.drag-handle', // Solo el handle para arrastrar
-        ghostClass: 'bg-indigo-100', // Clase para el elemento fantasma
-        onEnd: function (evt) {
-            // Un item ha sido movido
-            saveOrderButton.classList.remove('hidden');
-            saveOrderButton.disabled = false;
+    element.classList.add('opacity-50', 'pointer-events-none'); 
+    
+    try {
+        // 1. Eliminar del Storage
+        const { error: storageError } = await client.storage
+            .from(BUCKET_NAME)
+            .remove([imagePath]);
+
+        if (storageError) throw storageError;
+
+        // 2. Actualizar el registro en la tabla 'productos'
+        const obra = currentWorks.find(w => w.id === workId);
+        if (!obra) throw new Error("Obra no encontrada localmente.");
+
+        // Filtrar la imagen eliminada del array
+        const updatedImages = obra.imagenes.filter(img => img.path !== imagePath);
+
+        const { error: dbError } = await client
+            .from('productos')
+            .update({ imagenes: updatedImages })
+            .eq('id', workId);
+        
+        if (dbError) throw dbError;
+
+        // 3. Actualizar la interfaz local
+        obra.imagenes = updatedImages; // Actualiza el objeto local
+        workToEdit.imagenes = updatedImages; // Actualiza el objeto de edición
+        element.remove();
+        showAlert("Imagen eliminada de la obra y del Storage.", 'success');
+        
+        // Si no quedan más imágenes, oculta el contenedor
+        if (updatedImages.length === 0) {
+             currentImagesContainer.classList.add('hidden');
         }
-    });
+
+    } catch (error) {
+        console.error("Error al eliminar la imagen:", error);
+        showAlert(`Error al eliminar imagen: ${error.message}`, 'error');
+        element.classList.remove('opacity-50', 'pointer-events-none'); 
+    }
 }
 
 
-// --- INICIALIZACIÓN Y LISTENERS ---
-
+// --- LÓGICA DE AUTENTICACIÓN ---
 async function checkAuth() {
     const { data: { session } } = await client.auth.getSession();
     if (session) {
         showAdminView();
-        await fetchWorks();
     } else {
         showLoginView();
     }
 }
 
-async function handleLogin(event) {
-    event.preventDefault();
+async function handleLogin(e) {
+    e.preventDefault();
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
-    
+
     try {
         const { error } = await client.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        
-        await checkAuth(); // Esto recargará y mostrará la vista admin
+        // La vista se actualizará automáticamente con onAuthStateChange o al recargar
         showAlert("¡Bienvenido!", 'success');
     } catch (error) {
         showAlert("Error de login: " + error.message, 'error');
@@ -535,7 +541,50 @@ async function handleLogout() {
     }
 }
 
-// Event Listeners
+
+// --- LÓGICA DE ORDEN ---
+async function saveOrder() {
+    const orderElements = worksList.querySelectorAll('[data-id]');
+    const updates = [];
+
+    orderElements.forEach((el, index) => {
+        const newOrder = index + 1; // Orden basado en 1
+        const workId = parseInt(el.dataset.id);
+
+        if (workId) {
+            updates.push({
+                id: workId,
+                orden: newOrder
+            });
+        }
+    });
+
+    try {
+        const { error } = await client
+            .from('productos')
+            .upsert(updates); // Usar upsert para actualizar múltiples filas
+
+        if (error) throw error;
+
+        showAlert("Orden de obras guardado exitosamente!", 'success');
+        saveOrderButton.disabled = true;
+        saveOrderButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+        saveOrderButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+
+        // Actualizar el orden localmente
+        currentWorks = currentWorks.map(work => {
+            const update = updates.find(u => u.id === work.id);
+            return update ? { ...work, orden: update.orden } : work;
+        });
+
+    } catch (error) {
+        console.error("Error al guardar el orden:", error);
+        showAlert("Error al guardar el orden.", 'error');
+    }
+}
+
+
+// --- EVENT LISTENERS ---
 document.addEventListener('DOMContentLoaded', checkAuth);
 obraForm.addEventListener('submit', handleSubmit);
 document.getElementById('login-form').addEventListener('submit', handleLogin);
@@ -543,15 +592,4 @@ logoutButton.addEventListener('click', handleLogout);
 saveOrderButton.addEventListener('click', saveOrder);
 document.getElementById('show-add-form-button').addEventListener('click', showAddForm);
 document.getElementById('cancel-edit-button').addEventListener('click', showWorksList);
-
-// NUEVO: Listener para el buscador
-searchInput.addEventListener('input', filterWorks);
-
-
-// Listener para manejar cambios de autenticación en tiempo real (útil para otros tabs o si caduca)
-client.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        // Pequeño retardo para evitar conflictos en el flujo de login/logout manual
-        setTimeout(checkAuth, 100); 
-    }
-});
+searchInput.addEventListener('input', filterWorks); // Conectar el buscador

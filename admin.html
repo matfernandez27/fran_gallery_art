@@ -86,7 +86,29 @@
                     <input type="text" id="serie" name="serie" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 </div>
 
+                <div class="border-t border-gray-200 pt-4 mt-4 space-y-4">
+                    <h3 class="text-lg font-medium text-gray-800">Control de Venta</h3>
+                    
+                    <div>
+                        <label for="price" class="block text-sm font-medium text-gray-700">Precio (en USD o similar)</label>
+                        <input type="number" id="price" name="price" step="0.01" placeholder="Ej: 1200.00" 
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                    </div>
 
+                    <div class="flex items-center">
+                        <input type="checkbox" id="show_price" name="show_price" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                        <label for="show_price" class="ml-2 block text-sm text-gray-700">
+                            Mostrar precio al público
+                        </label>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input type="checkbox" id="is_available" name="is_available" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                        <label for="is_available" class="ml-2 block text-sm text-gray-700">
+                            Obra disponible para venta
+                        </label>
+                    </div>
+                </div>
                 <div id="current-images-container" class="space-y-3 hidden">
                     <h3 class="text-lg font-medium text-gray-700">Imágenes Actuales (Arrastrar para ordenar, click para eliminar)</h3>
                     <div id="current-images-list" class="flex flex-wrap gap-4 p-3 border border-gray-300 rounded-md bg-gray-50">

@@ -66,8 +66,11 @@
             position: absolute;
             width: 100%;
             height: 100%;
-            background-size: cover;
+            /* CORRECCIÓN FINAL: Contain para ver la imagen completa sin estirar */
+            background-size: contain; 
             background-position: center;
+            background-repeat: no-repeat;
+            background-color: #F5E5EC; /* Fondo suave para rellenar */
             opacity: 0;
             transition: opacity 1.5s ease-in-out; 
             transform: scale(1.05); 
@@ -93,9 +96,9 @@
         
         /* Contenedor de la Imagen */
         .bio-image-container {
-            /* Se elimina 'sticky' para que no se pegue al scroll */
+            /* flex justify-center se aplica en el HTML */
             display: flex; 
-            justify-content: center; /* Centra la foto dentro de la columna */
+            justify-content: center; 
         }
 
         /* Estilo de la imagen para asegurar que el rostro se vea */
@@ -195,7 +198,7 @@
         <div class="max-w-6xl mx-auto px-6">
             <div class="grid md:grid-cols-3 gap-16 items-start">
                 
-                <div class="md:col-span-1 bio-image-container">
+                <div class="md:col-span-1 flex justify-center bio-image-container">
                     <div class="w-64 h-64 md:w-80 md:h-80 rounded-sm overflow-hidden border-2 border-pantone-magenta/50 shadow-2xl">
                         <img src="./img/img_perfil.jpg" 
                             alt="Retrato de Francisco Fernández, artista plástico de la Patagonia."
@@ -209,17 +212,32 @@
                     
                     <h3 class="text-2xl font-medium text-text-dark mb-6">Francisco Fernández</h3>
                     
-                    <p class="text-lg text-text-dark leading-relaxed mb-6">
-                        Nacido en Trelew, Chubut hace 33 años y residente en la Patagonia, Francisco Fernández se destaca por su activa participación en exhibiciones itinerantes a lo largo del país.
-                    </p>
-                    
-                    <p class="text-base text-text-muted leading-relaxed mb-6">
-                        <strong>Su obra explora con maestría la intersección entre lo ancestral y lo contemporáneo, tejiendo un diálogo visual potente entre la inmensidad del paisaje patagónico y la vibrante experiencia urbana moderna.</strong>
-                    </p>
+                    <div id="bio-text-content">
+                        <p id="bio-short-text" class="text-lg text-text-dark leading-relaxed mb-4">
+                            Nacido en Trelew, Chubut hace 33 años y residente en la Patagonia, Francisco Fernández se destaca por su activa participación en exhibiciones itinerantes a lo largo del país.
+                        </p>
+                        
+                        <div id="bio-full-text" class="hidden">
+                            <p class="text-base text-text-muted leading-relaxed mb-4">
+                                <strong>Su obra explora con maestría la intersección entre lo ancestral y lo contemporáneo, tejiendo un diálogo visual potente entre la inmensidad del paisaje patagónico y la vibrante experiencia urbana moderna.</strong>
+                            </p>
 
-                    <p class="text-base text-text-muted leading-relaxed">
-                        Cada pieza es un puente hacia lo inhóspito y lo íntimo. Su técnica no solo captura la dualidad de un paisaje vasto, sino que también ofrece una mirada profunda y reflexiva sobre el alma de ese territorio.
-                    </p>
+                            <p class="text-base text-text-muted leading-relaxed mb-4">
+                                Cada pieza es un puente hacia lo inhóspito y lo íntimo. Su técnica no solo captura la dualidad de un paisaje vasto, sino que también ofrece una mirada profunda y reflexiva sobre el alma de ese territorio.
+                            </p>
+                            
+                            <p class="text-base text-text-muted leading-relaxed">
+                                Su trabajo se ha presentado en diversas galerías, mostrando un compromiso constante con la exploración de técnicas de grabado y dibujo contemporáneo.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <button id="read-more-btn" 
+                        class="mt-4 text-pantone-magenta font-semibold hover:text-text-dark transition-colors duration-300 text-sm self-start"
+                        onclick="toggleBio()">
+                        Leer biografía completa
+                    </button>
+                    
 
                 </div>
             </div>
@@ -234,25 +252,29 @@
                 <div class="w-16 h-px bg-pantone-magenta mx-auto"></div>
             </div>
 
-            <div class="mb-8 flex flex-wrap gap-4 items-center bg-bg-card p-4 rounded-sm shadow-inner max-w-5xl mx-auto border border-border-light">
-                <input id="search" type="search" placeholder="Buscar por título, técnica o descripción..."
-                    class="flex-1 min-w-[200px] p-3 rounded-sm border border-border-light shadow-sm focus:outline-none focus:ring-1 focus:ring-pantone-magenta bg-white text-text-dark transition-colors" />
+            <div class="mb-8 flex flex-wrap gap-4 items-center justify-between bg-bg-card p-4 rounded-sm shadow-inner max-w-5xl mx-auto border border-border-light">
                 
-                <select id="filter-category" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta">
-                    <option value="">Todas las categorías</option>
-                    <option value="grabado">Grabado</option>
-                    <option value="dibujo">Dibujo</option>
-                    <option value="pintura">Pintura</option>
-                </select>
+                <input id="search" type="search" placeholder="Buscar por título, técnica o descripción..."
+                    class="flex-1 min-w-0 md:min-w-[200px] p-3 rounded-sm border border-border-light shadow-sm focus:outline-none focus:ring-1 focus:ring-pantone-magenta bg-white text-text-dark transition-colors" />
+                
+                <div class="flex flex-wrap gap-4 justify-end">
+                    
+                    <select id="filter-category" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
+                        <option value="">Categoría</option>
+                        <option value="grabado">Grabado</option>
+                        <option value="dibujo">Dibujo</option>
+                        <option value="pintura">Pintura</option>
+                    </select>
 
-                <select id="filter-series" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta">
-                    <option value="">Todas las series</option>
-                </select>
+                    <select id="filter-series" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
+                        <option value="">Serie</option>
+                    </select>
 
-                <select id="filter-year" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta">
-                    <option value="">Todos los años</option>
-                </select>
-
+                    <select id="filter-year" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
+                        <option value="">Año</option>
+                    </select>
+                </div>
+                
                 <div id="admin-controls" class="hidden flex gap-2">
                     <button id="edit-toggle" class="p-3 rounded-sm bg-border-light hover:bg-pantone-magenta transition duration-300 text-text-dark hover:text-white text-sm">
                         Activar Edición
@@ -387,8 +409,22 @@
             items[currentCarouselIndex].classList.add('active');
         }
 
-        // --- FIN: LÓGICA DEL CARRUSEL DE FONDO ---
+        // --- LÓGICA DE BIOGRAFÍA (NUEVA FUNCIÓN) ---
+        function toggleBio() {
+            const fullText = document.getElementById('bio-full-text');
+            const button = document.getElementById('read-more-btn');
+            
+            const isExpanded = fullText.classList.contains('hidden');
 
+            if (isExpanded) {
+                fullText.classList.remove('hidden');
+                button.textContent = 'Ocultar biografía';
+            } else {
+                fullText.classList.add('hidden');
+                button.textContent = 'Leer biografía completa';
+            }
+        }
+        window.toggleBio = toggleBio; 
 
         // --- FUNCIONES CORE ---
         function normalize(p) {
@@ -477,11 +513,17 @@
 
                 // Poblar Filtros (Año)
                 const years = [...new Set(productos.map(a => a.year).filter(Boolean))].sort((a, b) => b - a);
-                filterYear.innerHTML = '<option value="">Todos los años</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+                filterYear.innerHTML = '<option value="">Año</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
 
                 // Poblar Filtros (Serie)
                 const series = [...new Set(productos.map(a => a.serie).filter(s => s && s.trim() !== ''))].sort((a, b) => a.localeCompare(b));
-                filterSeries.innerHTML = '<option value="">Todas las series</option>' + series.map(s => `<option value="${s}">${s}</option>`).join('');
+                filterSeries.innerHTML = '<option value="">Serie</option>' + series.map(s => `<option value="${s}">${s}</option>`).join('');
+
+                // Asegurar que la opción por defecto de Categoría no diga "Todas las categorías" (por el nuevo diseño)
+                const categoryDefault = document.querySelector('#filter-category option[value=""]');
+                if (categoryDefault.textContent === 'Todas las categorías') {
+                    categoryDefault.textContent = 'Categoría';
+                }
 
                 applyFilters(); 
                 status.textContent = "";

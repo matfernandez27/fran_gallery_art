@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-    <script src="config.js"></script>
+    <script src="config.js"></script> 
     
     <style>
         /* Estilos de Utilidad */
@@ -154,8 +154,8 @@
 
     <script>
         // Inicialización de Supabase y constantes
-        const BUCKET_NAME = 'obras'; 
-        // const BUCKET_URL = `${window.supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}`; // Ya no es necesario si usamos getPublicUrl()
+        // *** CORRECCIÓN CLAVE: Nombre del bucket actualizado a 'imagenes' ***
+        const BUCKET_NAME = 'imagenes'; 
 
         const client = supabase.createClient(window.supabaseUrl, window.supabaseAnonKey);
 
@@ -193,7 +193,7 @@
             setTimeout(() => alertDiv.classList.add('hidden'), 5000);
         }
 
-        // FUNCIÓN MODIFICADA: Usa la función nativa de Supabase para mayor robustez.
+        // FUNCIÓN MEJORADA: Usa la función nativa de Supabase para obtener la URL pública
         function getPublicUrl(path) {
             const { data } = client.storage
                 .from(BUCKET_NAME)
@@ -272,7 +272,7 @@
         function renderWorksList(works) {
             worksList.innerHTML = '';
             works.forEach(obra => {
-                // Se asegura de que la URL sea pública.
+                // Se usa getPublicUrl, que usa el BUCKET_NAME CORREGIDO
                 const mainImage = obra.imagenes[0] ? getPublicUrl(obra.imagenes[0].path) : 'https://placehold.co/60x60?text=NO+IMG';
 
                 const item = document.createElement('div');
@@ -285,7 +285,7 @@
                         <span class="drag-handle text-gray-400 hover:text-indigo-600 mr-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
                         </span>
-                        <img src="${mainImage}" alt="${obra.titulo}" class="w-16 h-16 object-cover rounded-md border border-gray-300" onerror="this.onerror=null;this.src='https://placehold.co/60x60?text=FAIL'">
+                        <img src="${mainImage}" alt="${obra.titulo}" class="w-16 h-16 object-cover rounded-md border border-gray-300" onerror="this.onerror=null;this.src='https://placehold.co/60x60?text=FALLO'">
                         <div>
                             <p class="text-lg font-semibold text-gray-800">${obra.titulo}</p>
                             <p class="text-sm text-gray-500">${obra.tecnica} | ${obra.anio}</p>
@@ -384,7 +384,7 @@
 
                 isEditMode = true;
                 
-                // 1. Llenar los campos (Corrección de IDs aplicada aquí)
+                // 1. Llenar los campos (usando los IDs CORREGIDOS)
                 document.getElementById('form-title').textContent = 'Editar Obra';
                 document.getElementById('form-id').value = workToEdit.id;
                 document.getElementById('form-titulo').value = workToEdit.titulo || '';
@@ -457,7 +457,6 @@
 
                     for (let i = 0; i < files.length; i++) {
                         const file = files[i];
-                        // Usamos el ID (si existe) o un timestamp para el path
                         const pathId = id ? id : Date.now(); 
                         const filePath = `${pathId}/${file.name.replace(/\s/g, '_')}`;
 

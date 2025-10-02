@@ -4,29 +4,19 @@
 const supabaseUrl = window.supabaseUrl;
 const supabaseAnonKey = window.supabaseAnonKey;
 const BUCKET_NAME = 'imagenes';
-// Usamos la inicialización global
-const client = supabase.createClient(supabaseUrl, supabaseAnonKey); 
+const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-let allWorks = []; // Almacena TODAS las obras para filtros/edición
-let displayedWorks = []; // Obras actualmente mostradas en el DOM
-
-// Parámetros de Paginación y Carga
-const PAGE_SIZE = 8; // Carga 8 obras por página
-let currentPage = 0;
-let hasMore = true; // Indica si hay más obras por cargar
-
+let productos = [];
 let isEditing = false;
 let sortableInstance = null;
 let carouselIntervalId = null;
 
-// Elementos del DOM
 const galleryContainer = document.getElementById("gallery-container");
 const status = document.getElementById("status");
 const loadingOverlay = document.getElementById("loading-overlay");
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modal-content");
 const alertDiv = document.getElementById('alert');
-const loadMoreButton = document.getElementById('load-more-button'); // Nuevo botón de carga
 
 // Elementos de Filtro
 const searchInput = document.getElementById("search");
@@ -45,358 +35,531 @@ const mainFooter = document.getElementById('main-footer');
 const gallerySection = document.getElementById('gallery-section');
 
 
-// --- FUNCIONES DE UTILIDAD (Se mantienen igual) ---
-
+// --- FUNCIONES DE UTILIDAD ---
 function showAlert(message, type = 'success') {
-    // ... lógica de showAlert (como en tu versión original) ...
-    if (!alertDiv) {
-        console.warn(`Alerta no mostrada (Falta #alert en el DOM): ${message}`);
-        return;
-    }
     alertDiv.textContent = message;
-    alertDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-indigo-100', 'text-indigo-700', 'opacity-0');
-    
+    alertDiv.classList.remove('hidden');
+    alertDiv.classList.remove('bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+
     if (type === 'error') {
         alertDiv.classList.add('bg-red-100', 'text-red-700');
-    } else if (type === 'success') {
+    } else {
         alertDiv.classList.add('bg-green-100', 'text-green-700');
-    } else if (type === 'info') {
-         alertDiv.classList.add('bg-indigo-100', 'text-indigo-700');
     }
-    
-    setTimeout(() => alertDiv.classList.add('opacity-0'), 4500);
     setTimeout(() => alertDiv.classList.add('hidden'), 5000);
 }
+window.showAlert = showAlert;
 
-// Renderiza OBRAS en el contenedor, usando el array displayedWorks
-function renderGallery(works, append = false) {
-    if (!append) {
-        galleryContainer.innerHTML = '';
-        displayedWorks = [];
-    }
+/**
+ * Formatea un número como un precio con el símbolo de dólar ($), sin decimales.
+ * @param {number} price El precio a formatear.
+ * @returns {string} El precio formateado (ej: $1,200) o 'Consultar'.
+ */
+function formatPrice(price) {
+    if (!price) return 'Consultar';
+    // Usamos Intl.NumberFormat para formatear el número, y anteponemos '$' para forzar el símbolo simple.
+    const formatted = new Intl.NumberFormat('es-AR', { 
+        minimumFractionDigits: 0, 
+        maximumFractionDigits: 0 
+    }).format(price);
+    return `$${formatted}`;
+}
 
-    const htmlContent = works.map((obra, index) => {
-        const imageUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${obra.ruta_imagen}`;
-        
-        return `
-            <div id="obra-${obra.id}" class="work-item relative bg-bg-card shadow-lg rounded-sm overflow-hidden group hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1" 
-                 data-id="${obra.id}" data-order="${obra.orden}" data-year="${obra.anio}" data-category="${obra.categoria}" data-series="${obra.serie}"
-                 onclick="openModal(${obra.id})">
-                <img src="${imageUrl}" alt="${obra.titulo}" class="w-full h-64 object-cover transition-opacity duration-500 group-hover:opacity-90" loading="lazy">
-                <div class="absolute inset-0 bg-black bg-opacity-30 flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <h3 class="text-white text-lg font-semibold">${obra.titulo}</h3>
-                    <p class="text-gray-200 text-sm">${obra.tecnica} (${obra.anio})</p>
-                </div>
-                ${isEditing ? `<div class="absolute top-2 right-2 bg-red-500 text-white p-1 text-xs rounded-full cursor-pointer z-10" onclick="event.stopPropagation(); deleteWork(${obra.id})">X</div>` : ''}
-            </div>
-        `;
-    }).join('');
-
-    galleryContainer.insertAdjacentHTML('beforeend', htmlContent);
-    displayedWorks = [...displayedWorks, ...works]; // Agrega las nuevas obras al array de obras mostradas
-    
-    // Si no hay obras
-    if (displayedWorks.length === 0) {
-        if (status) {
-            status.textContent = "No se encontraron obras que coincidan con el filtro.";
-            status.classList.remove('hidden');
+// --- LÓGICA DE SEGURIDAD: VERIFICACIÓN DE ADMIN ---
+async function checkAdminStatus() {
+    try {
+        const { data: { session } } = await client.auth.getSession();
+        if (session) {
+            adminControls.classList.remove('hidden');
+        } else {
+            adminControls.classList.add('hidden');
         }
-    } else {
-        if (status) status.classList.add('hidden');
+    } catch(e) {
+         console.warn("Error checking admin status:", e);
     }
 }
 
 
-async function openModal(id) {
-    // Buscar en allWorks (o displayedWorks, asumimos que allWorks se carga en su totalidad al inicio para los filtros)
-    const obra = allWorks.find(w => w.id === id) || displayedWorks.find(w => w.id === id); 
+// --- LÓGICA DEL CARRUSEL DE FONDO (DINÁMICO) ---
+const carouselContainer = document.getElementById('carousel-container');
+let currentCarouselIndex = 0;
+
+// Función auxiliar para obtener la URL pública de una imagen
+function getPublicImageUrl(path) {
+    if (!path) return 'https://via.placeholder.com/100x100?text=No+Image';
+    const { data } = client.storage.from(BUCKET_NAME).getPublicUrl(path);
+    return data.publicUrl;
+}
+
+function renderCarouselItems(carouselUrls) {
+    if (!carouselContainer || carouselUrls.length === 0) return;
+
+    if (carouselIntervalId) {
+        clearInterval(carouselIntervalId);
+    }
+    
+    carouselContainer.innerHTML = carouselUrls.map((url, index) => `
+        <div class="carousel-item ${index === 0 ? 'active' : ''}" style="background-image: url('${url}')"></div>
+    `).join('');
+
+    if (carouselUrls.length > 1) {
+        carouselIntervalId = setInterval(nextCarouselItem, 5000); 
+    }
+}
+
+function nextCarouselItem() {
+    const items = document.querySelectorAll('#carousel-container .carousel-item');
+    if (items.length <= 1) return; 
+
+    items[currentCarouselIndex].classList.remove('active');
+    currentCarouselIndex = (currentCarouselIndex + 1) % items.length;
+    items[currentCarouselIndex].classList.add('active');
+}
+
+
+// --- FUNCIONES CORE ---
+function normalize(p) {
+    const images = p.imagenes || [];
+    // Transformar paths a URLs públicas
+    const imagesWithUrls = images.map(img => ({
+        ...img,
+        url: getPublicImageUrl(img.path)
+    }));
+
+    return {
+        id: p.id,
+        title: p.titulo || "", 
+        technique: p.tecnica || "", 
+        size: p.medidas || "", 
+        year: p.anio || 0, 
+        description: p.descripcion || "",
+        order: p.orden || 0,
+        category: p.categoria || "",
+        serie: p.serie || "",
+        price: p.price || null,
+        is_available: p.is_available || false,
+        show_price: p.show_price || false,
+        images: imagesWithUrls,
+        mainImage: (imagesWithUrls.length ? imagesWithUrls[0].url : "https://via.placeholder.com/400x300?text=Sin+Imagen")
+    };
+}
+
+function renderGallery(items) {
+    galleryContainer.innerHTML = '';
+    if (items.length === 0) {
+        galleryContainer.innerHTML = '<p class="col-span-full text-center text-text-muted">No se encontraron obras que coincidan con los filtros.</p>';
+        return;
+    }
+
+    items.forEach(obra => {
+        const card = document.createElement("div");
+        card.className = "bg-bg-card rounded-sm overflow-hidden cursor-pointer shadow-lg hover:shadow-xl transition duration-500 transform hover:-translate-y-1 group border border-border-light";
+        card.setAttribute('data-id', obra.id); 
+        card.setAttribute('onclick', `openModal(${obra.id})`);
+        
+        // --- BLOQUE DE TARJETA ACTUALIZADO CON PRECIO Y DISPONIBILIDAD ---
+        const formattedPrice = obra.show_price && obra.price
+            ? formatPrice(obra.price)
+            : 'Consultar';
+            
+        const priceDisplayClass = obra.show_price && obra.price ? 'font-bold text-text-dark' : 'text-pantone-magenta font-semibold';
+        const availabilityText = obra.is_available ? 'Disponible' : 'Vendida'; // <- MODIFICADO
+        const availabilityClass = obra.is_available ? 'text-green-600' : 'text-red-500';
+
+        card.innerHTML = `
+            <div class="aspect-[4/3] overflow-hidden flex items-center justify-center bg-bg-principal"> 
+                <img 
+                    src="${obra.mainImage}" 
+                    alt="Obra de Francisco Fernández: ${obra.title}, ${obra.technique}" 
+                    class="w-full h-full object-contain transition duration-500 group-hover:scale-105"
+                    onerror="this.onerror=null;this.src='https://via.placeholder.com/400x300?text=Sin+Imagen';" 
+                />
+            </div>
+            <div class="p-4 border-t border-border-light">
+                <h3 class="text-xl font-medium text-text-dark truncate">${obra.title}</h3>
+                <p class="text-sm text-text-muted">${obra.technique} · <span class="text-pantone-magenta font-semibold">${obra.year}</span></p>
+                <div class="flex justify-between items-center pt-2 mt-2 border-t border-border-light">
+                    <span class="text-xs font-semibold ${availabilityClass}">
+                        ${availabilityText}
+                    </span>
+                    <span class="text-lg ${priceDisplayClass}">
+                        ${formattedPrice}
+                    </span>
+                </div>
+            </div>
+        `;
+        // --- FIN BLOQUE DE TARJETA ACTUALIZADO ---
+        galleryContainer.appendChild(card);
+    });
+
+    if (isEditing) {
+        enableSorting();
+    }
+}
+
+async function fetchGallery() {
+    status.textContent = "Cargando obras...";
+    loadingOverlay.classList.remove('hidden');
+    try {
+        const { data, error } = await client
+            .from('productos')
+            .select('*')
+            .order('orden', { ascending: true })
+            .order('anio', { ascending: false });
+        
+        loadingOverlay.classList.add('hidden');
+
+        if (error) {
+            throw new Error(`Error de Supabase: ${error.message}`);
+        }
+
+        productos = data.map(normalize);
+        
+        // Renderizar el carrusel de fondo con las 5 primeras imágenes disponibles
+        const carouselUrls = productos
+            .filter(p => p.images.length > 0)
+            .slice(0, 5)
+            .map(p => p.mainImage);
+            
+        renderCarouselItems(carouselUrls);
+        
+        applyFilters(); // Renderiza la galería completa o filtrada/ordenada por defecto
+
+    } catch (error) {
+        console.error("Error al cargar la galería:", error);
+        status.textContent = "Error al cargar la galería.";
+        loadingOverlay.classList.add('hidden');
+    }
+}
+
+
+function applyFilters() {
+    let filteredItems = [...productos];
+    const query = searchInput.value.toLowerCase().trim();
+    const year = filterYear.value;
+    const category = filterCategory.value;
+    const series = filterSeries.value;
+
+    if (query) {
+        filteredItems = filteredItems.filter(obra => 
+            obra.title.toLowerCase().includes(query) ||
+            obra.description.toLowerCase().includes(query) ||
+            obra.technique.toLowerCase().includes(query)
+        );
+    }
+
+    if (year) {
+        filteredItems = filteredItems.filter(obra => obra.year == year);
+    }
+
+    if (category) {
+        filteredItems = filteredItems.filter(obra => obra.category === category);
+    }
+
+    if (series) {
+        filteredItems = filteredItems.filter(obra => obra.serie === series);
+    }
+
+    renderGallery(filteredItems);
+}
+
+function populateFilterOptions() {
+    const years = [...new Set(productos.map(p => p.year).filter(y => y))].sort((a, b) => b - a);
+    const categories = [...new Set(productos.map(p => p.category).filter(c => c))].sort();
+    const seriesList = [...new Set(productos.map(p => p.serie).filter(s => s))].sort();
+
+    years.forEach(year => filterYear.innerHTML += `<option value="${year}">${year}</option>`);
+    categories.forEach(cat => filterCategory.innerHTML += `<option value="${cat}">${cat}</option>`);
+    seriesList.forEach(ser => filterSeries.innerHTML += `<option value="${ser}">${ser}</option>`);
+}
+
+// --- MODAL Y DETALLE DE OBRA ---
+
+window.openModal = (id) => {
+    const obra = productos.find(p => p.id === id);
     if (!obra) return;
     
-    const imageUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${obra.ruta_imagen}`;
-
-    // ... lógica para construir el modalContent ...
-    modalContent.innerHTML = `
-        <div class="md:flex md:space-x-8">
-            <div class="md:w-1/2">
-                <img src="${imageUrl}" alt="${obra.titulo}" class="w-full h-auto object-contain rounded-sm shadow-lg">
+    // Generar el carrusel de imágenes del modal
+    const imageCarousel = obra.images.map((img, index) => `
+        <div class="modal-carousel-item ${index === 0 ? 'active' : ''}" data-index="${index}">
+            <div class="image-zoom-container cursor-move" onmousemove="zoomImage(event, this)" onmouseleave="resetZoom(this)">
+                <img src="${img.url}" alt="${obra.title} - Imagen ${index + 1}" class="zoom-image w-full h-full object-contain transition-transform duration-300" />
             </div>
-            <div class="md:w-1/2 pt-4 md:pt-0">
-                <h3 class="text-3xl font-bold text-text-dark mb-2">${obra.titulo}</h3>
-                <p class="text-pantone-magenta font-medium mb-4">${obra.serie}</p>
-                <p class="text-text-muted mb-1">**Técnica:** ${obra.tecnica}</p>
-                <p class="text-text-muted mb-1">**Dimensiones:** ${obra.dimensiones}</p>
-                <p class="text-text-muted mb-1">**Año:** ${obra.anio}</p>
-                <p class="text-text-muted mb-1">**Categoría:** ${obra.categoria}</p>
+            <p class="text-xs text-center text-text-muted mt-2">${img.name || `Imagen ${index + 1}`}</p>
+        </div>
+    `).join('');
+    
+    const navDots = obra.images.map((_, index) => `
+        <button class="w-2 h-2 rounded-full bg-text-muted transition-colors duration-300 ${index === 0 ? 'bg-pantone-magenta' : ''}" 
+                onclick="goToSlide(${index})"></button>
+    `).join('');
+
+
+    // Lógica de Precio y Disponibilidad
+    const priceText = obra.show_price && obra.price 
+        ? formatPrice(obra.price) // <- USA LA FUNCIÓN CREADA
+        : 'Consultar';
+        
+    const availabilityText = obra.is_available ? 'Disponible' : 'Vendida'; // <- MODIFICADO
+    const availabilityClass = obra.is_available ? 'text-green-600' : 'text-red-500';
+
+    const whatsappLink = `https://wa.me/5491100000000?text=Hola%2C%20estoy%20interesado%20en%20la%20obra%20%22${encodeURIComponent(obra.title)}%22%20(ID:%20${obra.id}).%20Me%20gustar%C3%ADa%20consultar%20el%20precio%20y%2Fo%20disponibilidad.`;
+    
+    // Contenido del modal
+    modalContent.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="image-column">
+                <div id="modal-image-carousel" class="relative overflow-hidden aspect-[4/3] bg-bg-principal">
+                    ${imageCarousel}
+                </div>
+                ${obra.images.length > 1 ? `
+                    <div class="carousel-nav flex justify-center space-x-2 mt-4">
+                        ${navDots}
+                    </div>
+                ` : ''}
+            </div>
+            
+            <div class="info-column p-4 md:p-0">
+                <h2 class="text-3xl font-light text-text-dark mb-2">${obra.title}</h2>
+                <p class="text-xl font-semibold text-pantone-magenta mb-4">${obra.year || 'Año N/A'}</p>
                 
-                <div class="mt-6 text-text-dark">
-                    **Descripción:**
-                    <p class="mt-2 text-sm leading-relaxed">${obra.descripcion || 'Sin descripción disponible.'}</p>
+                <div class="space-y-3 mb-6">
+                    <p class="text-lg text-text-dark"><strong>Técnica:</strong> ${obra.technique || 'N/A'}</p>
+                    <p class="text-lg text-text-dark"><strong>Medidas:</strong> ${obra.size || 'N/A'}</p>
+                    <p class="text-lg text-text-dark"><strong>Serie:</strong> ${obra.serie || 'N/A'}</p>
+                    <p class="text-lg text-text-dark"><strong>Categoría:</strong> ${obra.category || 'N/A'}</p>
                 </div>
 
-                <div class="mt-8 text-center">
-                    <a href="https://wa.me/[NUMERO_DE_WHATSAPP]?text=Hola,%20estoy%20interesado/a%20en%20la%20obra:%20${encodeURIComponent(obra.titulo)}" 
-                       target="_blank" 
-                       class="inline-flex items-center bg-whatsapp text-white font-bold py-3 px-6 rounded-sm hover:bg-opacity-90 transition duration-300 shadow-md">
-                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24"></svg>
-                        Consultar Disponibilidad
+                <div class="mt-4 pt-4 border-t border-border-light">
+                    <p class="text-xl font-medium text-text-dark"><strong>Disponibilidad:</strong> <span class="font-semibold ${availabilityClass}">${availabilityText}</span></p>
+                    <p class="text-xl font-medium text-text-dark mt-2"><strong>Precio:</strong> <span class="${obra.show_price && obra.price ? 'font-bold' : 'font-semibold text-pantone-magenta'}">${priceText}</span></p>
+                </div>
+
+                <div class="mt-6">
+                    <a href="${whatsappLink}" target="_blank" class="w-full inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-500 hover:bg-green-600 transition duration-300">
+                        <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.031 2.25c-5.497 0-9.967 4.47-9.967 9.967 0 1.77.464 3.444 1.303 4.887l-1.37 5.293 5.422-1.343c1.433.784 3.067 1.196 4.612 1.196 5.497 0 9.967-4.47 9.967-9.967s-4.47-9.967-9.967-9.967zm4.394 13.927s-.272-.14-.567-.282c-.294-.142-.44-.224-.716-.546-.275-.322-.727-.373-1.04-.373-.243 0-.41.066-.64.066-.23 0-.41-.09-.64-.403s-.84-.817-1.025-1.127c-.184-.31-.383-.69-.533-1.02-.15-.33-.016-.496.096-.688.087-.15.195-.276.294-.418.099-.142.164-.268.229-.403.064-.135.032-.268-.008-.403-.04-.135-.383-.896-.513-1.226-.13-.33-.26-.27-.403-.27-.142 0-.306-.02-.47-.02-.164 0-.44.02-.67.02s-.64-.085-.947.88c-.307.965-1.19 1.77-1.19 1.77s-.184.18-.09.344c.09.164.887 1.25 1.127 1.545.24.295.49.567.817.896 1.11 1.096 2.09 1.488 2.68 1.638.18.04.403.04.587.04.282 0 .546-.108.73-.3.26-.282.59-.513.82-.744.23-.23.414-.49.627-.67l.112-.086c.099-.085.27-.224.513-.333.243-.11.455-.175.76-.108.306.066.567.31.676.474.108.164.19.344.19.587 0 .243-.09.474-.356.705-.26.23-.424.428-.56.59l-.09.09c-.066.065-.13.13-.19.19s-.14.07-.205.108c-.065.04-.15.1-.258.127-.108.027-.216.035-.34.035z"/></svg>
+                        Consultar por esta obra
                     </a>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-border-light text-text-muted">
+                    <p class="font-light">${obra.description || 'Sin descripción detallada.'}</p>
                 </div>
             </div>
         </div>
     `;
 
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
-    document.body.style.overflow = 'hidden';
-}
-
-function closeModal() {
-    modal.classList.add("hidden");
-    modal.classList.remove("flex");
-    document.body.style.overflow = 'auto';
-}
-
-// --- LÓGICA DE CARGA DE GALERÍA (PAGINADA) ---
-
-// Carga todas las obras (solo para filtros y administración)
-async function fetchAllWorks() {
-    try {
-        const { data, error } = await client
-            .from('productos')
-            .select('*')
-            .order('orden', { ascending: true });
-
-        if (error) throw error;
-        allWorks = data;
-        populateFilterOptions();
-    } catch (error) {
-        console.error("Error al cargar todas las obras (para filtros):", error);
+    modal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    
+    // Iniciar carrusel del modal
+    if (obra.images.length > 1) {
+        initModalCarousel();
     }
+};
+
+window.closeModal = (event) => {
+    if (event && event.target !== modal) return;
+    
+    modal.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+    
+    // Resetear el carrusel
+    const items = document.querySelectorAll('#modal-image-carousel .modal-carousel-item');
+    items.forEach((item, index) => {
+        item.classList.remove('active');
+        if (index === 0) item.classList.add('active');
+    });
+    const dots = document.querySelectorAll('.carousel-nav button');
+    dots.forEach((dot, index) => {
+        dot.classList.remove('bg-pantone-magenta');
+        dot.classList.remove('bg-text-muted');
+        if (index === 0) dot.classList.add('bg-pantone-magenta');
+        else dot.classList.add('bg-text-muted');
+    });
+    
+    // Resetear zoom
+    const zoomContainers = document.querySelectorAll('.image-zoom-container');
+    zoomContainers.forEach(resetZoom);
+};
+
+let currentSlide = 0;
+
+function initModalCarousel() {
+    currentSlide = 0;
+    // Asegurar que solo el primer elemento esté activo
+    const items = document.querySelectorAll('#modal-image-carousel .modal-carousel-item');
+    items.forEach((item, index) => {
+        item.classList.toggle('active', index === 0);
+    });
+    // Asegurar que solo el primer dot esté activo
+    const dots = document.querySelectorAll('.carousel-nav button');
+    dots.forEach((dot, index) => {
+        dot.classList.toggle('bg-pantone-magenta', index === 0);
+        dot.classList.toggle('bg-text-muted', index !== 0);
+    });
 }
 
-
-// Carga la siguiente página de obras
-async function fetchNextPage() {
-    if (!hasMore || isEditing) return; // Detiene la carga si no hay más o si se está editando
-
-    loadingOverlay.classList.remove('hidden');
-    loadMoreButton.classList.add('hidden'); // Oculta el botón mientras carga
-    status.textContent = "Cargando obras...";
-    status.classList.remove('hidden');
-
-
-    const from = currentPage * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1; // Rango de 8 obras (0-7, 8-15, etc.)
-
-    try {
-        let query = client
-            .from('productos')
-            .select('*')
-            .order('orden', { ascending: true })
-            .range(from, to); // Aplicar paginación
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        const newWorks = data;
-        renderGallery(newWorks, true); // Renderiza y APENDEA al contenido existente
-
-        // Comprueba si el número de obras devueltas es menor que el tamaño de la página
-        if (newWorks.length < PAGE_SIZE) {
-            hasMore = false;
-            status.textContent = "Se han cargado todas las obras.";
-            loadMoreButton.classList.add('hidden');
-        } else {
-            hasMore = true;
-            status.classList.add('hidden'); // Oculta "Cargando obras..."
-            loadMoreButton.classList.remove('hidden'); // Muestra el botón para cargar más
-        }
+window.goToSlide = (index) => {
+    const items = document.querySelectorAll('#modal-image-carousel .modal-carousel-item');
+    const dots = document.querySelectorAll('.carousel-nav button');
+    
+    if (index >= 0 && index < items.length) {
+        // Ocultar actual
+        items[currentSlide].classList.remove('active');
+        dots[currentSlide].classList.remove('bg-pantone-magenta');
+        dots[currentSlide].classList.add('bg-text-muted');
         
-        currentPage++; // Avanza a la siguiente página
+        // Mostrar nueva
+        currentSlide = index;
+        items[currentSlide].classList.add('active');
+        dots[currentSlide].classList.add('bg-pantone-magenta');
+        dots[currentSlide].classList.remove('bg-text-muted');
+    }
+};
 
-    } catch (error) {
-        console.error("Error al cargar obras:", error);
-        showAlert("Error al cargar la galería. Intenta recargar.", 'error');
-        status.textContent = "Error al cargar la galería. Intenta recargar.";
-        loadMoreButton.classList.add('hidden');
+// Funciones de Zoom
+function zoomImage(event, container) {
+    const img = container.querySelector('.zoom-image');
+    if (!img) return;
 
-    } finally {
-        loadingOverlay.classList.add('hidden');
+    const { offsetX, offsetY, target } = event;
+    const { offsetWidth, offsetHeight } = target;
+
+    const xPercent = (offsetX / offsetWidth) * 100;
+    const yPercent = (offsetY / offsetHeight) * 100;
+    const zoomScale = 2.5; 
+    img.style.transformOrigin = `${xPercent}% ${yPercent}%`;
+    img.style.transform = `scale(${zoomScale})`;
+}
+
+function resetZoom(container) {
+    const img = container.querySelector('.zoom-image');
+    if (img) {
+        img.style.transform = null; 
+        img.style.transformOrigin = 'center center';
     }
 }
 
-// Inicia la carga de la galería (solo la primera página)
-function initialLoadGallery() {
-    currentPage = 0; // Reinicia la página
-    hasMore = true; // Reinicia el indicador
-    galleryContainer.innerHTML = ''; // Limpia la galería
-    displayedWorks = []; // Limpia las obras mostradas
-    fetchNextPage(); // Carga la primera página
-}
 
-// --- LÓGICA DE FILTROS ---
+// --- LÓGICA DE ORDENAMIENTO (solo si isEditing es true) ---
 
-// Para la paginación, la función de filtros necesita que TODAS las obras estén en allWorks.
-function applyFilters() {
-    
-    // Ocultar paginación y mensaje de carga mientras se aplica el filtro
-    loadMoreButton.classList.add('hidden');
-    status.classList.add('hidden');
-    
-    const searchText = searchInput.value.toLowerCase();
-    const selectedYear = filterYear.value;
-    const selectedCategory = filterCategory.value;
-    const selectedSeries = filterSeries.value;
-
-    const filtered = allWorks.filter(obra => {
-        const titleMatch = obra.titulo.toLowerCase().includes(searchText);
-        const yearMatch = selectedYear ? obra.anio == selectedYear : true;
-        const categoryMatch = selectedCategory ? obra.categoria === selectedCategory : true;
-        const seriesMatch = selectedSeries ? obra.serie === selectedSeries : true;
-        return titleMatch && yearMatch && categoryMatch && seriesMatch;
-    });
-
-    // Se renderizan todas las obras filtradas de golpe, no paginadas.
-    renderGallery(filtered, false); 
-}
-
-function populateFilterOptions() {
-    const allYears = new Set();
-    const allCategories = new Set();
-    const allSeries = new Set();
-
-    allWorks.forEach(obra => { 
-        if (obra.anio) allYears.add(obra.anio);
-        if (obra.categoria) allCategories.add(obra.categoria);
-        if (obra.serie) allSeries.add(obra.serie);
-    });
-
-    if (filterYear) filterYear.innerHTML = '<option value="">Año</option>' + Array.from(allYears).sort((a, b) => b - a).map(year => `<option value="${year}">${year}</option>`).join('');
-
-    if (filterCategory) filterCategory.innerHTML = '<option value="">Categoría</option>' + Array.from(allCategories).sort().map(cat => `<option value="${cat}">${cat}</option>`).join('');
-
-    if (filterSeries) filterSeries.innerHTML = '<option value="">Serie</option>' + Array.from(allSeries).sort().map(ser => `<option value="${ser}">${ser}</option>`).join('');
-}
-
-// --- LÓGICA DE ADMIN (Se mantiene similar, pero usando displayedWorks/allWorks) ---
-
-function checkAdminStatus() {
-    // Si estás logueado, muestra los controles de administrador
-    client.auth.getUser().then(({ data: { user } }) => {
-        if (user) {
-            adminControls.classList.remove('hidden');
-        }
-    });
-}
-
-function toggleEditMode() {
-    isEditing = !isEditing;
-    editToggleButton.textContent = isEditing ? 'Salir de Edición' : 'Modo Edición';
-    saveOrderButton.classList.toggle('hidden', !isEditing);
-    
-    // Al entrar/salir de edición, volvemos a renderizar
-    if (isEditing) {
-        // En modo edición, cargamos TODAS las obras de golpe para reordenarlas
-        renderGallery(allWorks, false); 
-        loadMoreButton.classList.add('hidden'); // Ocultar botón de carga en modo edición
-        setupSortable();
-    } else {
-        if (sortableInstance) {
-            sortableInstance.destroy();
-            sortableInstance = null;
-        }
-        // Al salir de edición, volvemos al modo de paginación
-        initialLoadGallery();
-    }
-}
-
-function setupSortable() {
+function enableSorting() {
     if (sortableInstance) {
         sortableInstance.destroy();
     }
+    
     sortableInstance = new Sortable(galleryContainer, {
         animation: 150,
-        group: 'shared',
-        draggable: '.work-item',
-        onEnd: function (evt) {
-            saveOrder();
+        handle: '.drag-handle', // Asumiendo que el handle está dentro de la tarjeta
+        ghostClass: 'bg-indigo-100',
+        onUpdate: (evt) => {
+            saveOrderButton.disabled = false;
         }
     });
 }
 
 async function saveOrder() {
-    if (!sortableInstance) return;
+    saveOrderButton.textContent = "Guardando...";
+    saveOrderButton.disabled = true;
 
-    const items = sortableInstance.toArray();
-    const updates = items.map((id, index) => ({
-        id: parseInt(id),
-        orden: index + 1
+    const orderUpdates = Array.from(galleryContainer.children).map((card, index) => ({
+        id: parseInt(card.dataset.id),
+        orden: index 
     }));
-    
+
     try {
         const { error } = await client
-            .from('productos') // CLAVE: Se usa la tabla 'productos'
-            .upsert(updates);
+            .from('productos')
+            .upsert(orderUpdates); 
 
         if (error) throw error;
-        showAlert("Orden de obras guardado exitosamente!", 'success');
-        await fetchAllWorks(); // Recarga TODAS las obras para mantener el array allWorks actualizado
-        renderGallery(allWorks, false); // Vuelve a renderizar la lista completa ordenada
 
+        // Actualizar el array local
+        orderUpdates.forEach(update => {
+            const index = productos.findIndex(p => p.id === update.id);
+            if (index !== -1) {
+                productos[index].order = update.orden;
+            }
+        });
+        productos.sort((a, b) => a.order - b.order); // Reordenar el array principal
+
+        showAlert("Orden guardado exitosamente!", 'success');
     } catch (error) {
-        console.error("Error al guardar orden:", error);
-        showAlert("Error al guardar el orden.", 'error');
+        console.error("Error al guardar el orden:", error);
+        showAlert("Error al guardar el orden: " + error.message, 'error');
+    } finally {
+        saveOrderButton.textContent = "Guardar Orden";
+        saveOrderButton.disabled = true;
     }
 }
 
-// --- EVENT LISTENERS ---
-document.addEventListener('DOMContentLoaded', async () => {
-    // Ocultar footer y botón de WhatsApp al inicio
-    if(mainFooter) mainFooter.classList.add('translate-y-full');
-    if(whatsappButton) whatsappButton.classList.remove('show');
+
+// --- LISTENERS Y SCROLL ---
+
+// Toggle del modo edición
+if (editToggleButton) {
+    editToggleButton.addEventListener('click', () => {
+        isEditing = !isEditing;
+        editToggleButton.textContent = isEditing ? 'Salir de Edición' : 'Modo Edición';
+        saveOrderButton.classList.toggle('hidden', !isEditing);
+        
+        if (isEditing) {
+            enableSorting();
+            showAlert("Modo Edición activado. Puedes arrastrar para reordenar.", 'info');
+        } else {
+            if (sortableInstance) {
+                sortableInstance.destroy();
+                sortableInstance = null;
+            }
+            // Si salimos de edición y hay cambios sin guardar, preguntar.
+            if (!saveOrderButton.disabled) {
+                 // Aquí se podría poner un confirm, pero por simplicidad lo dejamos sin guardar automáticamente al salir
+            }
+            saveOrderButton.disabled = true;
+            applyFilters(); // Para restaurar el orden si no se guardó
+        }
+    });
+}
+
+// Listener para el botón guardar orden (SOLO EN INDEX.HTML)
+if (saveOrderButton) {
+    saveOrderButton.addEventListener('click', saveOrder);
+}
+
+
+const firstSection = document.querySelector('section#carousel-header'); 
+
+window.addEventListener('scroll', () => {
+    if (!firstSection) return;
     
-    // Carga todas las obras para que los filtros funcionen
-    await fetchAllWorks();
+    const firstSectionHeight = firstSection.offsetHeight;
     
-    // Inicia la carga paginada de la galería (8 obras)
-    initialLoadGallery();
-    
-    if (typeof checkAdminStatus === 'function') {
-        checkAdminStatus();
+    if (window.scrollY > firstSectionHeight - 100) { 
+        mainFooter.classList.remove('translate-y-full');
+    } else {
+        mainFooter.classList.add('translate-y-full');
+    }
+
+    const gallerySectionTop = gallerySection ? gallerySection.offsetTop : firstSectionHeight;
+    if (window.scrollY > gallerySectionTop - window.innerHeight / 2) { 
+        whatsappButton.classList.add('show');
+    } else {
+        whatsappButton.classList.remove('show');
     }
 });
 
-
-if (loadMoreButton) loadMoreButton.addEventListener('click', fetchNextPage);
+// --- LISTENERS DE FILTROS ---
 if (searchInput) searchInput.addEventListener('input', applyFilters);
 if (filterYear) filterYear.addEventListener('change', applyFilters);
 if (filterCategory) filterCategory.addEventListener('change', applyFilters);
 if (filterSeries) filterSeries.addEventListener('change', applyFilters);
 
-if (editToggleButton) editToggleButton.addEventListener('click', toggleEditMode);
-if (saveOrderButton) saveOrderButton.addEventListener('click', saveOrder);
-
-
-const firstSection = document.querySelector('section#carousel-header'); 
-window.addEventListener('scroll', () => {
-    // ... lógica de scroll para el footer y el botón de WhatsApp (Se mantiene igual) ...
-    if (!firstSection) return;
-    
-    const firstSectionHeight = firstSection.offsetHeight;
-    
-    // Mostrar footer al hacer scroll fuera de la primera sección
-    if (window.scrollY > firstSectionHeight - 100) { 
-        if (mainFooter) mainFooter.classList.remove('translate-y-full');
-    } else {
-        if (mainFooter) mainFooter.classList.add('translate-y-full');
-    }
-
-    // Mostrar botón de WhatsApp al llegar a la galería
-    const gallerySectionTop = gallerySection ? gallerySection.offsetTop : firstSectionHeight;
-    if (window.scrollY > gallerySectionTop - window.innerHeight / 2) { 
-        if (whatsappButton) whatsappButton.classList.add('show');
-    } else {
-        if (whatsappButton) whatsappButton.classList.remove('show');
-    }
+// --- INICIALIZACIÓN ---
+document.addEventListener('DOMContentLoaded', async () => {
+    mainFooter.classList.add('translate-y-full');
+    whatsappButton.classList.remove('show');
+    await fetchGallery();
+    populateFilterOptions();
+    checkAdminStatus();
 });

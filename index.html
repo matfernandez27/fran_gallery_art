@@ -29,8 +29,6 @@
                         'text-muted': '#666666',      // Texto secundario (Gris medio)
                         'border-light': '#E0E0E0',    // Bordes y líneas divisorias (Gris claro)
                         'whatsapp': '#25D366',        // Verde de WhatsApp
-                        'facebook': '#1877F2',        // Azul de Facebook
-                        'instagram': '#E4405F',       // Rojo de Instagram
                     },
                     fontFamily: {
                         'sans': ['Inter', 'system-ui', 'sans-serif'],
@@ -40,418 +38,780 @@
         }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script>
-
+    <script src="config.js"></script> <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    
     <style>
-        /* Estilos de Utilidad */
-        #alert {
-            position: fixed; top: 4px; left: 50%; transform: translateX(-50%);
-            padding: 1rem; border-radius: 0.375rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            z-index: 50;
-            width: 90%; 
-            max-width: 400px; 
-            transition: opacity 0.3s ease-in-out;
+        /* Estilos del Overlay de Carga (Spinner) */
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(250, 235, 240, 0.95);
+            display: flex; justify-content: center; align-items: center; z-index: 1000;
         }
-        .whatsapp-button {
-            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
-            transform: translateY(150%);
-            opacity: 0;
+        .lds-ring div { 
+            box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; 
+            border: 8px solid #DE3B89;
+            border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; 
+            border-color: #DE3B89 transparent transparent transparent;
         }
-        .whatsapp-button.show {
-            transform: translateY(0);
-            opacity: 1;
+        
+        /* --- ESTILOS DEL CARRUSEL DE FONDO (DINÁMICO) --- */
+        #carousel-header {
+            position: relative;
+            overflow: hidden;
         }
-        /* Estilo para el carrusel (ajustar si es necesario) */
         .carousel-item {
-            display: none;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-size: contain; 
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #F5E5EC; 
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out; 
+            transform: scale(1.05); 
         }
         .carousel-item.active {
-            display: block;
+            opacity: 1;
+            transform: scale(1);
         }
-        .animate-fadeIn {
-            animation: fadeIn 0.5s ease-in-out;
+        .carousel-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(250, 235, 240, 0.5); 
+            z-index: 1;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        
+        /* --- ESTILOS DE LA BIOGRAFÍA: CORRECCIÓN DE POSICIÓN Y CENTRADO DE FOTO --- */
+        #bio-section .grid {
+            align-items: start;
+        }
+        
+        .bio-image-container {
+            display: flex; 
+            justify-content: center; 
+        }
+
+        .bio-image-focus {
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+            object-position: top center; 
+        }
+
+        /* Estilo del Botón Flotante de WhatsApp */
+        .whatsapp-float-btn {
+            position: fixed; bottom: 60px; right: 20px; width: 56px; height: 56px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            z-index: 50; transition: transform 0.3s ease-in-out, opacity 0.5s ease-in-out;
+            opacity: 0; 
+            pointer-events: none; 
+        }
+        .whatsapp-float-btn.show { opacity: 1; pointer-events: auto; }
+        .whatsapp-float-btn:hover { transform: scale(1.1); }
+
+        /* --- ESTILOS DE ZOOM INTERACTIVO (MANTENIDOS) --- */
+        .zoom-container {
+            position: relative; overflow: hidden; cursor: crosshair; 
+        }
+        .zoom-image {
+            width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s ease-in-out; 
+            transform: scale(1); transform-origin: center center;
+        }
+        .zoom-container:hover .zoom-image { transform: scale(2.5); }
+        .zoom-icon {
+            position: absolute; top: 10px; left: 10px;
+            background: rgba(255, 255, 255, 0.5); color: #333333; 
+            padding: 8px; border-radius: 50%; z-index: 10;
+            border: 1px solid #E0E0E0;
+        }
+
+        /* Estilo para el modo de ordenamiento */
+        .sortable-ghost {
+            opacity: 0.4;
+            background-color: #DE3B89; 
+            border: 2px dashed #333333; 
+        }
+
+        /* Estilo para el footer con degradado */
+        .footer-gradient {
+            background: linear-gradient(to right, #F5E5EC, #FFFFFF); 
+        }
+
+        /* Estilo de alerta flotante */
+        #alert {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 1001; 
+            padding: 1rem; border-radius: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            font-weight: 500;
         }
     </style>
 </head>
 <body class="bg-bg-principal text-text-dark font-sans min-h-screen">
     
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+    </div>
+
     <div id="alert" class="hidden" role="alert"></div>
-    
-    <a href="https://wa.me/[TU_NUMERO_DE_WHATSAPP]?text=Hola%2C%20estoy%20interesado%2Fa%20en%20una%20obra." target="_blank"
-        class="whatsapp-button fixed bottom-4 left-4 bg-whatsapp hover:bg-opacity-80 text-white font-bold py-2 px-4 rounded-full shadow-lg transition duration-300 z-50">
-        WhatsApp
+
+    <a id="whatsapp-btn" href="https://wa.me/+5492805032663?text=Hola,%20quisiera%20consultar%20sobre%20una%20obra%20de%20la%20galería." 
+        target="_blank" 
+        class="whatsapp-float-btn bg-whatsapp text-white">
+        <svg fill="#FFF" viewBox="0 0 24 24" width="28" height="28" class="whatsapp-icon"><path d="M12 2C6.48 2 2 6.48 2 12c0 3.25 1.5 6.2 3.88 8.1l-1.38 5.02L7.6 21.62C9.5 22.18 11.08 22 12 22c5.52 0 10-4.48 10-10C22 6.48 17.52 2 12 2zM17.43 15.4c-.09-.15-.36-.24-.77-.42-.42-.18-2.52-1.24-2.91-1.38-.39-.14-.67-.21-.95.21-.28.42-1.09 1.38-1.34 1.66-.25.28-.5.31-.92.21-.42-.1-.71-.34-1.27-.64-.47-.25-1.07-.65-2.03-1.89-.75-.98-1.25-1.95-1.38-2.2-.14-.25-.02-.38.11-.5.1-.11.23-.26.35-.4.12-.14.16-.25.25-.42.09-.17.04-.32-.02-.45-.06-.13-.57-1.36-.78-1.87-.2-.5-.41-.42-.56-.42-.15 0-.33-.02-.51-.02-.18 0-.47.07-.72.35-.25.28-.95.93-.95 2.27 0 1.34.97 2.64 1.1 2.82.13.18 1.92 3.03 4.6 4.24 2.68 1.21 2.68.85 2.97.8.29-.05.95-.39 1.08-.77.13-.38.13-.7.09-.77z"/></svg>
     </a>
 
-    <header class="bg-bg-principal py-6 border-b border-border-light sticky top-0 z-40">
-        <div class="max-w-6xl mx-auto px-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-pantone-magenta">
-                <a href="#carousel-header">Francisco Fernández</a>
+    <section id="carousel-header" class="min-h-screen flex items-center justify-center bg-bg-principal">
+        
+        <div id="carousel-container" class="absolute inset-0">
+            </div>
+
+        <div class="carousel-overlay"></div>
+
+        <div class="text-center max-w-4xl mx-auto px-6 z-10">
+            <h1 class="text-6xl md:text-8xl font-light text-text-dark mb-8 tracking-tight">
+                Francisco<br>
+                <span class="text-pantone-magenta">Fernández</span>
             </h1>
-            <nav>
-                <ul class="flex space-x-6 text-sm font-medium">
-                    <li><a href="#gallery-section" class="text-text-dark hover:text-pantone-magenta transition duration-300">Galería</a></li>
-                    <li><a href="./biografia-completa.html" class="text-text-dark hover:text-pantone-magenta transition duration-300">Biografía</a></li>
-                    <li><a href="#contact-section" class="text-text-dark hover:text-pantone-magenta transition duration-300">Contacto</a></li>
-                </ul>
-            </nav>
+            <p class="text-xl md:text-2xl text-text-muted font-light mb-12 max-w-2xl mx-auto">
+                Galería Personal
+            </p>
+            <div class="w-24 h-px bg-pantone-magenta mx-auto mb-12"></div>
+            <button onclick="document.getElementById('bio-section').scrollIntoView({behavior: 'smooth'})" 
+                    class="text-text-muted hover:text-pantone-magenta transition-colors duration-300 text-sm uppercase tracking-wider">
+                Explorar Galería
+            </button>
         </div>
-    </header>
+    </section>
+    <section id="bio-section" class="py-20 bg-bg-card">
+        <div class="max-w-6xl mx-auto px-6">
+            
+            <div class="grid md:grid-cols-3 gap-16 items-start">
+                
+                <div class="md:col-span-2 flex flex-col justify-start">
+                    
+                    <div class="w-16 h-px bg-pantone-magenta mb-8"></div>
+                    
+                    <h3 class="text-2xl font-medium text-text-dark mb-6">Francisco Fernández</h3>
+                    
+                    <div id="bio-text-content">
+                        <p class="text-lg text-text-dark leading-relaxed mb-4">
+                            Nacido en Trelew, Chubut hace 33 años y residente en la Patagonia, Francisco Fernández se destaca por su activa participación en exhibiciones itinerantes a lo largo del país.
+                        </p>
+                        
+                        <p class="text-base text-text-muted leading-relaxed mb-6">
+                            Cada pieza es un puente hacia lo inhóspito y lo íntimo. Su técnica no solo captura la dualidad de un paisaje vasto, sino que también ofrece una mirada profunda y reflexiva sobre el alma de ese territorio.
+                        </p>
+                    </div>
+                    
+                    <a href="biografia-completa.html" 
+                        class="mt-4 text-pantone-magenta font-semibold hover:text-text-dark transition-colors duration-300 text-sm self-start inline-flex items-center space-x-2">
+                        <span>LEER BIOGRAFÍA COMPLETA</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </a>
+                </div>
 
-    <main class="min-h-[calc(100vh-100px)]">
+                <div class="md:col-span-1 md:order-last flex justify-center bio-image-container">
+                    <div class="w-64 h-64 md:w-80 md:h-80 rounded-sm overflow-hidden border-2 border-pantone-magenta/50 shadow-2xl">
+                        <img src="./img/img_perfil.jpg" 
+                            alt="Retrato de Francisco Fernández, artista plástico de la Patagonia."
+                            class="bio-image-focus"/>
+                    </div>
+                </div>
 
-        <section id="carousel-header" class="bg-bg-principal pt-12 pb-20">
-            <div class="max-w-6xl mx-auto px-4">
-                <h2 class="text-center text-4xl font-extrabold text-text-dark mb-10">
-                    Arte Patagónico Contemporáneo
+            </div>
+        </div>
+    </section>
+    <section id="gallery-section" class="py-20 bg-bg-principal">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-light text-text-dark mb-8">
+                    Catálogo de Obras
                 </h2>
+                <div class="w-16 h-px bg-pantone-magenta mx-auto"></div>
+            </div>
+
+            <div class="mb-8 flex flex-wrap gap-4 items-center justify-between bg-bg-card p-4 rounded-sm shadow-inner max-w-5xl mx-auto border border-border-light">
                 
-                <div id="carousel-container" class="relative w-full overflow-hidden rounded-lg shadow-xl">
-                    <div id="carousel-items" class="relative">
-                        <div class="carousel-item active animate-pulse flex justify-center items-center bg-gray-200 h-[60vh]">
-                            <p class="text-text-muted">Cargando obras...</p>
-                        </div>
-                    </div>
-
-                    <button id="carousel-prev" class="absolute top-1/2 left-4 transform -translate-y-1/2 bg-white bg-opacity-50 p-3 rounded-full shadow-md hover:bg-opacity-80 transition duration-300 z-10 hidden">
-                        <svg class="w-6 h-6 text-pantone-magenta" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                    </button>
-                    <button id="carousel-next" class="absolute top-1/2 right-4 transform -translate-y-1/2 bg-white bg-opacity-50 p-3 rounded-full shadow-md hover:bg-opacity-80 transition duration-300 z-10 hidden">
-                        <svg class="w-6 h-6 text-pantone-magenta" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                    </button>
-                    
-                    <div id="carousel-indicators" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                        </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="gallery-section" class="py-20 bg-bg-card">
-            <div class="max-w-6xl mx-auto px-4">
-                <h2 class="text-4xl font-extrabold text-text-dark mb-12 text-center">Catálogo de Obras</h2>
+                <input id="search" type="search" placeholder="Buscar por título, técnica o descripción..."
+                    class="flex-1 min-w-0 md:min-w-[200px] p-3 rounded-sm border border-border-light shadow-sm focus:outline-none focus:ring-1 focus:ring-pantone-magenta bg-white text-text-dark transition-colors" />
                 
-                <div class="mb-10 p-6 bg-bg-principal rounded-lg shadow-inner grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <input type="text" id="search-input" placeholder="Buscar por título, técnica o descripción"
-                        class="p-3 border border-border-light rounded-md focus:ring-pantone-magenta focus:border-pantone-magenta col-span-full md:col-span-1">
+                <div class="flex flex-wrap gap-4 justify-end">
                     
-                    <select id="filter-year" class="p-3 border border-border-light rounded-md focus:ring-pantone-magenta focus:border-pantone-magenta">
-                        <option value="">Todos los Años</option>
-                        </select>
-                    
-                    <select id="filter-category" class="p-3 border border-border-light rounded-md focus:ring-pantone-magenta focus:border-pantone-magenta">
-                        <option value="">Todas las Categorías</option>
-                        </select>
+                    <select id="filter-category" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
+                        <option value="">Categoría</option>
+                        <option value="grabado">Grabado</option>
+                        <option value="dibujo">Dibujo</option>
+                        <option value="pintura">Pintura</option>
+                    </select>
 
-                    <select id="filter-series" class="p-3 border border-border-light rounded-md focus:ring-pantone-magenta focus:border-pantone-magenta">
-                        <option value="">Todas las Series</option>
-                        </select>
+                    <select id="filter-series" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
+                        <option value="">Serie</option>
+                    </select>
+
+                    <select id="filter-year" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
+                        <option value="">Año</option>
+                    </select>
                 </div>
-
-                <div id="works-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <div id="loading-placeholder" class="col-span-full text-center py-20 text-text-muted">
-                        <p class="text-lg animate-pulse">Cargando obras...</p>
-                    </div>
+                
+                <div id="admin-controls" class="hidden flex gap-2">
+                    <button id="edit-toggle" class="p-3 rounded-sm bg-border-light hover:bg-pantone-magenta transition duration-300 text-text-dark hover:text-white text-sm">
+                        Activar Edición
+                    </button>
+                    <button id="save-order-button" class="hidden p-3 rounded-sm bg-green-600 hover:bg-green-700 text-white transition duration-300 text-sm" disabled>
+                        Guardar Orden
+                    </button>
                 </div>
             </div>
-        </section>
+            
+            <p id="status" class="text-center text-red-500 font-semibold mb-8"></p>
 
-        <section id="contact-section" class="py-20 bg-bg-principal">
-            <div class="max-w-3xl mx-auto px-4 text-center">
-                <h2 class="text-4xl font-extrabold text-text-dark mb-6">Contacto y Consultas</h2>
-                <p class="text-text-muted mb-10 text-lg">
-                    Si está interesado en una obra, una colaboración, o simplemente desea saludar, por favor, envíe un mensaje a través de WhatsApp o correo electrónico.
-                </p>
-
-                <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-                    <a href="https://wa.me/[TU_NUMERO_DE_WHATSAPP]?text=Hola%2C%20estoy%20interesado%2Fa%20en%20una%20obra." target="_blank"
-                        class="bg-whatsapp hover:bg-opacity-80 text-white font-bold py-3 px-8 rounded-sm transition duration-300 uppercase tracking-wider shadow-lg">
-                        Enviar un WhatsApp
-                    </a>
-                    <a href="mailto:[TU_CORREO_ELECTRONICO]"
-                        class="bg-text-dark hover:bg-opacity-80 text-white font-bold py-3 px-8 rounded-sm transition duration-300 uppercase tracking-wider shadow-lg">
-                        Enviar Email
-                    </a>
+            <div id="gallery-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 </div>
+        </div>
+    </section>
 
-                <div class="mt-12 pt-6 border-t border-border-light">
-                    <p class="text-sm text-text-muted mb-4">Sígueme en redes sociales:</p>
-                    <div class="flex justify-center space-x-6">
-                        <a href="[URL_INSTAGRAM]" target="_blank" class="text-instagram hover:opacity-80 transition duration-300">
-                            <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.074 1.347.062 2.059.207 2.613.428a3.298 3.298 0 011.751 1.139 3.299 3.299 0 011.139 1.751c.221.554.366 1.266.428 2.613.063 1.266.074 1.646.074 4.85s-.012 3.584-.074 4.85c-.062 1.347-.207 2.059-.428 2.613a3.298 3.298 0 01-1.139 1.751 3.299 3.299 0 01-1.751 1.139c-.554.221-1.266.366-2.613.428-1.266.063-1.646.074-4.85.074s-3.584-.012-4.85-.074c-1.347-.062-2.059-.207-2.613-.428a3.298 3.298 0 01-1.751-1.139 3.299 3.299 0 01-1.139-1.751c-.221-.554-.366-1.266-.428-2.613-.063-1.266-.074-1.646-.074-4.85s.012-3.584.074-4.85c.062-1.347.207-2.059.428-2.613a3.298 3.298 0 011.139-1.751 3.299 3.299 0 011.751-1.139c.554-.221 1.266-.366 2.613-.428C8.416 2.175 8.796 2.163 12 2.163zm0 3.868c-3.321 0-6.007 2.686-6.007 6.007s2.686 6.007 6.007 6.007c3.321 0 6.007-2.686 6.007-6.007s-2.686-6.007-6.007-6.007zm0 9.875a3.868 3.868 0 110-7.736 3.868 3.868 0 010 7.736zm6.182-11.458a.965.965 0 11-1.93 0 .965.965 0 011.93 0z"/></svg>
-                        </a>
-                        <a href="[URL_FACEBOOK]" target="_blank" class="text-facebook hover:opacity-80 transition duration-300">
-                            <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.35c0 .732.593 1.325 1.325 1.325h11.493v-9.294h-3.13v-3.626h3.13v-2.19c0-3.111 1.894-4.821 4.673-4.821 1.325 0 2.464.099 2.8.143v3.25l-1.918.001c-1.503 0-1.802.715-1.802 1.768v2.31h3.64l-.473 3.626h-3.167v9.294h6.115c.732 0 1.325-.593 1.325-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
-                        </a>
-                    </div>
-                </div>
+    <footer id="main-footer" class="fixed bottom-0 left-0 right-0 footer-gradient bg-opacity-95 backdrop-blur-sm border-t border-border-light p-3 z-40 translate-y-full transition-transform duration-500">
+        <div class="max-w-7xl mx-auto flex justify-between items-center text-sm text-text-muted">
+            <div class="font-light">
+                © 2025 Francisco Fernández. Todos los derechos reservados.
             </div>
-        </section>
-
-    </main>
-
-    <a href="./admin.html" id="admin-link" class="fixed bottom-4 right-4 bg-pantone-magenta hover:bg-opacity-80 text-white font-bold py-2 px-4 rounded-full shadow-lg transition duration-300 z-50 hidden">
-        Panel de Administración
-    </a>
-
-    <footer id="main-footer" class="fixed bottom-0 left-0 w-full bg-pantone-magenta text-white py-4 transition-transform duration-500 translate-y-full z-30">
-        <div class="max-w-6xl mx-auto px-4 flex justify-between items-center text-sm">
-            <p>&copy; 2024 Francisco Fernández. Todos los derechos reservados.</p>
-            <a href="./login.html" class="hover:underline" id="login-link">Acceder</a>
+            <nav class="space-x-4">
+                <a href="#bio-section" class="hover:text-pantone-magenta transition-colors">Bio</a>
+                <a href="mailto:ffran.arte@gmail.com" class="hover:text-pantone-magenta transition-colors">Contacto</a>
+                <a href="https://www.instagram.com/fran.faf/?hl=es" target="_blank" class="hover:text-pantone-magenta transition-colors">Instagram</a>
+            </nav>
         </div>
     </footer>
 
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden items-center justify-center p-4" onclick="closeModal(event)">
+        <div id="modal-container" class="bg-bg-card rounded-sm shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+               <div class="flex justify-end p-4">
+                <button onclick="closeModal()" class="text-text-muted hover:text-pantone-magenta text-2xl">&times;</button>
+            </div>
+            <div id="modal-content" class="p-6 pt-0">
+                </div>
+        </div>
+    </div>
+
     <script>
-        // Inicialización de Supabase
-        const client = supabase.createClient(window.supabaseUrl, window.supabaseAnonKey);
-        const TABLE_NAME = 'works';
-        let allWorks = []; // Para almacenar todas las obras cargadas
-        let currentWorks = []; // Para las obras actualmente filtradas
+        // Inicialización de Supabase usando config.js
+        const supabaseUrl = window.supabaseUrl;
+        const supabaseAnonKey = window.supabaseAnonKey;
+        const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
         
-        // Elementos del DOM
-        const worksGrid = document.getElementById('works-grid');
-        const loadingPlaceholder = document.getElementById('loading-placeholder');
-        const searchInput = document.getElementById('search-input');
-        const filterYear = document.getElementById('filter-year');
-        const filterCategory = document.getElementById('filter-category');
-        const filterSeries = document.getElementById('filter-series');
+        let productos = [];
+        let isEditing = false;
+        let sortableInstance = null;
+        let carouselIntervalId = null;
+
+        const galleryContainer = document.getElementById("gallery-container");
+        const status = document.getElementById("status");
+        const loadingOverlay = document.getElementById("loading-overlay");
+        const modal = document.getElementById("modal");
+        const modalContent = document.getElementById("modal-content");
+        const alertDiv = document.getElementById('alert');
+
+        // Elementos de Filtro
+        const searchInput = document.getElementById("search");
+        const filterYear = document.getElementById("filter-year");
+        const filterCategory = document.getElementById("filter-category");
+        const filterSeries = document.getElementById("filter-series");
+
+        // Elementos de Control de Administrador
+        const adminControls = document.getElementById("admin-controls");
+        const editToggleButton = document.getElementById("edit-toggle");
+        const saveOrderButton = document.getElementById("save-order-button");
+
+        // Elementos de interacción dinámica
+        const whatsappButton = document.getElementById('whatsapp-btn');
         const mainFooter = document.getElementById('main-footer');
-        const whatsappButton = document.querySelector('.whatsapp-button');
         const gallerySection = document.getElementById('gallery-section');
-        const firstSection = document.getElementById('carousel-header'); 
 
-        // --- FUNCIONES DE ALERTA Y UTILERÍA ---
+
+        // --- FUNCIONES DE UTILIDAD ---
         function showAlert(message, type = 'success') {
-            const alertDiv = document.getElementById('alert');
-            let bgColor, textColor;
-
-            if (type === 'success') {
-                bgColor = 'bg-green-100';
-                textColor = 'text-green-700';
-            } else if (type === 'error') {
-                bgColor = 'bg-red-100';
-                textColor = 'text-red-700';
-            }
-
-            alertDiv.className = `${bgColor} ${textColor} p-3 rounded-lg shadow-md transition duration-300 z-50`;
             alertDiv.textContent = message;
             alertDiv.classList.remove('hidden');
+            alertDiv.classList.remove('bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
 
-            setTimeout(() => {
-                alertDiv.classList.add('hidden');
-            }, 4000);
+            if (type === 'error') {
+                alertDiv.classList.add('bg-red-100', 'text-red-700');
+            } else {
+                alertDiv.classList.add('bg-green-100', 'text-green-700');
+            }
+            setTimeout(() => alertDiv.classList.add('hidden'), 5000);
+        }
+        window.showAlert = showAlert;
+
+        // --- LÓGICA DE SEGURIDAD: VERIFICACIÓN DE ADMIN ---
+        async function checkAdminStatus() {
+            try {
+                const { data: { session } } = await client.auth.getSession();
+                if (session) {
+                    adminControls.classList.remove('hidden');
+                } else {
+                    adminControls.classList.add('hidden');
+                }
+            } catch(e) {
+                 console.warn("Error checking admin status:", e);
+            }
         }
 
-        // --- FUNCIONES DE GALERÍA Y FILTROS ---
 
-        function renderWorkCard(obra) {
-            const imageUrl = obra.imagenes && obra.imagenes.length > 0 ? obra.imagenes[0].publicUrl : 'placeholder.jpg';
-            const categoriesText = obra.categorias ? obra.categorias.join(', ') : '';
+        // --- LÓGICA DEL CARRUSEL DE FONDO (DINÁMICO) ---
+        const carouselContainer = document.getElementById('carousel-container');
+        let currentCarouselIndex = 0;
 
-            return `
-                <div class="bg-bg-card rounded-lg shadow-lg overflow-hidden transform hover:scale-[1.02] transition duration-500">
-                    <img src="${imageUrl}" alt="${obra.titulo}" class="w-full h-72 object-cover">
-                    <div class="p-6">
-                        <h3 class="text-xl font-semibold text-text-dark mb-2">${obra.titulo}</h3>
-                        <p class="text-pantone-magenta font-medium text-sm mb-2">${obra.anio}</p>
-                        <p class="text-text-muted text-sm mb-4">${obra.tecnica}</p>
-                        <p class="text-text-muted text-xs uppercase tracking-wider">${categoriesText}</p>
-                    </div>
-                </div>
-            `;
+        function renderCarouselItems(carouselUrls) {
+            if (!carouselContainer || carouselUrls.length === 0) return;
+
+            if (carouselIntervalId) {
+                clearInterval(carouselIntervalId);
+            }
+            
+            carouselContainer.innerHTML = carouselUrls.map((url, index) => `
+                <div class="carousel-item ${index === 0 ? 'active' : ''}" style="background-image: url('${url}')"></div>
+            `).join('');
+
+            if (carouselUrls.length > 1) {
+                carouselIntervalId = setInterval(nextCarouselItem, 5000); 
+            }
         }
 
-        function renderWorks(works) {
-            worksGrid.innerHTML = ''; // Limpiar la cuadrícula
-            loadingPlaceholder.classList.add('hidden');
+        function nextCarouselItem() {
+            const items = document.querySelectorAll('#carousel-container .carousel-item');
+            if (items.length <= 1) return; 
 
-            if (works.length === 0) {
-                worksGrid.innerHTML = '<p class="col-span-full text-center py-10 text-text-muted">No se encontraron obras con los filtros seleccionados.</p>';
+            items[currentCarouselIndex].classList.remove('active');
+            currentCarouselIndex = (currentCarouselIndex + 1) % items.length;
+            items[currentCarouselIndex].classList.add('active');
+        }
+
+
+        // --- FUNCIONES CORE ---
+        function normalize(p) {
+            const images = p.imagenes || [];
+            return {
+                id: p.id,
+                title: p.titulo || "", 
+                technique: p.tecnica || "", 
+                size: p.medidas || "", 
+                year: p.anio || 0, 
+                description: p.descripcion || "",
+                order: p.orden || 0,
+                category: p.categoria || "",
+                serie: p.serie || "",
+                images,
+                mainImage: (images.length ? images[0].url : "")
+            };
+        }
+        
+        // Función renderGallery MODIFICADA para usar object-contain
+        function renderGallery(items) {
+            galleryContainer.innerHTML = '';
+            if (items.length === 0) {
+                galleryContainer.innerHTML = '<p class="col-span-full text-center text-text-muted">No se encontraron obras que coincidan con los filtros.</p>';
                 return;
             }
 
-            const worksHtml = works.map(renderWorkCard).join('');
-            worksGrid.innerHTML = worksHtml;
-        }
-
-        function populateFilterOptions() {
-            const years = new Set();
-            const categories = new Set();
-            const series = new Set();
-
-            allWorks.forEach(obra => {
-                years.add(obra.anio);
-                if (obra.categorias) obra.categorias.forEach(cat => categories.add(cat));
-                if (obra.serie) series.add(obra.serie);
-            });
-
-            // Llenar Año
-            const sortedYears = Array.from(years).sort((a, b) => b - a);
-            filterYear.innerHTML = '<option value="">Todos los Años</option>' + 
-                sortedYears.map(year => `<option value="${year}">${year}</option>`).join('');
-
-            // Llenar Categoría
-            const sortedCategories = Array.from(categories).sort();
-            filterCategory.innerHTML = '<option value="">Todas las Categorías</option>' + 
-                sortedCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+            items.forEach(obra => {
+                const card = document.createElement("div");
+                card.className = "bg-bg-card rounded-sm overflow-hidden cursor-pointer shadow-lg hover:shadow-xl transition duration-500 transform hover:-translate-y-1 group border border-border-light";
+                card.setAttribute('data-id', obra.id); 
+                card.setAttribute('onclick', `openModal(${obra.id})`);
                 
-            // Llenar Serie
-            const sortedSeries = Array.from(series).sort();
-            filterSeries.innerHTML = '<option value="">Todas las Series</option>' + 
-                sortedSeries.map(s => `<option value="${s}">${s}</option>`).join('');
+                card.innerHTML = `
+                    <div class="aspect-[4/3] overflow-hidden flex items-center justify-center bg-bg-principal"> 
+                        <img src="${obra.mainImage}" alt="Obra de Francisco Fernández: ${obra.title}, ${obra.technique}" 
+                            class="w-full h-full object-contain transition duration-500 group-hover:scale-105" 
+                            onerror="this.onerror=null;this.src='[URL_IMAGEN_DEFAULT]';" />
+                    </div>
+                    <div class="p-4 border-t border-border-light">
+                        <h3 class="text-xl font-medium text-text-dark">${obra.title}</h3>
+                        <p class="text-sm text-text-muted">${obra.technique} · <span class="text-pantone-magenta font-semibold">${obra.year}</span></p>
+                    </div>
+                `;
+                galleryContainer.appendChild(card);
+            });
+            
+            if (isEditing) {
+                enableSorting();
+            }
+        }
+        
+        async function initGallery() {
+            status.textContent = "Cargando obras...";
+            loadingOverlay.classList.remove('hidden');
+
+            try {
+                const { data, error } = await client
+                    .from('productos')
+                    .select('*')
+                    .order('orden', { ascending: true }) 
+                    .order('anio', { ascending: false }); 
+
+                loadingOverlay.classList.add('hidden');
+                
+                if (error) {
+                    throw new Error(`Error de Supabase: ${error.message}`);
+                }
+
+                productos = data.map(normalize);
+                productos.sort((a, b) => {
+                    if (a.order !== b.order) {
+                        if (!a.order) return 1;
+                        if (!b.order) return -1;
+                        return a.order - b.order; 
+                    }
+                    return b.year - a.year; 
+                });
+
+                // --- LÓGICA PARA EL CARRUSEL: USAR LAS PRIMERAS IMÁGENES DE LAS OBRAS ---
+                const carouselUrls = productos
+                    .filter(p => p.mainImage) 
+                    .slice(0, 4) 
+                    .map(p => p.mainImage);
+
+                renderCarouselItems(carouselUrls);
+                // -------------------------------------------------------------------------
+
+
+                // Poblar Filtros (Año)
+                const years = [...new Set(productos.map(a => a.year).filter(Boolean))].sort((a, b) => b - a);
+                filterYear.innerHTML = '<option value="">Año</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+
+                // Poblar Filtros (Serie)
+                const series = [...new Set(productos.map(a => a.serie).filter(s => s && s.trim() !== ''))].sort((a, b) => a.localeCompare(b));
+                filterSeries.innerHTML = '<option value="">Serie</option>' + series.map(s => `<option value="${s}">${s}</option>`).join('');
+
+                // Asegurar que la opción por defecto de Categoría no diga "Todas las categorías" (por el nuevo diseño)
+                const categoryDefault = document.querySelector('#filter-category option[value=""]');
+                if (categoryDefault.textContent === 'Todas las categorías') {
+                    categoryDefault.textContent = 'Categoría';
+                }
+
+                applyFilters(); 
+                status.textContent = "";
+
+                await checkAdminStatus(); 
+            } catch (e) {
+                loadingOverlay.classList.add('hidden');
+                status.textContent = `¡ERROR AL CARGAR LA GALERÍA! Detalle: ${e.message}`;
+                console.error("Error crítico al cargar initGallery:", e);
+            }
         }
         
         function applyFilters() {
-            const searchText = searchInput.value.toLowerCase();
-            const selectedYear = filterYear.value;
-            const selectedCategory = filterCategory.value;
-            const selectedSeries = filterSeries.value;
+            const q = searchInput.value.trim().toLowerCase();
+            const y = filterYear.value;
+            const c = filterCategory.value;
+            const s = filterSeries.value;
 
-            const filtered = allWorks.filter(obra => {
-                const titleMatch = obra.titulo.toLowerCase().includes(searchText);
-                const techniqueMatch = obra.tecnica.toLowerCase().includes(searchText);
-                const descriptionMatch = obra.descripcion.toLowerCase().includes(searchText);
+            let filtered = productos.filter(p => {
+                const hay = `${p.title || ""} ${p.technique || ""} ${p.year || ""} ${p.description || ""} ${p.serie || ""} ${p.category || ""}`.toLowerCase();
                 
-                const yearMatch = !selectedYear || obra.anio.toString() === selectedYear;
-                
-                const categoryMatch = !selectedCategory || (obra.categorias && obra.categorias.includes(selectedCategory));
-                
-                const seriesMatch = !selectedSeries || obra.serie === selectedSeries;
+                let textMatch = hay.includes(q);
+                let yearMatch = y ? String(p.year) === y : true;
+                let categoryMatch = c ? String(p.category).toLowerCase() === c : true;
+                let seriesMatch = s ? String(p.serie) === s : true;
 
-                return (titleMatch || techniqueMatch || descriptionMatch) && yearMatch && categoryMatch && seriesMatch;
+                return textMatch && yearMatch && categoryMatch && seriesMatch;
             });
 
-            currentWorks = filtered;
-            renderWorks(currentWorks);
+            renderGallery(filtered);
         }
 
-        async function loadWorks() {
-            loadingPlaceholder.classList.remove('hidden');
-            try {
-                const { data, error } = await client
-                    .from(TABLE_NAME)
-                    .select('id, titulo, anio, tecnica, descripcion, categorias, serie, destacado, position, imagenes') // Incluir 'position'
-                    .order('position', { ascending: true }); // Ordenar por la posición
-
-                if (error) throw error;
-
-                allWorks = data;
-                currentWorks = [...allWorks]; // Inicialmente, todas las obras son las obras actuales
-                
-                populateFilterOptions();
-                renderWorks(currentWorks);
-                initCarousel(); // Inicializar el carrusel con los datos
-                
-            } catch (error) {
-                console.error("Error al cargar las obras:", error);
-                showAlert("Error al cargar la galería. Intente recargar la página.", 'error');
-            } finally {
-                loadingPlaceholder.classList.add('hidden');
+        // --- LÓGICA DE REORDENAMIENTO ---
+        function enableSorting() {
+            if (sortableInstance) {
+                sortableInstance.destroy();
             }
+            sortableInstance = new Sortable(galleryContainer, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: function (evt) {
+                    if (evt.oldIndex !== evt.newIndex) {
+                        saveOrderButton.disabled = false;
+                        saveOrderButton.textContent = "Guardar Orden (Cambios Pendientes)";
+                        saveOrderButton.classList.add('bg-pantone-magenta', 'hover:bg-opacity-80', 'text-white');
+                        saveOrderButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    }
+                },
+            });
         }
         
-        // --- FUNCIONES DEL CARRUSEL ---
-        
-        let carouselWorks = [];
-        let currentSlide = 0;
-        
-        function initCarousel() {
-            // Filtrar solo las obras destacadas
-            carouselWorks = allWorks.filter(obra => obra.destacado).sort((a, b) => a.position - b.position);
+        editToggleButton.addEventListener('click', () => {
+            isEditing = !isEditing;
+            
+            if (isEditing) {
+                editToggleButton.textContent = 'Salir de Edición';
+                editToggleButton.classList.replace('bg-border-light', 'bg-red-500');
+                editToggleButton.classList.replace('hover:bg-pantone-magenta', 'hover:bg-red-600');
+                editToggleButton.classList.remove('text-text-dark');
+                editToggleButton.classList.add('text-white');
 
-            if (carouselWorks.length === 0) {
-                document.getElementById('carousel-container').classList.add('hidden');
-                return;
+                saveOrderButton.classList.remove('hidden');
+                galleryContainer.style.cursor = 'grab';
+                applyFilters(); 
+            } else {
+                editToggleButton.textContent = 'Activar Edición';
+                editToggleButton.classList.replace('bg-red-500', 'bg-border-light');
+                editToggleButton.classList.replace('hover:bg-red-600', 'hover:bg-pantone-magenta');
+                editToggleButton.classList.add('text-text-dark');
+                editToggleButton.classList.remove('text-white'); 
+                
+                saveOrderButton.classList.add('hidden');
+                galleryContainer.style.cursor = 'default';
+                if (sortableInstance) {
+                    sortableInstance.destroy();
+                    sortableInstance = null;
+                }
+                initGallery(); 
+            }
+        });
+
+        saveOrderButton.addEventListener('click', async () => {
+            saveOrderButton.disabled = true;
+            saveOrderButton.textContent = "Guardando...";
+            saveOrderButton.classList.remove('bg-pantone-magenta', 'hover:bg-opacity-80', 'text-white');
+            saveOrderButton.classList.add('bg-gray-500', 'hover:bg-gray-600', 'text-white'); 
+            
+            const cardElements = galleryContainer.querySelectorAll('[data-id]');
+            const updates = [];
+
+            cardElements.forEach((card, index) => {
+                const obraId = parseInt(card.getAttribute('data-id'));
+                const newOrder = index + 1;
+                updates.push({ id: obraId, orden: newOrder });
+            });
+            
+            const { error } = await client
+                .from('productos')
+                .upsert(updates); 
+
+            if (error) {
+                status.textContent = `Error al guardar el orden: ${error.message}`;
+                console.error(error);
+                saveOrderButton.textContent = "Error al Guardar";
+            } else {
+                status.textContent = "Orden guardado exitosamente!";
+                await initGallery();
+                
+                saveOrderButton.textContent = "Orden Guardado";
+                saveOrderButton.classList.add('bg-green-600', 'hover:bg-green-700', 'text-white');
+                saveOrderButton.classList.remove('bg-gray-500', 'hover:bg-gray-600', 'bg-pantone-magenta'); 
+            }
+            
+            saveOrderButton.disabled = false; 
+        });
+
+
+        // --- LÓGICA DE GUARDADO DE CAMBIOS DESDE EL MODAL ---
+        async function saveModalChanges(event, id) {
+            event.preventDefault(); 
+            
+            const form = event.target;
+            const saveButton = form.querySelector('button[type="submit"]');
+
+            const updatedData = {
+                titulo: form.titulo.value.trim(),
+                anio: parseInt(form.anio.value.trim()),
+                tecnica: form.tecnica.value.trim(),
+                medidas: form.medidas.value.trim(),
+                categoria: form.categoria.value,
+                serie: form.serie.value.trim(),
+                descripcion: form.descripcion.value.trim(),
+            };
+
+            saveButton.textContent = "Guardando...";
+            saveButton.disabled = true;
+            
+            const { error } = await client
+                .from('productos')
+                .update(updatedData)
+                .eq('id', id);
+
+            if (error) {
+                showAlert(`Error al guardar: ${error.message}. ¿Tiene las Políticas RLS de UPDATE configuradas?`, 'error');
+            } else {
+                showAlert("¡Obra actualizada exitosamente!", 'success');
+                closeModal();
+                await initGallery();
             }
 
-            renderCarouselItems();
-            
-            document.getElementById('carousel-prev').classList.remove('hidden');
-            document.getElementById('carousel-next').classList.remove('hidden');
-
-            document.getElementById('carousel-prev').addEventListener('click', () => changeSlide(-1));
-            document.getElementById('carousel-next').addEventListener('click', () => changeSlide(1));
-            
-            // Auto-avance (opcional)
-            setInterval(() => changeSlide(1), 5000); 
+            saveButton.textContent = "Guardar Cambios";
+            saveButton.disabled = false;
         }
+        window.saveModalChanges = saveModalChanges;
 
-        function renderCarouselItems() {
-            const container = document.getElementById('carousel-items');
-            const indicatorsContainer = document.getElementById('carousel-indicators');
-            container.innerHTML = '';
-            indicatorsContainer.innerHTML = '';
 
-            carouselWorks.forEach((obra, index) => {
-                const imageUrl = obra.imagenes && obra.imagenes.length > 0 ? obra.imagenes[0].publicUrl : 'placeholder.jpg';
-                
-                // Item de Carrusel
-                const item = document.createElement('div');
-                item.className = `carousel-item relative ${index === currentSlide ? 'active animate-fadeIn' : ''}`;
-                item.innerHTML = `
-                    <img src="${imageUrl}" alt="${obra.titulo}" class="w-full h-[60vh] object-cover">
-                    <div class="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-8">
-                        <h3 class="text-3xl font-bold text-white mb-2">${obra.titulo}</h3>
-                        <p class="text-white text-lg">${obra.tecnica} | ${obra.anio}</p>
+        // --- MODAL LÓGICA ---
+        function openModal(id) {
+            const obra = productos.find(p => p.id === parseInt(id));
+            if (!obra) return;
+            
+            modalContent.innerHTML = '';
+            
+            const whatsappNumber = '+5492805032663'; 
+            const whatsappMessage = encodeURIComponent(`¡Hola, Francisco! Vi esta obra en tu galería web y me encantaría saber más. El título es: ${obra.title}.`);
+            const whatsappLink = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
+            
+            let modalHtml;
+
+            if (isEditing) {
+                // MODO EDICIÓN: RENDERIZAR FORMULARIO
+                modalHtml = `
+                    <form id="edit-form" onsubmit="saveModalChanges(event, ${obra.id})">
+                        <div class="grid md:grid-cols-2 gap-8">
+                            <div class="md:h-[65vh] h-80 overflow-hidden flex items-center justify-center bg-bg-principal rounded-sm">
+                                <img src="${obra.mainImage}" alt="Imagen de la obra ${obra.title}" class="max-w-full max-h-full object-contain" />
+                            </div>
+                            
+                            <div>
+                                <input name="titulo" value="${obra.title}" class="text-3xl font-light w-full text-text-dark mb-2 border-b border-pantone-magenta focus:outline-none p-1" required />
+                                <input name="anio" type="number" value="${obra.year}" class="text-xl text-pantone-magenta mb-4 w-20 border-b border-pantone-magenta focus:outline-none p-1" required />
+                                
+                                <div class="space-y-3 text-text-dark mb-6 border-b border-border-light pb-4">
+                                    <p class="text-sm">
+                                        <strong class="text-text-dark">Categoría:</strong>
+                                        <select name="categoria" class="ml-2 border border-border-light rounded-sm p-1 text-text-dark">
+                                            <option value="grabado" ${obra.category === 'grabado' ? 'selected' : ''}>Grabado</option>
+                                            <option value="dibujo" ${obra.category === 'dibujo' ? 'selected' : ''}>Dibujo</option>
+                                            <option value="pintura" ${obra.category === 'pintura' ? 'selected' : ''}>Pintura</option>
+                                        </select>
+                                    </p>
+                                    <p class="text-sm"><strong class="text-text-dark">Serie:</strong> <input name="serie" value="${obra.serie || ''}" class="ml-2 border-b border-border-light focus:outline-none p-1 w-2/3 text-text-dark" /></p>
+                                    <p class="text-sm"><strong class="text-text-dark">Técnica:</strong> <input name="tecnica" value="${obra.technique}" class="ml-2 border-b border-border-light focus:outline-none p-1 w-2/3 text-text-dark" required /></p>
+                                    <p class="text-sm"><strong class="text-text-dark">Medidas:</strong> <input name="medidas" value="${obra.size}" class="ml-2 border-b border-border-light focus:outline-none p-1 w-2/3 text-text-dark" required /></p>
+                                </div>
+                                
+                                <h3 class="text-xl font-medium border-b border-border-light pb-1 mb-2 text-text-dark">Descripción</h3>
+                                <textarea name="descripcion" class="text-text-muted whitespace-pre-wrap text-sm w-full h-32 border border-border-light p-2 focus:border-pantone-magenta rounded-sm">${obra.description || 'Sin descripción.'}</textarea>
+                                
+                                <div class="mt-8 flex flex-wrap gap-3 pt-4 border-t border-border-light" id="thumbnail-container">
+                                    ${obra.images.map(img => `
+                                        <img src="${img.url}" alt="Miniatura de ${obra.title}" class="h-16 w-16 object-cover rounded-sm shadow border border-border-light" />
+                                    `).join('')}
+                                </div>
+
+                                <button type="submit" class="mt-8 w-full inline-flex text-center py-3 px-6 rounded-sm bg-pantone-magenta hover:bg-opacity-80 text-white font-semibold transition-colors items-center justify-center shadow-md">
+                                    Guardar Cambios
+                                </button>
+                                <button type="button" onclick="closeModal()" class="mt-4 w-full py-3 px-6 rounded-sm bg-border-light hover:bg-gray-300 text-text-dark font-semibold transition-colors items-center justify-center shadow-md">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                `;
+            } else {
+                // MODO LECTURA: RENDERIZAR VISTA NORMAL (CON ZOOM Y WHATSAPP)
+                modalHtml = `
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div id="zoom-container-${id}" class="md:h-[65vh] h-80 overflow-hidden flex items-center justify-center bg-bg-principal rounded-sm zoom-container">
+                            <div class="zoom-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                            </div>
+                            <img id="modal-main-image-${id}" src="${obra.mainImage}" alt="Detalle de la obra de Francisco Fernández: ${obra.title}" class="max-w-full max-h-full object-contain zoom-image" />
+                        </div>
+
+                        <div>
+                            <h2 class="text-3xl font-light text-text-dark mb-2">${obra.title}</h2>
+                            <p class="text-xl text-pantone-magenta mb-4">${obra.year}</p>
+                            
+                            <div class="space-y-3 text-text-dark mb-6 border-b border-border-light pb-4">
+                                <p class="text-sm"><strong>Categoría:</strong> ${obra.category || 'N/A'}</p>
+                                <p class="text-sm"><strong>Serie:</strong> ${obra.serie || 'N/A'}</p>
+                                <p class="text-sm"><strong>Técnica:</strong> ${obra.technique}</p>
+                                <p class="text-sm"><strong>Medidas:</strong> ${obra.size}</p>
+                            </div>
+                            
+                            <h3 class="text-xl font-medium border-b border-border-light pb-1 mb-2 text-text-dark">Descripción</h3>
+                            <p class="text-text-muted whitespace-pre-wrap text-sm">${obra.description || 'Sin descripción.'}</p>
+                            
+                            <div class="mt-8 flex flex-wrap gap-3 pt-4 border-t border-border-light" id="thumbnail-container-${id}">
+                                ${obra.images.map(img => `
+                                    <img src="${img.url}" alt="Miniatura de ${obra.title}" class="h-16 w-16 object-cover rounded-sm shadow cursor-pointer border border-border-light hover:border-pantone-magenta transition-colors" 
+                                        data-url="${img.url}" />
+                                `).join('')}
+                            </div>
+
+                            <a href="${whatsappLink}" target="_blank" 
+                            class="mt-8 w-full md:w-auto inline-flex text-center py-3 px-6 rounded-sm bg-whatsapp hover:bg-green-600 text-white font-semibold transition-colors items-center justify-center space-x-2 shadow-md">
+                                <svg fill="#FFF" viewBox="0 0 24 24" width="20" height="20" class="whatsapp-icon"><path d="M12 2C6.48 2 2 6.48 2 12c0 3.25 1.5 6.2 3.88 8.1l-1.38 5.02L7.6 21.62C9.5 22.18 11.08 22 12 22c5.52 0 10-4.48 10-10C22 6.48 17.52 2 12 2zM17.43 15.4c-.09-.15-.36-.24-.77-.42-.42-.18-2.52-1.24-2.91-1.38-.39-.14-.67-.21-.95.21-.28.42-1.09 1.38-1.34 1.66-.25.28-.5.31-.92.21-.42-.1-.71-.34-1.27-.64-.47-.25-1.07-.65-2.03-1.89-.75-.98-1.25-1.95-1.38-2.2-.14-.25-.02-.38.11-.5.1-.11.23-.26.35-.4.12-.14.16-.25.25-.42.09-.17.04-.32-.02-.45-.06-.13-.57-1.36-.78-1.87-.2-.5-.41-.42-.56-.42-.15 0-.33-.02-.51-.02-.18 0-.47.07-.72.35-.25.28-.95.93-.95 2.27 0 1.34.97 2.64 1.1 2.82.13.18 1.92 3.03 4.6 4.24 2.68 1.21 2.68.85 2.97.8.29-.05.95-.39 1.08-.77.13-.38.13-.7.09-.77z"/></svg>
+                                <span>Consultar por esta Obra</span>
+                            </a>
+                        </div>
                     </div>
                 `;
-                container.appendChild(item);
+            }
+            
+            modalContent.innerHTML = modalHtml;
 
-                // Indicador (Dot)
-                const indicator = document.createElement('button');
-                indicator.className = `w-3 h-3 rounded-full transition duration-300 ${index === currentSlide ? 'bg-pantone-magenta' : 'bg-white bg-opacity-50'}`;
-                indicator.addEventListener('click', () => goToSlide(index));
-                indicatorsContainer.appendChild(indicator);
-            });
+            if (!isEditing) {
+                const zoomContainer = document.getElementById(`zoom-container-${id}`);
+                const mainImage = document.getElementById(`modal-main-image-${id}`);
+                
+                if (zoomContainer) {
+                    zoomContainer.addEventListener('mousemove', handleZoom);
+                    zoomContainer.addEventListener('mouseleave', () => resetZoom(zoomContainer));
+                }
+                
+                document.querySelectorAll(`#thumbnail-container-${id} img`).forEach(thumb => {
+                    thumb.addEventListener('click', () => {
+                        mainImage.src = thumb.getAttribute('data-url');
+                        resetZoom(zoomContainer);
+                    });
+                });
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal(event) {
+            if (!event || event.target.id === 'modal' || event.target.tagName === 'BUTTON' || event.target.closest('button')) { 
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
         }
         
-        function changeSlide(direction) {
-            let newSlide = currentSlide + direction;
-            if (newSlide < 0) {
-                newSlide = carouselWorks.length - 1;
-            } else if (newSlide >= carouselWorks.length) {
-                newSlide = 0;
-            }
-            goToSlide(newSlide);
+        document.querySelector('#modal-container .flex.justify-end button').onclick = closeModal;
+
+
+        
+        // --- LÓGICA DE ZOOM Y SCROLL ---
+        function handleZoom(event) {
+            const container = event.currentTarget;
+            const img = container.querySelector('.zoom-image');
+            if (!img) return;
+            const rect = container.getBoundingClientRect();
+            const x = event.clientX - rect.left; 
+            const y = event.clientY - rect.top;  
+            const xPercent = (x / rect.width) * 100;
+            const yPercent = (y / rect.height) * 100;
+            const zoomScale = 2.5; 
+            img.style.transformOrigin = `${xPercent}% ${yPercent}%`;
+            img.style.transform = `scale(${zoomScale})`;
         }
-
-        function goToSlide(index) {
-            const items = document.querySelectorAll('#carousel-items .carousel-item');
-            const indicators = document.querySelectorAll('#carousel-indicators button');
-
-            // Quitar animación y clase active
-            items[currentSlide].classList.remove('active', 'animate-fadeIn');
-            indicators[currentSlide].className = 'w-3 h-3 rounded-full transition duration-300 bg-white bg-opacity-50';
-
-            currentSlide = index;
-            
-            // Poner animación y clase active
-            items[currentSlide].classList.add('active', 'animate-fadeIn');
-            indicators[currentSlide].className = 'w-3 h-3 rounded-full transition duration-300 bg-pantone-magenta';
-        }
-
-        // --- GESTIÓN DE AUTENTICACIÓN (ADMIN) ---
-
-        async function checkAdminStatus() {
-            const { data: { session } } = await client.auth.getSession();
-            const loginLink = document.getElementById('login-link');
-            const adminLink = document.getElementById('admin-link'); // NUEVA LÍNEA
-
-            if (session) {
-                // Si hay sesión, es administrador. Ocultamos el 'Acceder' y mostramos el 'Panel Admin' flotante.
-                if (loginLink) loginLink.classList.add('hidden');
-                if (adminLink) adminLink.classList.remove('hidden'); 
-            } else {
-                // Si no hay sesión, mostramos el 'Acceder' y ocultamos el 'Panel Admin' flotante.
-                if (loginLink) loginLink.classList.remove('hidden');
-                if (adminLink) adminLink.classList.add('hidden'); 
+        
+        function resetZoom(container) {
+            const img = container.querySelector('.zoom-image');
+            if (img) {
+                img.style.transform = null; 
+                img.style.transformOrigin = 'center center';
             }
         }
 
-        // --- INICIALIZACIÓN Y EVENTOS ---
+        const firstSection = document.querySelector('section#carousel-header'); 
         
         window.addEventListener('scroll', () => {
             if (!firstSection) return;
@@ -475,15 +835,11 @@
         });
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Ocultar elementos al cargar para una transición suave
             mainFooter.classList.add('translate-y-full');
             whatsappButton.classList.remove('show');
             
-            // Cargar datos
-            loadWorks(); 
-            
-            // Verificar sesión de administrador
-            checkAdminStatus();
+            // initGallery ahora llama a renderCarouselItems
+            initGallery(); 
         });
 
         // Event Listeners de Filtro

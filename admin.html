@@ -6,13 +6,23 @@
     <title>Panel de Administración</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script src="config.js"></script>
+    
     <style>
+        /* Estilos de Utilidad */
         #alert {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 1001; 
-            padding: 1rem; border-radius: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            font-weight: 500;
+            position: fixed; top: 4px; left: 1/2; transform: translateX(-50%);
+            padding: 1rem; border-radius: 0.375rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+            width: 11/12;
+        }
+        .drag-handle {
+            cursor: grab;
+            transition: color 0.2s;
+        }
+        .drag-handle:hover {
+            color: #4f46e5;
         }
     </style>
 </head>
@@ -20,302 +30,518 @@
     
     <div id="alert" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 p-4 text-sm rounded-lg shadow-xl z-50 w-11/12 md:w-auto" role="alert"></div>
 
-    <header id="admin-header" class="bg-white shadow">
+    <header id="admin-header" class="bg-white shadow hidden">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <h1 class="text-2xl font-bold text-gray-800">Panel de Administración</h1>
-            <button id="logout-button" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
-                Cerrar Sesión
-            </button>
+            <div class="flex items-center space-x-4">
+                <button id="save-order-button" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 hidden">
+                    Guardar Orden
+                </button>
+                <button id="logout-button" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
+                    Cerrar Sesión
+                </button>
+            </div>
         </div>
     </header>
 
     <main class="container mx-auto px-6 py-8">
-        
-        <div id="admin-section">
-            <h2 class="text-xl font-semibold text-gray-700 mb-6">Gestionar obras y catálogo</h2>
-            
-            <div class="bg-white p-6 rounded-lg shadow-lg mb-8">
-                <h3 class="text-lg font-bold mb-4 border-b pb-2">Agregar nueva obra</h3>
+        <div id="form-container" class="bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+            <h2 id="form-title" class="text-xl font-semibold text-gray-800 mb-4">Añadir Nueva Obra</h2>
+            <form id="obra-form" class="space-y-4">
+                <input type="hidden" id="obra-id" />
                 
-                <form id="obra-form" class="space-y-4">
-                    <input id="title" type="text" placeholder="Título *" class="w-full p-3 border rounded-lg" required />
-                    <input id="year" type="number" placeholder="Año (ej: 2023) *" class="w-full p-3 border rounded-lg" required />
-                    <input id="technique" type="text" placeholder="Técnica (ej: Óleo sobre lienzo) *" class="w-full p-3 border rounded-lg" required />
-                    <input id="size" type="text" placeholder="Medidas (ej: 90x40 cm) *" class="w-full p-3 border rounded-lg" required />
-                    
-                    <select id="category" class="w-full p-3 border rounded-lg" required>
-                        <option value="">Seleccionar Categoría *</option>
-                        <option value="grabado">Grabado</option>
-                        <option value="dibujo">Dibujo</option>
-                        <option value="pintura">Pintura</option>
-                    </select>
+                <input type="text" id="title" placeholder="Título de la Obra" required 
+                       class="w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500" />
+                
+                <textarea id="description" placeholder="Descripción de la Obra" rows="3"
+                          class="w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                
+                <div class="grid md:grid-cols-3 gap-4">
+                    <input type="number" id="year" placeholder="Año (ej: 2023)" required 
+                           class="p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500" />
+                    <input type="text" id="technique" placeholder="Técnica (ej: Óleo sobre tela)" required 
+                           class="p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500" />
+                    <input type="text" id="dimensions" placeholder="Dimensiones (ej: 100x80cm)" required 
+                           class="p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500" />
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-4">
+                    <input type="text" id="category" placeholder="Categoría (ej: Pintura, Grabado)" 
+                           class="p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500" />
+                    <input type="text" id="series" placeholder="Serie (opcional)" 
+                           class="p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500" />
+                </div>
 
-                    <input id="serie" type="text" placeholder="Serie (opcional)" class="w-full p-3 border rounded-lg" />
+                <div class="grid md:grid-cols-4 gap-4 items-center">
+                    <input type="number" id="price" placeholder="Precio (ej: 150000)" 
+                           class="col-span-2 p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500" />
                     
-                    <div class="grid md:grid-cols-3 gap-4">
-                        <input id="price" type="number" step="0.01" placeholder="Precio (Opcional)" class="p-3 border rounded-lg" />
-                        <select id="is-available" class="p-3 border rounded-lg" required>
-                            <option value="true">Disponible (Sí)</option>
-                            <option value="false">Disponible (No)</option>
-                        </select>
-                        <select id="show-price" class="p-3 border rounded-lg" required>
-                            <option value="false">No mostrar Precio</option>
-                            <option value="true">Mostrar Precio</option>
-                        </select>
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="show_price" class="h-5 w-5 text-indigo-600 border-gray-300 rounded" />
+                        <label for="show_price" class="text-gray-700 text-sm">Mostrar Precio</label>
                     </div>
-                    <textarea id="description" placeholder="Descripción de la obra" class="w-full p-3 border rounded-lg h-32"></textarea>
+
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="is_available" class="h-5 w-5 text-indigo-600 border-gray-300 rounded" checked />
+                        <label for="is_available" class="text-gray-700 text-sm">Disponible</label>
+                    </div>
+                </div>
+
+                <div class="space-y-4 border p-4 rounded-lg">
+                    <label class="block text-gray-700 font-semibold">Imágenes</label>
                     
-                    <label class="block text-gray-700 font-semibold pt-2">Seleccionar Imágenes (Múltiples) *</label>
-                    <input id="image-files" type="file" accept="image/*" multiple required class="w-full p-3 border rounded-lg bg-gray-50" />
-                    
-                    <button type="submit" id="save-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 w-full">
-                        Guardar obra
+                    <input type="file" id="mainImageFile" accept="image/*" 
+                           class="w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500" />
+                    <p class="text-xs text-gray-500">Imagen Principal (Obligatoria)</p>
+                    <div id="mainImagePreview" class="mt-2 flex items-center space-x-3"></div>
+
+                    <div id="additionalImagesContainer" class="space-y-3">
+                        <input type="file" id="additionalImageFile1" accept="image/*" class="w-full p-3 border rounded-lg" />
+                        <div id="additionalImagePreview1" class="mt-1 flex items-center space-x-3"></div>
+                        
+                        <input type="file" id="additionalImageFile2" accept="image/*" class="w-full p-3 border rounded-lg" />
+                        <div id="additionalImagePreview2" class="mt-1 flex items-center space-x-3"></div>
+                        
+                        <input type="file" id="additionalImageFile3" accept="image/*" class="w-full p-3 border rounded-lg" />
+                        <div id="additionalImagePreview3" class="mt-1 flex items-center space-x-3"></div>
+                    </div>
+                </div>
+
+                <div class="flex space-x-4">
+                    <button type="submit" id="submit-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 flex-grow">
+                        Guardar Obra
                     </button>
-                </form>
+                    <button type="button" onclick="resetForm()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg transition duration-300">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <button onclick="openForm()" id="add-button" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg transition duration-300 mb-6 hidden">
+            + Añadir Nueva Obra
+        </button>
+
+        <div id="works-list-container" class="space-y-4 hidden">
             </div>
 
-            <div class="bg-white p-6 rounded-lg shadow-lg">
-                <h3 class="text-lg font-bold mb-4 border-b pb-2">Obras existentes (Gestión)</h3>
-                <div id="obra-list" class="space-y-4">
-                    <p class="text-gray-500">Cargando lista de obras...</p>
-                    </div>
-            </div>
+        <div id="loading-spinner" class="text-center py-10 hidden">
+            <svg class="animate-spin h-8 w-8 text-indigo-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
         </div>
     </main>
-    
+
     <script>
         // Inicialización de Supabase
         const supabaseUrl = window.supabaseUrl;
         const supabaseAnonKey = window.supabaseAnonKey;
         const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-        // --- ELEMENTOS DEL DOM ---
-        const obraForm = document.getElementById("obra-form");
-        const logoutButton = document.getElementById("logout-button");
-        const imageFilesInput = document.getElementById("image-files");
-        const alertDiv = document.getElementById("alert");
-        const obraListDiv = document.getElementById("obra-list"); 
-        
-        // --- CONFIGURACIÓN ---
-        const BUCKET_NAME = 'imagenes';
-        const IMAGE_FOLDER = 'images'; 
+        const BUCKET_NAME = 'galeria-obras';
 
-        // --- FUNCIONES DE UTILIDAD ---
+        // --- ESTADO Y UTILERÍAS ---
+        let currentWorks = [];
+        let isEditing = false;
+        let filesToDelete = []; // Array para almacenar rutas de imágenes a borrar del storage
 
+        // Referencias del DOM
+        const header = document.getElementById('admin-header');
+        const formContainer = document.getElementById('form-container');
+        const worksListContainer = document.getElementById('works-list-container');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const obraForm = document.getElementById('obra-form');
+        const formTitle = document.getElementById('form-title');
+        const submitButton = document.getElementById('submit-button');
+        const addButton = document.getElementById('add-button');
+        const logoutButton = document.getElementById('logout-button');
+        const saveOrderButton = document.getElementById('save-order-button');
+        const alertDiv = document.getElementById('alert');
+
+        // Referencias de los campos del formulario
+        const mainImageFile = document.getElementById('mainImageFile');
+        const additionalImageFile1 = document.getElementById('additionalImageFile1');
+        const additionalImageFile2 = document.getElementById('additionalImageFile2');
+        const additionalImageFile3 = document.getElementById('additionalImageFile3');
+        const mainImagePreview = document.getElementById('mainImagePreview');
+        const additionalImagePreview1 = document.getElementById('additionalImagePreview1');
+        const additionalImagePreview2 = document.getElementById('additionalImagePreview2');
+        const additionalImagePreview3 = document.getElementById('additionalImagePreview3');
+
+        // Función para mostrar alertas temporales
         function showAlert(message, type = 'success') {
             alertDiv.textContent = message;
-            alertDiv.classList.remove('hidden');
-            alertDiv.classList.remove('bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
-
+            alertDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+            
             if (type === 'error') {
                 alertDiv.classList.add('bg-red-100', 'text-red-700');
             } else {
                 alertDiv.classList.add('bg-green-100', 'text-green-700');
             }
+            
             setTimeout(() => alertDiv.classList.add('hidden'), 5000);
         }
+        
+        // --- AUTENTICACIÓN ---
 
         async function checkAuth() {
+            loadingSpinner.classList.remove('hidden');
             const { data: { user } } = await client.auth.getUser();
-            if (!user) {
-                // Si no hay usuario, redirigir al login
-                window.location.href = './login.html';
-            } else {
-                loadObraList();
-            }
-        }
-        
-        // --- GESTIÓN DE AUTH ---
 
-        logoutButton.addEventListener("click", async () => {
+            if (!user) {
+                // Redirigir a la página de login si no hay usuario
+                window.location.href = './login.html';
+                return;
+            }
+
+            // Si hay usuario, mostrar el panel y cargar obras
+            header.classList.remove('hidden');
+            addButton.classList.remove('hidden');
+            worksListContainer.classList.remove('hidden');
+            fetchWorks();
+        }
+
+        logoutButton.addEventListener('click', async () => {
             const { error } = await client.auth.signOut();
-            if (!error) {
-                showAlert("Sesión cerrada. Redirigiendo...", 'success');
-                setTimeout(() => {
-                    window.location.href = './login.html';
-                }, 1000);
+            if (error) {
+                showAlert('Error al cerrar sesión', 'error');
             } else {
-                showAlert("Error al cerrar sesión.", 'error');
+                window.location.href = './login.html';
             }
         });
 
-        // --- SUBIDA DE ARCHIVOS A SUPABASE STORAGE ---
-        async function uploadFiles(files, obraTitle) {
-            const uploadedImages = [];
-            
-            for (const file of files) {
-                // Se garantiza que el orden en el array 'imagenes' de la DB es el orden de subida
-                const safeTitle = obraTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-                const filePath = `${IMAGE_FOLDER}/${safeTitle}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+        // --- IMÁGENES Y PREVIEWS ---
 
-                const { data, error } = await client.storage
-                    .from(BUCKET_NAME)
-                    .upload(filePath, file, { cacheControl: '3600', upsert: false });
+        // Función para obtener la URL pública
+        function getPublicUrl(path) {
+            if (!path) return '';
+            const { data } = client.storage.from(BUCKET_NAME).getPublicUrl(path);
+            return data.publicUrl;
+        }
 
-                if (error) {
-                    throw new Error(`Error subiendo imagen: ${error.message}`);
+        // Crea el botón de borrar para la preview
+        function createDeleteButton(previewId) {
+            const button = document.createElement('button');
+            button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>`;
+            button.className = "text-red-500 hover:text-red-700 transition";
+            button.type = "button";
+            button.onclick = () => {
+                const previewContainer = document.getElementById(previewId);
+                const fileInput = document.getElementById(previewId.replace('Preview', 'File'));
+                
+                // Si es una imagen existente (tiene un data-path), la marcamos para borrar
+                const path = previewContainer.getAttribute('data-path');
+                if (path) {
+                    filesToDelete.push(path);
                 }
 
-                const { data: publicUrl } = client.storage
-                    .from(BUCKET_NAME)
-                    .getPublicUrl(filePath);
-
-                uploadedImages.push({ url: publicUrl.publicUrl, path: filePath, originalName: file.name });
-            }
-            return uploadedImages;
+                // Limpiar DOM y input
+                previewContainer.innerHTML = '';
+                previewContainer.removeAttribute('data-path');
+                fileInput.value = ''; // Resetear el archivo seleccionado
+            };
+            return button;
         }
 
-        // --- GESTIÓN DE FORMULARIO DE OBRA ---
-        obraForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
+        // Muestra la imagen de preview (desde File o URL)
+        function showImagePreview(fileOrUrl, previewContainerId, path = null) {
+            const container = document.getElementById(previewContainerId);
+            container.innerHTML = '';
             
-            const title = document.getElementById("title").value.trim();
-            const year = parseInt(document.getElementById("year").value.trim());
-            const technique = document.getElementById("technique").value.trim();
-            const size = document.getElementById("size").value.trim();
-            const description = document.getElementById("description").value.trim();
-            const files = imageFilesInput.files;
-            const category = document.getElementById("category").value; 
-            const serie = document.getElementById("serie").value.trim(); 
-            // Nuevos campos
-            const priceValue = document.getElementById("price").value.trim();
-            const price = priceValue ? parseFloat(priceValue) : null;
-            const isAvailable = document.getElementById("is-available").value === 'true';
-            const showPrice = document.getElementById("show-price").value === 'true';
+            const url = typeof fileOrUrl === 'string' ? fileOrUrl : URL.createObjectURL(fileOrUrl);
+            const img = document.createElement('img');
+            img.src = url;
+            img.className = "h-16 w-16 object-cover rounded-sm border";
+            container.appendChild(img);
             
-            if (!files.length) {
-                showAlert("Debe seleccionar al menos una imagen.", 'error');
-                return;
+            // Agregar botón de borrar
+            container.appendChild(createDeleteButton(previewContainerId));
+            
+            // Almacenar la ruta del Storage para obras existentes
+            if (path) {
+                container.setAttribute('data-path', path);
+            }
+        }
+
+        // Listeners para los inputs de tipo file (para mostrar el preview)
+        mainImageFile.addEventListener('change', (e) => {
+            if (e.target.files[0]) showImagePreview(e.target.files[0], 'mainImagePreview');
+        });
+        additionalImageFile1.addEventListener('change', (e) => {
+            if (e.target.files[0]) showImagePreview(e.target.files[0], 'additionalImagePreview1');
+        });
+        additionalImageFile2.addEventListener('change', (e) => {
+            if (e.target.files[0]) showImagePreview(e.target.files[0], 'additionalImagePreview2');
+        });
+        additionalImageFile3.addEventListener('change', (e) => {
+            if (e.target.files[0]) showImagePreview(e.target.files[0], 'additionalImagePreview3');
+        });
+
+        // --- CÁLCULO DE RUTAS Y UPLOAD ---
+
+        // Subir archivos al Storage y devolver sus rutas
+        async function uploadFiles(id) {
+            const files = [
+                { input: mainImageFile, preview: mainImagePreview, key: 'mainImage' },
+                { input: additionalImageFile1, preview: additionalImagePreview1, key: 'additionalImage1' },
+                { input: additionalImageFile2, preview: additionalImagePreview2, key: 'additionalImage2' },
+                { input: additionalImageFile3, preview: additionalImagePreview3, key: 'additionalImage3' }
+            ];
+            
+            const uploadedPaths = {};
+
+            for (const fileObj of files) {
+                const input = fileObj.input;
+                const preview = fileObj.preview;
+                const key = fileObj.key;
+
+                // Caso 1: Nuevo archivo subido (Input tiene archivo)
+                if (input.files.length > 0) {
+                    const file = input.files[0];
+                    const extension = file.name.split('.').pop();
+                    const fileName = `${key}_${Date.now()}.${extension}`;
+                    const filePath = `${id}/${fileName}`;
+                    
+                    const { data, error } = await client.storage
+                        .from(BUCKET_NAME)
+                        .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+                    if (error) throw new Error(`Error al subir ${key}: ${error.message}`);
+                    uploadedPaths[key] = data.path;
+
+                // Caso 2: Archivo existente (Preview tiene data-path)
+                } else if (preview.hasAttribute('data-path')) {
+                    uploadedPaths[key] = preview.getAttribute('data-path');
+                
+                // Caso 3: No hay archivo nuevo y no hay ruta existente (se borró o nunca existió)
+                } else {
+                    uploadedPaths[key] = null;
+                }
+            }
+            
+            // Borrar archivos marcados
+            if (filesToDelete.length > 0) {
+                const { error: deleteError } = await client.storage.from(BUCKET_NAME).remove(filesToDelete);
+                if (deleteError) {
+                    console.warn("Advertencia: No se pudieron borrar algunas imágenes antiguas:", deleteError.message);
+                }
+                filesToDelete = []; // Limpiar después de intentar el borrado
             }
 
-            const saveButton = e.submitter;
-            saveButton.textContent = "Guardando...";
-            saveButton.disabled = true;
+            return uploadedPaths;
+        }
 
+
+        // --- CRUD DE OBRA ---
+
+        // 1. Manejar el Formulario de Creación/Edición
+        obraForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Bloquear botón y mostrar carga
+            submitButton.textContent = isEditing ? "Actualizando..." : "Guardando...";
+            submitButton.disabled = true;
+
+            const id = document.getElementById('obra-id').value || `obra_${Date.now()}`;
+            
             try {
-                // 1. Obtener el siguiente valor de 'orden'
-                const { data: maxOrder } = await client.from('productos').select('orden').order('orden', { ascending: false }).limit(1);
-                const newOrder = (maxOrder && maxOrder.length > 0) ? maxOrder[0].orden + 1 : 1;
-
-                // 2. Subir archivos a Storage
-                const uploadedImages = await uploadFiles(files, title);
+                // A. Subir imágenes
+                const paths = await uploadFiles(id);
                 
-                // 3. Insertar registro en la tabla 'productos'
-                const { error: insertError } = await client
-                    .from("productos")
-                    .insert([{
-                        titulo: title, anio: year, tecnica: technique, medidas: size, descripcion: description, 
-                        imagenes: uploadedImages, orden: newOrder, categoria: category, serie: serie,
-                        // Insertar nuevos campos
-                        price: price, is_available: isAvailable, show_price: showPrice 
-                    }]);
+                // B. Construir objeto de datos
+                const workData = {
+                    title: document.getElementById('title').value,
+                    description: document.getElementById('description').value,
+                    year: parseInt(document.getElementById('year').value),
+                    technique: document.getElementById('technique').value,
+                    dimensions: document.getElementById('dimensions').value,
+                    category: document.getElementById('category').value,
+                    series: document.getElementById('series').value,
+                    // Nuevos campos
+                    price: document.getElementById('price').value ? parseFloat(document.getElementById('price').value) : null,
+                    show_price: document.getElementById('show_price').checked,
+                    is_available: document.getElementById('is_available').checked,
+                    // Imágenes
+                    mainImage: getPublicUrl(paths.mainImage),
+                    additionalImages: [
+                        getPublicUrl(paths.additionalImage1),
+                        getPublicUrl(paths.additionalImage2),
+                        getPublicUrl(paths.additionalImage3)
+                    ].filter(url => url), // Filtrar URLs nulas
+                    // Path para borrado futuro
+                    mainImagePath: paths.mainImage,
+                    additionalImagePaths: [paths.additionalImage1, paths.additionalImage2, paths.additionalImage3].filter(path => path),
+                };
 
-                if (insertError) throw new Error("Error al insertar en DB: " + insertError.message);
+                // C. Insertar/Actualizar en la DB
+                let error;
+                if (isEditing) {
+                    // Actualizar
+                    const result = await client.from('works').update(workData).eq('id', id);
+                    error = result.error;
+                } else {
+                    // Insertar
+                    workData.id = id;
+                    // Asignar la siguiente posición
+                    workData.position = currentWorks.length > 0 ? currentWorks[currentWorks.length - 1].position + 1 : 1; 
+                    const result = await client.from('works').insert([workData]);
+                    error = result.error;
+                }
 
-                showAlert("Obra guardada exitosamente!", 'success');
-                obraForm.reset();
-                loadObraList(); 
+                if (error) throw new Error(error.message);
+
+                showAlert(`Obra ${isEditing ? 'actualizada' : 'creada'} exitosamente!`, 'success');
+                resetForm();
+                fetchWorks(); // Recargar la lista
+                
             } catch (error) {
                 console.error(error);
-                showAlert(error.message, 'error');
-            } finally {
-                saveButton.textContent = "Guardar obra";
-                saveButton.disabled = false;
+                showAlert(error.message || 'Error desconocido al guardar la obra.', 'error');
+                submitButton.textContent = isEditing ? "Actualizar Obra" : "Guardar Obra";
+                submitButton.disabled = false;
             }
         });
 
-        // --- GESTIÓN DE LISTA DE OBRAS Y BORRADO ---
-
-        async function loadObraList() {
-            obraListDiv.innerHTML = '<p class="text-gray-500">Cargando lista de obras...</p>';
-            
+        // 2. Cargar Obras
+        async function fetchWorks() {
+            loadingSpinner.classList.remove('hidden');
             const { data, error } = await client
-                .from('productos')
-                .select('id, titulo, anio, tecnica, imagenes, created_at, is_available, show_price')
-                .order('created_at', { ascending: false }); 
+                .from('works')
+                .select('*')
+                .order('position', { ascending: true }); // Ordenar por posición
+
+            loadingSpinner.classList.add('hidden');
 
             if (error) {
-                obraListDiv.innerHTML = `<p class="text-red-500">Error al cargar obras: ${error.message}</p>`;
+                console.error("Error al cargar obras:", error);
+                worksListContainer.innerHTML = '<p class="text-red-500">Error al cargar el listado de obras.</p>';
                 return;
             }
 
-            if (data.length === 0) {
-                obraListDiv.innerHTML = '<p class="text-gray-500">No hay obras subidas aún.</p>';
+            currentWorks = data || [];
+            renderWorksList(currentWorks);
+            enableSorting();
+        }
+
+        // 3. Renderizar Lista de Obras
+        function renderWorksList(works) {
+            worksListContainer.innerHTML = '';
+
+            if (works.length === 0) {
+                worksListContainer.innerHTML = '<p class="text-gray-500">No hay obras creadas. Usa el botón "Añadir Nueva Obra".</p>';
                 return;
             }
 
-            obraListDiv.innerHTML = ''; 
-            
-            data.forEach(obra => {
+            works.forEach(obra => {
                 const item = document.createElement('div');
-                const mainImage = obra.imagenes && obra.imagenes.length > 0 ? obra.imagenes[0].url : '';
+                item.id = `obra-item-${obra.id}`;
+                item.setAttribute('data-id', obra.id);
+                item.className = 'bg-white p-4 rounded-lg shadow flex items-center justify-between space-x-4 border border-gray-200 hover:shadow-md transition duration-200';
                 
-                item.className = 'flex items-center space-x-4 p-3 border-b hover:bg-gray-50 rounded-lg transition duration-150';
-                item.setAttribute('id', `obra-item-${obra.id}`); 
-                
-                const jsonString = JSON.stringify(obra.imagenes);
-                const base64Images = btoa(jsonString);
-
-                const statusColor = obra.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-                const statusText = obra.is_available ? 'DISPONIBLE' : 'NO DISPONIBLE';
-                const priceStatusText = obra.show_price ? 'PRECIO SÍ' : 'PRECIO NO';
-
+                // Contenido de la Obra
                 item.innerHTML = `
-                    <img src="${mainImage}" alt="${obra.titulo}" class="w-16 h-16 object-cover rounded-md" onerror="this.style.display='none'" />
-                    <div class="flex-1">
-                        <h4 class="font-semibold text-gray-800">${obra.titulo} (${obra.anio})</h4>
-                        <p class="text-sm text-gray-500">${obra.tecnica}</p>
-                        <div class="flex gap-2 mt-1">
-                             <span class="text-xs font-medium px-2 py-0.5 rounded ${statusColor}">${statusText}</span>
-                             <span class="text-xs font-medium px-2 py-0.5 rounded ${obra.show_price ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">${priceStatusText}</span>
+                    <div class="flex items-center space-x-4 flex-grow min-w-0">
+                        <span class="drag-handle text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </span>
+                        <img src="${obra.mainImage}" alt="${obra.title}" class="h-16 w-16 object-cover rounded-sm border" 
+                             onerror="this.onerror=null;this.src='[URL_IMAGEN_DEFAULT]';" />
+                        <div class="min-w-0 flex-grow">
+                            <h3 class="text-lg font-semibold text-gray-800 truncate">${obra.title} (${obra.year})</h3>
+                            <p class="text-sm text-gray-500 truncate">${obra.technique} · ${obra.dimensions}</p>
+                            <p class="text-xs ${obra.is_available ? 'text-green-600' : 'text-red-600'} font-medium">
+                                ${obra.is_available ? 'DISPONIBLE' : 'VENDIDA'} 
+                                ${obra.show_price && obra.price ? ` | $${obra.price.toLocaleString('es-AR')}` : ''}
+                            </p>
                         </div>
                     </div>
-                    <div>
-                        <button id="delete-btn-${obra.id}" onclick="deleteObra(${obra.id}, '${base64Images}', this)" class="bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-3 rounded-lg transition duration-300">
-                            Eliminar
+                    <div class="flex space-x-3">
+                        <button onclick="editObra('${obra.id}')" class="text-indigo-600 hover:text-indigo-800 transition" title="Editar">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-9-4l9-9m-7 7l7-7"></path></svg>
+                        </button>
+                        <button onclick="deleteObra('${obra.id}')" class="text-red-500 hover:text-red-700 transition" title="Eliminar">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         </button>
                     </div>
                 `;
-                obraListDiv.appendChild(item);
+                worksListContainer.appendChild(item);
             });
         }
-        
-        // Se pasa el botón como argumento para deshabilitarlo durante la operación
-        async function deleteObra(id, base64Images, button) {
-            let images = [];
-            try {
-                // 1. Decodificar de Base64
-                const jsonString = atob(base64Images);
-                // 2. Parsear el JSON
-                images = JSON.parse(jsonString);
-            } catch (e) {
-                console.error("Error al decodificar/parsear imágenes:", e);
-                showAlert("Error interno al preparar la eliminación. Los datos de la imagen no son válidos.", 'error');
+
+        // 4. Edición de Obra
+        function editObra(id) {
+            const obra = currentWorks.find(w => w.id === id);
+            if (!obra) {
+                showAlert('Obra no encontrada.', 'error');
                 return;
             }
 
+            isEditing = true;
+            formTitle.textContent = 'Editar Obra: ' + obra.title;
+            submitButton.textContent = 'Actualizar Obra';
+            openForm();
 
-            if (!confirm(`¿Está seguro de eliminar la obra con ID ${id} y todas sus imágenes? Esta acción es irreversible.`)) {
+            // Llenar campos
+            document.getElementById('obra-id').value = obra.id;
+            document.getElementById('title').value = obra.title;
+            document.getElementById('description').value = obra.description || '';
+            document.getElementById('year').value = obra.year;
+            document.getElementById('technique').value = obra.technique;
+            document.getElementById('dimensions').value = obra.dimensions;
+            document.getElementById('category').value = obra.category || '';
+            document.getElementById('series').value = obra.series || '';
+            document.getElementById('price').value = obra.price || '';
+            document.getElementById('show_price').checked = obra.show_price || false;
+            document.getElementById('is_available').checked = obra.is_available;
+
+            // Llenar Previews
+            const paths = [obra.mainImagePath, ...obra.additionalImagePaths];
+            const previews = [mainImagePreview, additionalImagePreview1, additionalImagePreview2, additionalImagePreview3];
+            const fileInputs = [mainImageFile, additionalImageFile1, additionalImageFile2, additionalImageFile3];
+
+            // Limpiar inputs de archivo (solo si están siendo usados para nuevos files)
+            fileInputs.forEach(input => input.value = ''); 
+            filesToDelete = []; // Limpiar lista de borrado
+
+            // Mostrar imágenes existentes
+            previews.forEach((preview, index) => {
+                preview.innerHTML = '';
+                preview.removeAttribute('data-path');
+
+                const path = paths[index];
+                if (path) {
+                    showImagePreview(getPublicUrl(path), preview.id, path);
+                }
+            });
+        }
+
+        // 5. Borrado de Obra
+        async function deleteObra(id) {
+            if (!confirm("¿Estás seguro de que quieres eliminar esta obra permanentemente? Se borrarán todos los archivos asociados.")) {
                 return;
             }
+
+            const obra = currentWorks.find(w => w.id === id);
+            const button = document.querySelector(`#obra-item-${id} button:last-child`);
+            const originalText = button.innerHTML;
             
-            const originalText = button.textContent;
-            button.textContent = 'Borrando...';
+            button.innerHTML = `<svg class="animate-spin h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
             button.disabled = true;
 
             try {
-                // 1. Eliminar el registro de la DB
+                // 1. Borrar registro de la DB
                 const { error: dbError } = await client
-                    .from('productos')
+                    .from('works')
                     .delete()
                     .eq('id', id);
 
-                if (dbError) {
-                    throw new Error(`Error al eliminar el registro: ${dbError.message}.`);
-                }
+                if (dbError) throw new Error(dbError.message);
 
-                // 2. Eliminar las imágenes del Storage
-                const filePaths = images.map(img => img.path).filter(Boolean);
+                // 2. Borrar imágenes del Storage
+                const filePaths = [obra.mainImagePath, ...obra.additionalImagePaths].filter(Boolean);
 
                 if (filePaths.length > 0) {
                     const { error: storageError } = await client.storage
@@ -334,20 +560,107 @@
                 showAlert("Obra y archivos eliminados exitosamente!", 'success');
                 // Remover el elemento del DOM inmediatamente sin recargar toda la lista
                 document.getElementById(`obra-item-${id}`).remove(); 
-
+                currentWorks = currentWorks.filter(w => w.id !== id); // Actualizar el estado
+                
             } catch (error) {
                 console.error(error);
                 showAlert(error.message, 'error');
-                button.textContent = originalText;
+                button.innerHTML = originalText;
                 button.disabled = false;
             }
         }
 
-        // Hacer la función deleteObra accesible globalmente para el onclick
-        window.deleteObra = deleteObra;
+        // 6. Resetear Formulario
+        function resetForm() {
+            isEditing = false;
+            document.getElementById('obra-id').value = '';
+            formTitle.textContent = 'Añadir Nueva Obra';
+            submitButton.textContent = 'Guardar Obra';
+            submitButton.disabled = false;
+            obraForm.reset();
+            formContainer.classList.add('hidden');
+            addButton.classList.remove('hidden');
+            worksListContainer.classList.remove('hidden');
 
-        // Inicializar
-        document.addEventListener('DOMContentLoaded', checkAuth);
+            // Limpiar Previews y arrays de borrado
+            [mainImagePreview, additionalImagePreview1, additionalImagePreview2, additionalImagePreview3].forEach(p => {
+                p.innerHTML = '';
+                p.removeAttribute('data-path');
+            });
+            filesToDelete = [];
+        }
+        
+        // 7. Abrir Formulario
+        function openForm() {
+            formContainer.classList.remove('hidden');
+            addButton.classList.add('hidden');
+            worksListContainer.classList.add('hidden');
+        }
+
+
+        // --- ORDENAMIENTO (DRAG AND DROP) ---
+
+        function enableSorting() {
+            const sortable = new Sortable(worksListContainer, {
+                animation: 150,
+                handle: '.drag-handle',
+                onEnd: function (evt) {
+                    // Mostrar el botón de guardar orden al finalizar el drag
+                    saveOrderButton.classList.remove('hidden');
+                },
+            });
+        }
+
+        saveOrderButton.addEventListener('click', async () => {
+            const newOrder = [];
+            const listItems = worksListContainer.querySelectorAll('[data-id]');
+            
+            listItems.forEach((item, index) => {
+                newOrder.push({
+                    id: item.getAttribute('data-id'),
+                    position: index + 1 // 1-based index
+                });
+            });
+
+            saveOrderButton.textContent = "Guardando...";
+            saveOrderButton.disabled = true;
+
+            try {
+                // Usar RPC o una función de base de datos para actualizar masivamente
+                // Como Supabase no tiene updateMany simple, hacemos una serie de promesas
+                const updatePromises = newOrder.map(item => 
+                    client.from('works').update({ position: item.position }).eq('id', item.id)
+                );
+                
+                const results = await Promise.all(updatePromises);
+                
+                // Verificar si alguna promesa falló
+                const failed = results.some(r => r.error);
+                if (failed) throw new Error('Falló la actualización de una o más posiciones.');
+
+                showAlert("Orden actualizado exitosamente!", 'success');
+                saveOrderButton.classList.add('hidden');
+                currentWorks = currentWorks.sort((a, b) => newOrder.findIndex(i => i.id === a.id) - newOrder.findIndex(i => i.id === b.id));
+
+            } catch (error) {
+                console.error("Error al guardar el orden:", error);
+                showAlert("Error al guardar el orden. Intente nuevamente.", 'error');
+            } finally {
+                saveOrderButton.textContent = "Guardar Orden";
+                saveOrderButton.disabled = false;
+            }
+        });
+
+
+        // Hacer las funciones necesarias accesibles globalmente para el onclick
+        window.editObra = editObra;
+        window.deleteObra = deleteObra;
+        window.openForm = openForm;
+        window.resetForm = resetForm;
+        window.getPublicUrl = getPublicUrl;
+
+        // Inicializar la aplicación
+        checkAuth();
     </script>
 </body>
 </html>

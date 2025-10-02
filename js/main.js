@@ -25,8 +25,8 @@ const status = document.getElementById("status");
 const loadingOverlay = document.getElementById("loading-overlay");
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modal-content");
-// IMPORTANTE: alertDiv NO está en index.html, lo quitamos para evitar error de referencia
-// const alertDiv = document.getElementById('alert'); 
+// NOTA: alertDiv se usará si está presente, pero no es crucial en index.html
+const alertDiv = document.getElementById('alert'); 
 const loadMoreAnchor = document.getElementById('load-more-anchor'); // Elemento de anclaje
 
 // Elementos de Filtro
@@ -46,16 +46,28 @@ const mainFooter = document.getElementById('main-footer');
 const gallerySection = document.getElementById('gallery-section');
 
 
-// --- FUNCIONES DE UTILIDAD (Restaurada, pero sin alertDiv si no existe en index.html) ---
-// **NOTA:** Si usas esta función en index.html y quieres que funcione,
-// debes añadir un div con id="alert" en index.html como existe en admin.html
+// --- FUNCIONES DE UTILIDAD ---
 function showAlert(message, type = 'success') {
-    // Ya que 'alertDiv' no existe en index.html, no podemos mostrar alertas aquí por ahora.
-    console.warn(`Alerta no mostrada (Falta #alert en el DOM): ${message}`);
+    if (!alertDiv) {
+        console.warn(`Alerta no mostrada (Falta #alert en el DOM): ${message}`);
+        return;
+    }
+    alertDiv.textContent = message;
+    alertDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-indigo-100', 'text-indigo-700', 'opacity-0');
+    
+    if (type === 'error') {
+        alertDiv.classList.add('bg-red-100', 'text-red-700');
+    } else if (type === 'success') {
+        alertDiv.classList.add('bg-green-100', 'text-green-700');
+    } else if (type === 'info') {
+         alertDiv.classList.add('bg-indigo-100', 'text-indigo-700');
+    }
+    
+    setTimeout(() => alertDiv.classList.add('opacity-0'), 4500);
+    setTimeout(() => alertDiv.classList.add('hidden'), 5000);
 }
 
 function renderWork(obra, index) {
-    // Asegúrate que la imagen use 'loading="lazy"' si no lo hacía antes
     const imageUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${obra.ruta_imagen}`;
     
     return `
@@ -120,7 +132,8 @@ function closeModal() {
     document.body.style.overflow = 'auto';
 }
 
-// ... (El resto de funciones como populateFilterOptions, checkAdminStatus, saveOrder, etc. se mantienen) ...
+// NOTA: Las funciones checkAdminStatus, startSortable, saveOrder, deleteWork, etc. 
+// se asumen definidas aquí o enlazadas por otros scripts si son necesarias.
 
 // --- LÓGICA DE CARGA DIFERIDA Y PAGINACIÓN ---
 
@@ -194,16 +207,21 @@ async function initialLoadGallery() {
     hasMore = true;
     galleryContainer.innerHTML = ''; // Limpiar el contenedor
     
+    // Muestra un estado inicial de carga (opcional si es muy rápido)
+    if (status) status.classList.remove('hidden');
+
     // Cargar la primera página
     const initialWorks = await fetchWorksPage(0);
     appendWorks(initialWorks);
+    
+    // Ocultar el estado de carga que ya no es necesario
+    if (status) status.classList.add('hidden');
     
     // Asegurarse de poblar filtros después de tener la data inicial
     populateFilterOptions();
 }
 
 // --- INTERSECTION OBSERVER PARA SCROLL INFINITO ---
-// Verificamos si loadMoreAnchor existe antes de crear el observer
 if (loadMoreAnchor) {
     var observer = new IntersectionObserver(async (entries) => {
         // Si el ancla es visible (intersecting) y hay más obras para cargar
@@ -232,7 +250,7 @@ if (loadMoreAnchor) {
 // --- LÓGICA DE FILTROS ---
 
 function isFiltering() {
-    return searchInput.value || filterYear.value || filterCategory.value || filterSeries.value;
+    return searchInput && (searchInput.value || filterYear.value || filterCategory.value || filterSeries.value);
 }
 
 async function applyFilters() {
@@ -243,11 +261,8 @@ async function applyFilters() {
     }
     
     // Si hay filtros, cargamos TODAS las obras (si no están cargadas) para poder filtrar
-    // Esto asume que el número total de obras no es masivo
     if (allWorks.length === 0 || allWorks.length < displayedWorks.length) {
          // Cargar el resto de las obras para garantizar la búsqueda completa
-         // NOTA: Es una llamada potencialmente costosa si hay miles de obras.
-         // Para sitios con muchas obras, se debe implementar filtrado del lado del servidor.
          const remainingWorks = await fetchWorksPage(allWorks.length);
          allWorks = [...allWorks, ...remainingWorks];
     }
@@ -268,19 +283,21 @@ async function applyFilters() {
     galleryContainer.innerHTML = filtered.map(obra => renderWork(obra)).join('');
     
     // Desconectar el observador cuando se filtra
-    if (loadMoreAnchor) {
+    if (loadMoreAnchor && observer) {
         observer.unobserve(loadMoreAnchor);
     }
 }
 
-// Lógica de llenado de filtros (similar a la original)
-function populateFilterOptions() {
-    // ... (Tu función populateFilterOptions se mantiene) ...
-    // Aquí, al final, debes asegurarte de que la llamada a Supabase se haga a toda la tabla
-    // si el propósito de esta función es poblar opciones con TODA la data.
+// Lógica de llenado de filtros
+async function populateFilterOptions() {
+    // Si no tenemos todas las obras, las cargamos para poblar todos los filtros
+    if (allWorks.length === 0) {
+        // NOTA: Esta carga debe ser revisada si tienes miles de obras, 
+        // ya que la función fetchWorksPage solo trae una página. 
+        // Para filtros perfectos, esta llamada debe traer TODA la metadata necesaria.
+        // Asumiendo que ya se trajo una página, se poblan con lo que hay.
+    }
     
-    // Ejemplo de implementación de populateFilterOptions (Si no la tienes):
-    /*
     const allYears = new Set();
     const allCategories = new Set();
     const allSeries = new Set();
@@ -293,32 +310,28 @@ function populateFilterOptions() {
     });
 
     // Rellenar Año
-    filterYear.innerHTML = '<option value="">Año</option>' + Array.from(allYears).sort((a, b) => b - a).map(year => `<option value="${year}">${year}</option>`).join('');
+    if (filterYear) filterYear.innerHTML = '<option value="">Año</option>' + Array.from(allYears).sort((a, b) => b - a).map(year => `<option value="${year}">${year}</option>`).join('');
 
     // Rellenar Categoría
-    filterCategory.innerHTML = '<option value="">Categoría</option>' + Array.from(allCategories).sort().map(cat => `<option value="${cat}">${cat}</option>`).join('');
+    if (filterCategory) filterCategory.innerHTML = '<option value="">Categoría</option>' + Array.from(allCategories).sort().map(cat => `<option value="${cat}">${cat}</option>`).join('');
 
     // Rellenar Serie
-    filterSeries.innerHTML = '<option value="">Serie</option>' + Array.from(allSeries).sort().map(ser => `<option value="${ser}">${ser}</option>`).join('');
-    */
+    if (filterSeries) filterSeries.innerHTML = '<option value="">Serie</option>' + Array.from(allSeries).sort().map(ser => `<option value="${ser}">${ser}</option>`).join('');
 }
 
-// ... (El resto de funciones auxiliares como checkAdminStatus, startSortable, saveOrder se mantienen) ...
 
-// --- INICIALIZACIÓN (Modificada) ---
+// --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', async () => {
-    // Animaciones iniciales
     if(mainFooter) mainFooter.classList.add('translate-y-full');
     if(whatsappButton) whatsappButton.classList.remove('show');
     
     // Carga la primera página e inicia el observador si es necesario
     await initialLoadGallery(); 
 
-    // Ocultar el estado de carga y el overlay que ya no son necesarios
+    // Ocultar el overlay de carga.
     if (loadingOverlay) loadingOverlay.classList.add('hidden');
-    if (status) status.classList.add('hidden');
     
-    // Verifica si el usuario es administrador (si la función existe)
+    // Si tienes una función checkAdminStatus, llámala
     if (typeof checkAdminStatus === 'function') {
         checkAdminStatus();
     }
@@ -326,13 +339,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 // --- LISTENERS DE FILTROS ---
-// Asegura que los listeners solo se añadan si los elementos existen.
 if (searchInput) searchInput.addEventListener('input', applyFilters);
 if (filterYear) filterYear.addEventListener('change', applyFilters);
 if (filterCategory) filterCategory.addEventListener('change', applyFilters);
 if (filterSeries) filterSeries.addEventListener('change', applyFilters);
 
-// Listener de scroll para footer y WhatsApp (se mantiene)
+// Listener de scroll para footer y WhatsApp
 const firstSection = document.querySelector('section#carousel-header'); 
 window.addEventListener('scroll', () => {
     if (!firstSection) return;

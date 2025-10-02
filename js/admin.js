@@ -45,7 +45,7 @@ function showAlert(message, type = 'success') {
 
 function showWorksList() {
     obraFormContainer.classList.add('hidden');
-    worksList.parentElement.classList.remove('hidden'); // Mostrar el div padre de worksList
+    worksList.parentElement.classList.remove('hidden'); 
     obraForm.reset();
     isEditMode = false;
     workToEdit = null;
@@ -104,7 +104,7 @@ function showLoginView() {
 function showAdminView() {
     loginContainer.classList.add('hidden');
     adminHeader.classList.remove('hidden');
-    showWorksList(); // Por defecto muestra la lista de obras
+    showWorksList(); 
 }
 
 async function checkAuth() {
@@ -118,7 +118,6 @@ async function checkAuth() {
 
 async function handleLogin(e) {
     e.preventDefault();
-    // CLAVE: Usamos los IDs correctos del admin.html para el login
     const email = document.getElementById('email').value; 
     const password = document.getElementById('password').value; 
     
@@ -138,7 +137,7 @@ async function handleLogout() {
         const { error } = await client.auth.signOut();
         if (error) throw error;
         showAlert("Sesión cerrada.", 'info');
-        window.location.href = './login.html'; // Redirigir al login
+        window.location.href = './login.html'; // Redirigir al login.html
     } catch (error) {
         console.error("Error al cerrar sesión:", error);
         showAlert("Error al cerrar sesión: " + error.message, 'error');
@@ -161,7 +160,7 @@ async function fetchWorks() {
 
     currentWorks = data;
     renderWorksList(currentWorks);
-    setupSortable(); // Re-inicializar SortableJS después de cargar
+    setupSortable(); 
 }
 
 function renderWorksList(works) {

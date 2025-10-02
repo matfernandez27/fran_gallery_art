@@ -1,32 +1,24 @@
 // js/main.js
 
 // Inicialización de Supabase usando config.js
-// Se asume que config.js ya definió window.supabaseUrl y window.supabaseAnonKey
 const supabaseUrl = window.supabaseUrl;
 const supabaseAnonKey = window.supabaseAnonKey;
 const BUCKET_NAME = 'imagenes';
 // Usamos la inicialización global
 const client = supabase.createClient(supabaseUrl, supabaseAnonKey); 
 
-let allWorks = []; // Almacena todas las obras
-let displayedWorks = []; // Obras actualmente mostradas en el DOM
+let allWorks = []; // Antes 'productos', ahora 'allWorks' para ser consistente
 let isEditing = false;
 let sortableInstance = null;
 let carouselIntervalId = null;
 
-// Parámetros de Paginación y Carga Diferida
-const PAGE_SIZE = 8; // Número de obras a cargar por vez
-let currentPage = 0;
-let hasMore = true; 
-
 // Elementos del DOM
 const galleryContainer = document.getElementById("gallery-container");
-const status = document.getElementById("status"); // Texto estático "Cargando obras..."
-const loadingOverlay = document.getElementById("loading-overlay"); // Spinner
+const status = document.getElementById("status");
+const loadingOverlay = document.getElementById("loading-overlay");
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modal-content");
-const alertDiv = document.getElementById('alert'); 
-const loadMoreAnchor = document.getElementById('load-more-anchor'); 
+const alertDiv = document.getElementById('alert');
 
 // Elementos de Filtro
 const searchInput = document.getElementById("search");
@@ -67,26 +59,39 @@ function showAlert(message, type = 'success') {
     setTimeout(() => alertDiv.classList.add('hidden'), 5000);
 }
 
-function renderWork(obra, index) {
-    const imageUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${obra.ruta_imagen}`;
-    
-    return `
-        <div id="obra-${obra.id}" class="work-item relative bg-bg-card shadow-lg rounded-sm overflow-hidden group hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1" 
-             data-id="${obra.id}" data-order="${obra.orden}" data-year="${obra.anio}" data-category="${obra.categoria}" data-series="${obra.serie}"
-             onclick="openModal(${obra.id})">
-            <img src="${imageUrl}" alt="${obra.titulo}" class="w-full h-64 object-cover transition-opacity duration-500 group-hover:opacity-90" loading="lazy">
-            <div class="absolute inset-0 bg-black bg-opacity-30 flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <h3 class="text-white text-lg font-semibold">${obra.titulo}</h3>
-                <p class="text-gray-200 text-sm">${obra.tecnica} (${obra.anio})</p>
+function renderGallery(works) {
+    galleryContainer.innerHTML = works.map((obra, index) => {
+        const imageUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${obra.ruta_imagen}`;
+        
+        return `
+            <div id="obra-${obra.id}" class="work-item relative bg-bg-card shadow-lg rounded-sm overflow-hidden group hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1" 
+                 data-id="${obra.id}" data-order="${obra.orden}" data-year="${obra.anio}" data-category="${obra.categoria}" data-series="${obra.serie}"
+                 onclick="openModal(${obra.id})">
+                <img src="${imageUrl}" alt="${obra.titulo}" class="w-full h-64 object-cover transition-opacity duration-500 group-hover:opacity-90" loading="lazy">
+                <div class="absolute inset-0 bg-black bg-opacity-30 flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <h3 class="text-white text-lg font-semibold">${obra.titulo}</h3>
+                    <p class="text-gray-200 text-sm">${obra.tecnica} (${obra.anio})</p>
+                </div>
+                ${isEditing ? `<div class="absolute top-2 right-2 bg-red-500 text-white p-1 text-xs rounded-full cursor-pointer z-10" onclick="event.stopPropagation(); deleteWork(${obra.id})">X</div>` : ''}
             </div>
-            ${isEditing ? `<div class="absolute top-2 right-2 bg-red-500 text-white p-1 text-xs rounded-full cursor-pointer z-10" onclick="event.stopPropagation(); deleteWork(${obra.id})">X</div>` : ''}
-        </div>
-    `;
+        `;
+    }).join('');
+    
+    // Si no hay obras
+    if (works.length === 0) {
+        if (status) {
+            status.textContent = "No se encontraron obras que coincidan con el filtro.";
+            status.classList.remove('hidden');
+        }
+    } else {
+        if (status) status.classList.add('hidden');
+    }
+
 }
 
+
 async function openModal(id) {
-    // Buscar en ambas listas para asegurar que se encuentra
-    const obra = allWorks.find(w => w.id === id) || displayedWorks.find(w => w.id === id);
+    const obra = allWorks.find(w => w.id === id); // Busca en el array local
     if (!obra) return;
     
     const imageUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${obra.ruta_imagen}`;
@@ -132,149 +137,45 @@ function closeModal() {
     document.body.style.overflow = 'auto';
 }
 
-// --- LÓGICA DE CARGA DIFERIDA Y PAGINACIÓN ---
+// --- LÓGICA DE CARGA DE GALERÍA ---
 
-/**
- * Carga un nuevo bloque de obras desde Supabase.
- */
-async function fetchWorksPage(offset) {
-    const from = offset;
-    const to = offset + PAGE_SIZE - 1;
-    
-    // Muestra el spinner al cargar
+async function fetchGallery() {
     loadingOverlay.classList.remove('hidden');
+    status.classList.remove('hidden');
+    status.textContent = "Cargando obras...";
 
     try {
         const { data, error } = await client
             .from('productos') // <--- CLAVE: Se usa la tabla 'productos'
             .select('*')
-            .order('orden', { ascending: true })
-            .range(from, to);
+            .order('orden', { ascending: true });
 
         if (error) throw error;
         
-        // Si no estamos filtrando, actualizamos la lista completa
-        if (!isFiltering()) {
-            allWorks = [...allWorks, ...data];
-        }
-
-        // Verifica si ya no hay más obras
-        hasMore = data.length === PAGE_SIZE;
-        currentPage++;
-        
-        return data;
+        allWorks = data;
+        renderGallery(allWorks);
 
     } catch (error) {
         console.error("Error al cargar obras:", error);
         showAlert("Error al cargar la galería. Intenta recargar.", 'error');
-        // Mostrar el status text solo en caso de error
-        if (status) {
-            status.textContent = "Error al cargar la galería. Intenta recargar.";
-            status.classList.remove('hidden');
-        }
-        return [];
+        status.textContent = "Error al cargar la galería. Intenta recargar.";
+
     } finally {
-        // Oculta el spinner, independientemente del éxito o error
         loadingOverlay.classList.add('hidden');
+        populateFilterOptions();
     }
 }
-
-/**
- * Renderiza las obras y las adjunta al contenedor.
- */
-function appendWorks(works) {
-    const html = works.map((obra, index) => renderWork(obra, index)).join('');
-    galleryContainer.insertAdjacentHTML('beforeend', html);
-    displayedWorks = [...displayedWorks, ...works];
-    
-    // Si quedan más obras y no estamos filtrando, observamos el ancla
-    if (hasMore && !isFiltering() && loadMoreAnchor) {
-        observer.observe(loadMoreAnchor);
-    } else if (loadMoreAnchor && observer) {
-        // Si no hay más obras o estamos filtrando, desconectamos el observador
-        observer.unobserve(loadMoreAnchor);
-    }
-}
-
-/**
- * Función principal para la carga inicial (solo la primera página).
- */
-async function initialLoadGallery() {
-    // Reiniciar paginación y estado
-    allWorks = [];
-    displayedWorks = [];
-    currentPage = 0;
-    hasMore = true;
-    galleryContainer.innerHTML = ''; // Limpiar el contenedor
-    
-    // Cargar la primera página (esto mostrará el spinner solo durante la petición)
-    const initialWorks = await fetchWorksPage(0);
-    
-    // Si no se cargó nada y no hay error, mostrar mensaje de vacío
-    if (initialWorks.length === 0 && !status.classList.contains('bg-red-100')) {
-        if (status) {
-            status.textContent = "No se encontraron obras.";
-            status.classList.remove('hidden');
-        }
-    } else {
-        if (status) status.classList.add('hidden'); // Asegurarse de ocultar si hay obras
-        appendWorks(initialWorks);
-    }
-    
-    // Asegurarse de poblar filtros después de tener la data inicial
-    populateFilterOptions();
-}
-
-// --- INTERSECTION OBSERVER PARA SCROLL INFINITO ---
-if (loadMoreAnchor) {
-    var observer = new IntersectionObserver(async (entries) => {
-        // Si el ancla es visible (intersecting) y hay más obras para cargar
-        if (entries[0].isIntersecting && hasMore && !isFiltering()) {
-            
-            // Detener temporalmente el observador para evitar múltiples llamadas
-            observer.unobserve(loadMoreAnchor);
-
-            // Cargar la siguiente página
-            const nextWorks = await fetchWorksPage(currentPage * PAGE_SIZE);
-            
-            if (nextWorks.length > 0) {
-                appendWorks(nextWorks);
-            } else {
-                hasMore = false; // Ya no hay más obras
-            }
-        }
-    }, {
-        rootMargin: '100px',
-        threshold: 0.1
-    });
-}
-
 
 // --- LÓGICA DE FILTROS ---
 
-function isFiltering() {
-    return searchInput && (searchInput.value || filterYear.value || filterCategory.value || filterSeries.value);
-}
-
-async function applyFilters() {
-    // Si no hay filtros activos, volvemos a la carga diferida
-    if (!isFiltering()) {
-        await initialLoadGallery();
-        return;
-    }
-    
-    // Si hay filtros, cargamos TODAS las obras para un filtrado completo
-    // Si la lista allWorks no está completa, la cargamos
-    if (allWorks.length === 0 || allWorks.length < displayedWorks.length) {
-        // En un caso real, esto requeriría una carga completa, pero aquí solo usamos la data ya cargada o la que se trajo.
-    }
+function applyFilters() {
     
     const searchText = searchInput.value.toLowerCase();
     const selectedYear = filterYear.value;
     const selectedCategory = filterCategory.value;
     const selectedSeries = filterSeries.value;
 
-    const filtered = allWorks.filter(obra => {
+    const filtered = allWorks.filter(obra => { // Usa 'allWorks'
         const titleMatch = obra.titulo.toLowerCase().includes(searchText);
         const yearMatch = selectedYear ? obra.anio == selectedYear : true;
         const categoryMatch = selectedCategory ? obra.categoria === selectedCategory : true;
@@ -282,21 +183,15 @@ async function applyFilters() {
         return titleMatch && yearMatch && categoryMatch && seriesMatch;
     });
 
-    galleryContainer.innerHTML = filtered.map(obra => renderWork(obra)).join('');
-    
-    // Desconectar el observador cuando se filtra
-    if (loadMoreAnchor && observer) {
-        observer.unobserve(loadMoreAnchor);
-    }
+    renderGallery(filtered);
 }
 
-async function populateFilterOptions() {
+function populateFilterOptions() {
     const allYears = new Set();
     const allCategories = new Set();
     const allSeries = new Set();
 
-    // Iterar sobre todas las obras cargadas (allWorks)
-    allWorks.forEach(obra => {
+    allWorks.forEach(obra => { // Usa 'allWorks'
         if (obra.anio) allYears.add(obra.anio);
         if (obra.categoria) allCategories.add(obra.categoria);
         if (obra.serie) allSeries.add(obra.serie);
@@ -310,30 +205,94 @@ async function populateFilterOptions() {
 }
 
 
-// --- INICIALIZACIÓN ---
+// --- LÓGICA DE ADMIN (Manteniendo tu estructura original) ---
+// *Nota: Estas funciones dependen de que admin.js defina checkAdminStatus*
+
+function checkAdminStatus() {
+    // Si estás logueado, muestra los controles de administrador
+    client.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+            adminControls.classList.remove('hidden');
+        }
+    });
+}
+
+function toggleEditMode() {
+    isEditing = !isEditing;
+    editToggleButton.textContent = isEditing ? 'Salir de Edición' : 'Modo Edición';
+    saveOrderButton.classList.toggle('hidden', !isEditing);
+    
+    // Vuelve a renderizar para mostrar/ocultar los botones de eliminar
+    renderGallery(allWorks); 
+    
+    if (isEditing) {
+        setupSortable();
+    } else if (sortableInstance) {
+        sortableInstance.destroy();
+        sortableInstance = null;
+    }
+}
+
+function setupSortable() {
+    if (sortableInstance) {
+        sortableInstance.destroy();
+    }
+    sortableInstance = new Sortable(galleryContainer, {
+        animation: 150,
+        group: 'shared',
+        draggable: '.work-item',
+        onEnd: function (evt) {
+            saveOrder();
+        }
+    });
+}
+
+async function saveOrder() {
+    if (!sortableInstance) return;
+
+    const items = sortableInstance.toArray();
+    const updates = items.map((id, index) => ({
+        id: parseInt(id),
+        orden: index + 1
+    }));
+    
+    try {
+        const { error } = await client
+            .from('productos') // <--- CLAVE: Se usa la tabla 'productos'
+            .upsert(updates);
+
+        if (error) throw error;
+        showAlert("Orden de obras guardado exitosamente!", 'success');
+        await fetchGallery(); // Recarga la galería para actualizar el array local
+    } catch (error) {
+        console.error("Error al guardar orden:", error);
+        showAlert("Error al guardar el orden.", 'error');
+    }
+}
+
+// --- EVENT LISTENERS ---
 document.addEventListener('DOMContentLoaded', async () => {
     // Ocultar footer y botón de WhatsApp al inicio
     if(mainFooter) mainFooter.classList.add('translate-y-full');
     if(whatsappButton) whatsappButton.classList.remove('show');
     
-    // Inicia la carga de la galería (solo la primera página)
-    await initialLoadGallery(); 
+    await fetchGallery();
     
-    // Si checkAdminStatus existe (viene de otro script), se ejecuta
     if (typeof checkAdminStatus === 'function') {
-        // Nota: checkAdminStatus generalmente está en admin.js o login.js.
-        // Si no está, este 'if' evita el error.
+        checkAdminStatus();
     }
 });
 
 
-// --- LISTENERS DE FILTROS ---
 if (searchInput) searchInput.addEventListener('input', applyFilters);
 if (filterYear) filterYear.addEventListener('change', applyFilters);
 if (filterCategory) filterCategory.addEventListener('change', applyFilters);
 if (filterSeries) filterSeries.addEventListener('change', applyFilters);
 
-// Listener de scroll para footer y WhatsApp
+if (editToggleButton) editToggleButton.addEventListener('click', toggleEditMode);
+if (saveOrderButton) saveOrderButton.addEventListener('click', saveOrder);
+
+
 const firstSection = document.querySelector('section#carousel-header'); 
 window.addEventListener('scroll', () => {
     if (!firstSection) return;

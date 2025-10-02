@@ -420,6 +420,7 @@
             renderGallery(filteredWorks);
         }
 
+        // FUNCIÓN CORREGIDA
         async function loadWorks() {
             loadingOverlay.classList.remove("hidden");
             try {
@@ -669,7 +670,7 @@
             mainFooter.classList.add('translate-y-full');
             whatsappButton.classList.remove('show');
             
-            // Cargar datos
+            // Cargar datos (CORRECCIÓN IMPLEMENTADA: llama a loadWorks)
             loadWorks(); 
             
             // Verificar sesión de administrador

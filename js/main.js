@@ -411,16 +411,23 @@ window.openModal = (id) => {
     const imageCarousel = obra.images.map((img, index) => `
         <div class="modal-carousel-item ${index === 0 ? 'active' : ''}" data-index="${index}">
             <div class="image-zoom-container cursor-move" onmousemove="zoomImage(event, this)" onmouseleave="resetZoom(this)">
-                <img src="${img.url}" alt="${obra.title} - Imagen ${index + 1}" class="zoom-image w-full h-full object-contain transition-transform duration-300" />
+                <img 
+                    src="${img.url}" 
+                    alt="${obra.title} - Imagen ${index + 1}" 
+                    class="zoom-image w-full h-full object-contain transition-transform duration-300" 
+                    onerror="this.onerror=null;this.src='https://via.placeholder.com/600x450?text=Sin+Imagen';" 
+                />
             </div>
-            <p class="text-xs text-center text-text-muted mt-2">${img.name || `Imagen ${index + 1}`}</p>
+            ${img.name ? `<p class="text-xs text-center text-text-muted mt-2">${img.name}</p>` : ''}
         </div>
     `).join('');
     
-    const navDots = obra.images.map((_, index) => `
+    // SOLO generar navegación si hay MÁS de una imagen
+    const hasMultipleImages = obra.images.length > 1;
+    const navDots = hasMultipleImages ? obra.images.map((_, index) => `
         <button class="w-2 h-2 rounded-full bg-text-muted transition-colors duration-300 ${index === 0 ? 'bg-pantone-magenta' : ''}" 
                 onclick="goToSlide(${index})"></button>
-    `).join('');
+    `).join('') : '';
 
 
     // Lógica de Precio y Disponibilidad
@@ -435,19 +442,19 @@ window.openModal = (id) => {
     
     // Contenido del modal
     modalContent.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6"> 
             <div class="image-column">
-                <div id="modal-image-carousel" class="relative overflow-hidden aspect-[4/3] bg-bg-principal">
+                <div id="modal-image-carousel" class="relative overflow-hidden ${hasMultipleImages ? 'aspect-[4/3]' : 'aspect-square'} bg-bg-principal rounded-md">
                     ${imageCarousel}
                 </div>
-                ${obra.images.length > 1 ? `
+                ${hasMultipleImages ? `
                     <div class="carousel-nav flex justify-center space-x-2 mt-4">
                         ${navDots}
                     </div>
                 ` : ''}
             </div>
             
-            <div class="info-column p-4 md:p-0">
+            <div class="info-column p-0"> 
                 <h2 class="text-3xl font-light text-text-dark mb-2">${obra.title}</h2>
                 <p class="text-xl font-semibold text-pantone-magenta mb-4">${obra.year || 'Año N/A'}</p>
                 
@@ -481,13 +488,24 @@ window.openModal = (id) => {
     document.body.classList.add('overflow-hidden');
     
     // Iniciar carrusel del modal
-    if (obra.images.length > 1) {
+    if (hasMultipleImages) {
         initModalCarousel();
+    } else {
+        // Asegurarse de que el zoom funcione si es una sola imagen
+        const zoomContainer = document.querySelector('.image-zoom-container');
+        if (zoomContainer) {
+            zoomContainer.onmousemove = (e) => zoomImage(e, zoomContainer);
+            zoomContainer.onmouseleave = () => resetZoom(zoomContainer);
+        }
     }
 };
 
 window.closeModal = (event) => {
-    if (event && event.target !== modal) return;
+    // Si haces click directamente en el fondo negro (modal), ciérralo.
+    // Si haces click en la X, ciérralo.
+    if (event && event.target !== modal && !event.target.closest('#modal-container') && event.target.tagName !== 'BUTTON') {
+        return;
+    }
     
     modal.classList.add('hidden');
     document.body.classList.remove('overflow-hidden');
@@ -533,12 +551,17 @@ function zoomImage(event, container) {
     const img = container.querySelector('.zoom-image');
     if (!img) return;
 
-    const { offsetX, offsetY, target } = event;
-    const { offsetWidth, offsetHeight } = target;
+    // Obtener la posición relativa dentro del contenedor
+    const rect = container.getBoundingClientRect();
+    const offsetX = event.clientX - rect.left;
+    const offsetY = event.clientY - rect.top;
+
+    const { offsetWidth, offsetHeight } = container;
 
     const xPercent = (offsetX / offsetWidth) * 100;
     const yPercent = (offsetY / offsetHeight) * 100;
     const zoomScale = 2.5; 
+    
     img.style.transformOrigin = `${xPercent}% ${yPercent}%`;
     img.style.transform = `scale(${zoomScale})`;
 }

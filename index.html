@@ -17,9 +17,12 @@
     <link rel="icon" type="image/png" href="./img/favicon.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    
     <script src="config.js"></script> 
+    
     <script>
         // Configuración de colores personalizados (VIVO Y CLARO)
         tailwind.config = {
@@ -251,8 +254,8 @@
         let isEditing = false;
         let sortableInstance = null;
         let carouselIntervalId = null;
-        let carouselImages = []; // Para almacenar las URLs de las imágenes del carrusel
-        let worksData = []; // Para almacenar los datos originales de las obras
+        let carouselImages = []; 
+        let worksData = []; 
 
         // Elementos del DOM
         const galleryContainer = document.getElementById("gallery-container");
@@ -442,7 +445,7 @@
             renderGallery(filteredWorks);
         }
 
-        // Función que carga los datos y los procesa (CORREGIDA Y CON DEBUG)
+        // Función que carga los datos y los procesa
         async function loadWorks() {
             console.log("1. loadWorks() iniciado. Mostrando overlay de carga.");
             loadingOverlay.classList.remove("hidden");
@@ -456,7 +459,6 @@
 
                 if (error) {
                     console.error("3. ERROR DE SUPABASE al cargar obras:", error.message, error);
-                    // No hacemos throw error aquí para asegurar que el finally se ejecute y oculte el loading.
                     status.textContent = "Error al cargar la galería. Ver consola (F12) para más detalles (Supabase).";
                     renderGallery([]);
                     renderCarouselItems([]); // Renderiza el fondo estático
@@ -691,7 +693,7 @@
         }
 
 
-        // Inicializar la Galería y Auth
+        // Inicializar la Galería y Auth (CORRECCIÓN FINAL: Bloque movido al final del script)
         document.addEventListener('DOMContentLoaded', () => {
             // Ocultar elementos al cargar para una transición suave
             mainFooter.classList.add('translate-y-full');

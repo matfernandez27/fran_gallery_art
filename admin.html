@@ -155,7 +155,7 @@
     <script>
         // Inicialización de Supabase y constantes
         const BUCKET_NAME = 'obras'; 
-        const BUCKET_URL = `${window.supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}`; 
+        // const BUCKET_URL = `${window.supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}`; // Ya no es necesario si usamos getPublicUrl()
 
         const client = supabase.createClient(window.supabaseUrl, window.supabaseAnonKey);
 
@@ -193,8 +193,12 @@
             setTimeout(() => alertDiv.classList.add('hidden'), 5000);
         }
 
+        // FUNCIÓN MODIFICADA: Usa la función nativa de Supabase para mayor robustez.
         function getPublicUrl(path) {
-            return `${BUCKET_URL}/${path}`;
+            const { data } = client.storage
+                .from(BUCKET_NAME)
+                .getPublicUrl(path);
+            return data.publicUrl;
         }
         window.getPublicUrl = getPublicUrl;
 
@@ -268,6 +272,7 @@
         function renderWorksList(works) {
             worksList.innerHTML = '';
             works.forEach(obra => {
+                // Se asegura de que la URL sea pública.
                 const mainImage = obra.imagenes[0] ? getPublicUrl(obra.imagenes[0].path) : 'https://placehold.co/60x60?text=NO+IMG';
 
                 const item = document.createElement('div');
@@ -280,7 +285,7 @@
                         <span class="drag-handle text-gray-400 hover:text-indigo-600 mr-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
                         </span>
-                        <img src="${mainImage}" alt="${obra.titulo}" class="w-16 h-16 object-cover rounded-md border border-gray-300">
+                        <img src="${mainImage}" alt="${obra.titulo}" class="w-16 h-16 object-cover rounded-md border border-gray-300" onerror="this.onerror=null;this.src='https://placehold.co/60x60?text=FAIL'">
                         <div>
                             <p class="text-lg font-semibold text-gray-800">${obra.titulo}</p>
                             <p class="text-sm text-gray-500">${obra.tecnica} | ${obra.anio}</p>
@@ -452,7 +457,9 @@
 
                     for (let i = 0; i < files.length; i++) {
                         const file = files[i];
-                        const filePath = `${id || 'new'}-${Date.now()}-${file.name.replace(/\s/g, '_')}`;
+                        // Usamos el ID (si existe) o un timestamp para el path
+                        const pathId = id ? id : Date.now(); 
+                        const filePath = `${pathId}/${file.name.replace(/\s/g, '_')}`;
 
                         const { data: uploadData, error: uploadError } = await client.storage
                             .from(BUCKET_NAME)
@@ -462,12 +469,16 @@
                         
                         newImages.push({ 
                             path: uploadData.path, 
-                            url: getPublicUrl(uploadData.path) 
+                            // Aquí usamos el path para que getPublicUrl lo pueda procesar después de guardar
                         });
                     }
                 }
                 
-                const finalImagesArray = [...imagesToKeep, ...newImages];
+                // Para las nuevas imágenes, debemos obtener la URL pública si es un array de objetos con path
+                const finalImagesArray = [...imagesToKeep, ...newImages].map(img => ({
+                    path: img.path,
+                    url: getPublicUrl(img.path) // Obtener la URL pública antes de guardar en la DB
+                }));
                 
                 // 2. Preparar datos de la DB
                 const dataToSave = {

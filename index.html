@@ -19,7 +19,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-    <script src="config.js"></script>
+    <script src="config.js"></script> 
     <script>
         // Configuración de colores personalizados (VIVO Y CLARO)
         tailwind.config = {
@@ -64,8 +64,8 @@
             background-position: center;
             opacity: 0;
             transition: opacity 2s ease-in-out;
-            transform: scale(1.1); /* Ligeramente más grande para evitar bordes */
-            filter: brightness(0.7) grayscale(0.2); /* Oscurecer y suavizar */
+            transform: scale(1.1);
+            filter: brightness(0.7) grayscale(0.2);
         }
 
         .carousel-item.active {
@@ -112,7 +112,7 @@
             padding: 4px;
             border-radius: 50%;
             opacity: 0.8;
-            pointer-events: none; /* Asegura que no interfiera con el mousemove */
+            pointer-events: none;
         }
         
     </style>
@@ -139,13 +139,31 @@
             
             <div class="mt-8 space-x-4 text-white">
                 <a href="https://www.instagram.com/fran.faf" target="_blank" class="hover:text-pantone-magenta transition duration-300">
-                    <svg fill="currentColor" viewBox="0 0 24 24" class="w-6 h-6 inline-block"><path d="M12 2c2.71 0 3.05.01 4.12.06 1.07.05 1.77.21 2.37.45.6.24 1.05.57 1.54 1.06.49.49.82.94 1.06 1.54.24.6.4 1.3.45 2.37.05 1.07.06 1.41.06 4.12s-.01 3.05-.06 4.12c-.05 1.07-.21 1.77-.45 2.37-.24.6-.57 1.05-1.06 1.54-.49.49-.94.82-1.54 1.06-.6.24-1.3.4-2.37.45-1.07.05-1.41.06-4.12.06s-3.05-.01-4.12-.06c-1.07-.05-1.77-.21-2.37-.45-.6-.24-1.05-.57-1.54-1.06-.49-.49-.82-.94-1.06-1.54-.24-.6-.4-1.3-.45-2.37-.05-1.07-.06-1.41-.06-4.12s.01-3.05.06-4.12c.05-1.07.21-1.77.45-2.37.24-.6.57-1.05 1.06-1.54.49-.49.94-.82 1.54-1.06.6-.24 1.3-.4 2.37-.45C8.95 2.01 9.29 2 12 2zm0 2.16c-2.6 0-2.94.01-3.96.06-1.01.05-1.64.2-2.1.39-.47.19-.8.44-1.15.79-.35.35-.6.68-.79 1.15-.19.46-.34 1.09-.39 2.1-.05 1.02-.06 1.36-.06 3.96s.01 2.94.06 3.96c.05 1.01.2 1.64.39 2.1.19.47.44.8.79 1.15.35.35.68.6 1.15.79.46.19 1.09.34 2.1.39 1.02.05 1.36.06 3.96.06s2.94-.01 3.96-.06c1.01-.05 1.64-.2 2.1-.39.47-.19.8-.44 1.15-.79.35-.35.6-.68.79-1.15.19-.46.34-1.09.39-2.1.05-1.02.06-1.36.06-3.96s-.01-2.94-.06-3.96c-.05-1.01-.2-1.64-.39-2.1-.19-.47-.44-.8-.79-1.15-.35-.35-.68-.6-1.15-.79-.46-.19-1.09-.34-2.1-.39-1.02-.05-1.36-.06-3.96-.06zM12 7a5 5 0 100 10 5 5 0 000-10zm0 2.16a2.84 2.84 0 110 5.68 2.84 2.84 0 010-5.68zm7.3-1.1c.36 0 .66.29.66.66s-.3.66-.66.66-.66-.29-.66-.66.3-.66.66-.66z"/></svg>
+                    <svg fill="currentColor" viewBox="0 0 24 24" class="w-6 h-6 inline-block"><path d="M12 2c2.71 0 3.05.01 4.12.06 1.07.05 1.77.21 2.37.45.6.24 1.05.57 1.54 1.06.49.49.82.94 1.06 1.54.24.6.4 1.3.45 2.37.05 1.07.06 1.41.06 4.12s-.01 3.05-.06 4.12c-.05 1.07-.21 1.77-.45 2.37-.24.6-.57 1.05-1.06 1.54-.49.49-.94.82-1.54 1.06-.6.24-1.3.4-2.37.45-1.07.05-1.41.06-4.12.06s-3.05-.01-4.12-.06c-1.07-.05-1.77-.21-2.37-.45-.6-.24-1.05-.57-1.54-1.06-.49-.49-.82-.94-1.06-1.54-.24-.6-.4-1.3-.45-2.37-.05-1.07-.06-1.41-.06-4.12s.01-3.05.06-4.12c.05 1.07.21 1.77.45 2.37.24-.6.57-1.05 1.06-1.54.49-.49.94-.82 1.54-1.06.6-.24 1.3-.4 2.37-.45C8.95 2.01 9.29 2 12 2zm0 2.16c-2.6 0-2.94.01-3.96.06-1.01.05-1.64.2-2.1.39-.47.19-.8.44-1.15.79-.35.35-.6.68-.79 1.15-.19.47-.34 1.09-.39 2.1-.05 1.02-.06 1.36-.06 3.96s.01 2.94.06 3.96c.05 1.01.2 1.64.39 2.1.19.47.44.8.79 1.15.35.35.68.6 1.15.79.46.19 1.09.34 2.1.39 1.02.05 1.36.06 3.96.06s2.94-.01 3.96-.06c1.01-.05 1.64-.2 2.1-.39.47-.19.8-.44 1.15-.79.35-.35.68-.6 1.15-.79.46-.19 1.09-.34 2.1-.39 1.02-.05 1.36-.06 3.96-.06zM12 7a5 5 0 100 10 5 5 0 000-10zm0 2.16a2.84 2.84 0 110 5.68 2.84 2.84 0 010-5.68zm7.3-1.1c.36 0 .66.29.66.66s-.3.66-.66.66-.66-.29-.66-.66.3-.66.66-.66z"/></svg>
                 </a>
                 <a href="https://www.facebook.com/Francisco.F.art" target="_blank" class="hover:text-pantone-magenta transition duration-300">
                     <svg fill="currentColor" viewBox="0 0 24 24" class="w-6 h-6 inline-block"><path d="M12 2C6.48 2 2 6.48 2 12c0 5.01 3.65 9.17 8.44 9.94v-7.04H8.02v-2.9h2.42V9.6c0-2.38 1.45-3.67 3.56-3.67 1.02 0 1.89.07 2.16.1v2.5h-1.48c-1.17 0-1.4.55-1.4 1.36v1.76h2.9l-.47 2.9h-2.43V22c4.79-.77 8.44-4.93 8.44-9.94C22 6.48 17.52 2 12 2z"/></svg>
                 </a>
                 <a href="mailto:fran.faf@gmail.com" class="hover:text-pantone-magenta transition duration-300">
                     <svg fill="currentColor" viewBox="0 0 24 24" class="w-6 h-6 inline-block"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section id="bio-summary" class="py-12 md:py-16 bg-bg-card border-b border-border-light shadow-inner">
+        <div class="container mx-auto px-6 max-w-5xl flex flex-col md:flex-row items-center gap-8">
+            <div class="md:w-1/3">
+                <img src="./img/placeholder-bio.jpg" alt="Foto del artista Francisco Fernández" class="rounded-lg shadow-xl object-cover w-full h-auto max-h-80 mx-auto" onerror="this.onerror=null;this.src='./img/placeholder.jpg';"/>
+            </div>
+            <div class="md:w-2/3 text-center md:text-left">
+                <h3 class="text-3xl font-bold text-text-dark mb-4">Francisco Fernández</h3>
+                <h4 class="text-xl font-light text-pantone-magenta mb-4">Grabado, Dibujo y Arte Patagónico</h4>
+                <p class="text-text-muted leading-relaxed mb-4">
+                    La obra de Francisco Fernández establece un diálogo visual potente, contrastando la vastedad del paisaje patagónico con la experiencia urbana moderna. A través de técnicas mixtas, logra capturar la textura y el silencio de la estepa, fusionándolos con la energía de la vida actual.
+                </p>
+                <a href="./biografia-completa.html" class="inline-block text-pantone-magenta hover:text-opacity-80 font-semibold border-b-2 border-pantone-magenta transition duration-300">
+                    Leer Biografía Completa →
                 </a>
             </div>
         </div>
@@ -296,7 +314,11 @@
         let currentCarouselIndex = 0;
 
         function renderCarouselItems(carouselUrls) {
-            if (!carouselContainer || carouselUrls.length === 0) return;
+            if (!carouselContainer || carouselUrls.length === 0) {
+                 // Si no hay imágenes para carrusel, agregamos un fondo estático por defecto
+                carouselContainer.innerHTML = '<div class="carousel-item active" style="background-image: url(\'./img/default-header-bg.jpg\')"></div>';
+                return;
+            }
             if (carouselIntervalId) {
                 clearInterval(carouselIntervalId);
             }
@@ -332,8 +354,8 @@
                 description: p.descripcion || "",
                 order: p.orden || 0,
                 category: p.categoria || "",
-                serie: p.serie || "", // Añadido para el filtro
-                es_carrusel: p.es_carrusel || false, // Usar el campo de la DB
+                serie: p.serie || "", 
+                es_carrusel: p.es_carrusel || false,
                 images,
                 mainImage: (images.length ? images[0].url : "./img/placeholder.jpg")
             };
@@ -395,7 +417,7 @@
             const search = searchInput.value.toLowerCase();
             const year = filterYear.value;
             const category = filterCategory.value.toLowerCase();
-            const serie = filterSeries ? filterSeries.value.toLowerCase() : ''; // Uso seguro
+            const serie = filterSeries ? filterSeries.value.toLowerCase() : ''; 
 
             const filteredWorks = worksData.filter(obra => {
                 // Filtro de búsqueda de texto
@@ -420,17 +442,28 @@
             renderGallery(filteredWorks);
         }
 
-        // FUNCIÓN CORREGIDA
+        // Función que carga los datos y los procesa (CORREGIDA Y CON DEBUG)
         async function loadWorks() {
+            console.log("1. loadWorks() iniciado. Mostrando overlay de carga.");
             loadingOverlay.classList.remove("hidden");
             try {
-                // Se agregó 'es_carrusel' a la selección
+                
+                console.log("2. Realizando consulta a Supabase...");
                 const { data, error } = await client
                     .from("works")
                     .select("id, titulo, tecnica, medidas, anio, descripcion, orden, categoria, serie, imagenes, es_carrusel")
                     .order("orden", { ascending: true });
 
-                if (error) throw error;
+                if (error) {
+                    console.error("3. ERROR DE SUPABASE al cargar obras:", error.message, error);
+                    // No hacemos throw error aquí para asegurar que el finally se ejecute y oculte el loading.
+                    status.textContent = "Error al cargar la galería. Ver consola (F12) para más detalles (Supabase).";
+                    renderGallery([]);
+                    renderCarouselItems([]); // Renderiza el fondo estático
+                    return;
+                }
+                
+                console.log(`3. Datos de obras cargados exitosamente: ${data.length} registros.`);
                 
                 // 1. Normalizar y guardar datos
                 worksData = data.map(normalize);
@@ -438,7 +471,7 @@
                 // 2. Poblar filtros
                 populateFilters(worksData);
 
-                // 3. Renderizar la galería inicial (usa applyFilters para asegurar que se filtre si hay algún valor por defecto)
+                // 3. Renderizar la galería inicial 
                 applyFilters(); 
 
                 // 4. Inicializar Carrusel
@@ -450,10 +483,11 @@
                 renderCarouselItems(carouselImages);
 
             } catch (error) {
-                console.error("Error al cargar obras:", error.message);
-                status.textContent = "Error al cargar la galería. Intente recargar la página.";
+                console.error("4. Error crítico en loadWorks:", error);
+                status.textContent = "Error al cargar la galería. Ver consola para más detalles.";
             } finally {
                 loadingOverlay.classList.add("hidden");
+                console.log("5. loadWorks() finalizado.");
             }
         }
 
@@ -499,13 +533,13 @@
 
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            document.body.style.overflow = 'hidden'; // Evita el scroll de fondo
+            document.body.style.overflow = 'hidden';
         }
 
         function closeModal() {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
-            document.body.style.overflow = ''; // Restaura el scroll de fondo
+            document.body.style.overflow = '';
             const img = document.getElementById('modal-image');
             if (img) {
                 img.style.transform = null;
@@ -532,7 +566,6 @@
             img.style.transform = `scale(2.5)`;
             
             // El punto de origen del zoom se convierte en la posición del mouse
-            // Se ajusta para que el centro de la imagen ampliada siga el mouse
             const xOrigin = xPercent * 100;
             const yOrigin = yPercent * 100;
             
@@ -565,7 +598,6 @@
                 editToggleButton.textContent = "Activar Edición";
                 galleryContainer.classList.remove('cursor-move');
                 if (sortableInstance) {
-                    // No destruimos, simplemente ocultamos el botón de guardar
                     saveOrderButton.classList.add('hidden');
                 }
             }
@@ -576,7 +608,6 @@
                 animation: 150,
                 ghostClass: 'sortable-ghost',
                 onEnd: function (evt) {
-                    // Marcar que el orden ha cambiado y se puede guardar
                     saveOrderButton.disabled = false;
                     saveOrderButton.classList.remove('bg-green-600', 'hover:bg-green-700');
                     saveOrderButton.classList.add('bg-pantone-magenta', 'hover:bg-opacity-80');
@@ -591,10 +622,9 @@
             try {
                 const newOrder = Array.from(galleryContainer.children).map((item, index) => ({
                     id: item.getAttribute('data-id'),
-                    position: index + 1 // El orden empieza en 1
+                    position: index + 1
                 }));
 
-                // Actualizar la base de datos (copiar lógica de admin.html para consistencia)
                 const updatePromises = newOrder.map(item =>
                     client.from('works').update({ orden: item.position }).eq('id', item.id)
                 );
@@ -604,7 +634,6 @@
                 const failed = results.some(r => r.error);
                 if (failed) throw new Error('Falló la actualización de una o más posiciones.');
 
-                // Actualizar los datos locales y el renderizado (opcional, pero buena práctica)
                 worksData.forEach(obra => {
                     const newPos = newOrder.find(item => item.id === obra.id);
                     if (newPos) {
@@ -636,7 +665,6 @@
             const firstSectionHeight = firstSection.offsetHeight;
             
             // Lógica del Footer
-            // Muestra el footer una vez que se ha pasado el carrusel/header
             if (window.scrollY > firstSectionHeight - 100) { 
                 mainFooter.classList.remove('translate-y-full');
             } else {
@@ -644,7 +672,6 @@
             }
 
             // Lógica del Botón de WhatsApp
-            // Muestra el botón de WhatsApp cuando se ha scrolleado hasta la mitad de la sección de galería o más.
             const gallerySectionTop = gallerySection ? gallerySection.offsetTop : firstSectionHeight;
             if (window.scrollY > gallerySectionTop - window.innerHeight / 2) { 
                 whatsappButton.classList.add('show');
@@ -670,7 +697,7 @@
             mainFooter.classList.add('translate-y-full');
             whatsappButton.classList.remove('show');
             
-            // Cargar datos (CORRECCIÓN IMPLEMENTADA: llama a loadWorks)
+            // Cargar datos
             loadWorks(); 
             
             // Verificar sesión de administrador

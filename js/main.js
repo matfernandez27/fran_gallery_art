@@ -34,12 +34,6 @@ const whatsappButton = document.getElementById('whatsapp-btn');
 const mainFooter = document.getElementById('main-footer');
 const gallerySection = document.getElementById('gallery-section');
 
-// VARIABLES PARA SCROLL INFINITO
-let page = 0;
-const PAGE_SIZE = 12;
-let hasMore = true;
-let isLoading = false;
-
 
 // --- FUNCIONES DE UTILIDAD ---
 function showAlert(message, type = 'success') {
@@ -150,37 +144,26 @@ function normalize(p) {
     };
 }
 
-/**
- * Renderiza un conjunto de obras, agregándolas al contenedor de la galería.
- * @param {Array} items - Obras a renderizar.
- * @param {boolean} append - Si es true, las agrega al final; si es false, reemplaza el contenido.
- */
-function renderGallery(items, append = true) {
-    if (!append) {
-        galleryContainer.innerHTML = '';
-        productos = [];
-    }
-
-    if (items.length === 0 && productos.length === 0) {
+function renderGallery(items) {
+    galleryContainer.innerHTML = '';
+    if (items.length === 0) {
         galleryContainer.innerHTML = '<p class="col-span-full text-center text-text-muted">No se encontraron obras que coincidan con los filtros.</p>';
-        status.textContent = ''; // Limpiar mensaje de status si no hay obras
         return;
     }
 
     items.forEach(obra => {
-        productos.push(obra); // Agregar al array principal
         const card = document.createElement("div");
         card.className = "bg-bg-card rounded-sm overflow-hidden cursor-pointer shadow-lg hover:shadow-xl transition duration-500 transform hover:-translate-y-1 group border border-border-light";
         card.setAttribute('data-id', obra.id); 
         card.setAttribute('onclick', `openModal(${obra.id})`);
         
-        // --- Bloque de Tarjeta con Precio y Disponibilidad solicitados ---
+        // --- BLOQUE DE TARJETA ACTUALIZADO CON PRECIO Y DISPONIBILIDAD ---
         const formattedPrice = obra.show_price && obra.price
             ? formatPrice(obra.price)
             : 'Consultar';
             
         const priceDisplayClass = obra.show_price && obra.price ? 'font-bold text-text-dark' : 'text-pantone-magenta font-semibold';
-        const availabilityText = obra.is_available ? 'Disponible' : 'Vendida'; // <- CORREGIDO
+        const availabilityText = obra.is_available ? 'Disponible' : 'Vendida'; // <- MODIFICADO
         const availabilityClass = obra.is_available ? 'text-green-600' : 'text-red-500';
 
         card.innerHTML = `
@@ -205,6 +188,7 @@ function renderGallery(items, append = true) {
                 </div>
             </div>
         `;
+        // --- FIN BLOQUE DE TARJETA ACTUALIZADO ---
         galleryContainer.appendChild(card);
     });
 
@@ -213,189 +197,77 @@ function renderGallery(items, append = true) {
     }
 }
 
-/**
- * Carga el siguiente lote de obras desde Supabase.
- */
-async function loadMoreWorks() {
-    if (!hasMore || isLoading) return;
-
-    isLoading = true;
+async function fetchGallery() {
     status.textContent = "Cargando obras...";
     loadingOverlay.classList.remove('hidden');
-
     try {
-        const from = page * PAGE_SIZE;
-        const to = from + PAGE_SIZE - 1;
-
         const { data, error } = await client
             .from('productos')
             .select('*')
             .order('orden', { ascending: true })
-            .order('anio', { ascending: false })
-            .range(from, to);
+            .order('anio', { ascending: false });
         
         loadingOverlay.classList.add('hidden');
-        isLoading = false;
 
         if (error) {
             throw new Error(`Error de Supabase: ${error.message}`);
         }
-        
-        const newWorks = data.map(normalize);
-        renderGallery(newWorks, true); // Agregar al final
-        
-        if (newWorks.length < PAGE_SIZE) {
-            hasMore = false;
-            status.textContent = "Fin de la galería.";
-        } else {
-            page++;
-            status.textContent = "";
-        }
 
-    } catch (error) {
-        console.error("Error al cargar la galería:", error);
-        status.textContent = "Error al cargar más obras.";
-        loadingOverlay.classList.add('hidden');
-        isLoading = false;
-    }
-}
-
-
-/**
- * Inicializa la galería cargando los filtros y el primer lote de obras.
- */
-async function initGallery() {
-    // Carga inicial solo para obtener datos de filtros y carrusel
-    try {
-        const { data: allData, error } = await client
-            .from('productos')
-            .select('*')
-            .order('orden', { ascending: true })
-            .order('anio', { ascending: false });
-
-        if (error) throw error;
+        productos = data.map(normalize);
         
-        const allWorks = allData.map(normalize);
-        
-        // 1. Renderizar el carrusel de fondo con las 5 primeras imágenes disponibles
-        const carouselUrls = allWorks
+        // Renderizar el carrusel de fondo con las 5 primeras imágenes disponibles
+        const carouselUrls = productos
             .filter(p => p.images.length > 0)
             .slice(0, 5)
             .map(p => p.mainImage);
+            
         renderCarouselItems(carouselUrls);
         
-        // 2. Poblar opciones de filtro
-        populateFilterOptions(allWorks);
+        applyFilters(); // Renderiza la galería completa o filtrada/ordenada por defecto
 
     } catch (error) {
-        console.error("Error al inicializar la galería:", error);
-    }
-    
-    // 3. Cargar el primer lote de obras (restablecer paginación)
-    page = 0;
-    hasMore = true;
-    galleryContainer.innerHTML = '';
-    productos = [];
-    
-    // Desactivar temporalmente el scroll infinito mientras se aplican filtros
-    // La función applyFilters llamará a loadFilteredWorks, que manejará la paginación de los filtros
-    
-    if (searchInput.value || filterYear.value || filterCategory.value || filterSeries.value) {
-        // Si hay filtros preestablecidos, cargar filtrado
-        applyFilters(); 
-    } else {
-        // Carga inicial sin filtros
-        loadMoreWorks();
-    }
-}
-
-/**
- * Carga obras aplicando filtros y reiniciando la paginación.
- */
-async function loadFilteredWorks() {
-    isLoading = true;
-    status.textContent = "Filtrando obras...";
-    loadingOverlay.classList.remove('hidden');
-
-    try {
-        let query = client.from('productos')
-            .select('*')
-            .order('orden', { ascending: true })
-            .order('anio', { ascending: false });
-        
-        const searchText = searchInput.value.toLowerCase().trim();
-        const year = filterYear.value;
-        const category = filterCategory.value;
-        const series = filterSeries.value;
-
-        // Construir la consulta con filtros (solo filtros directos)
-        if (year) query = query.eq('anio', parseInt(year));
-        if (category) query = query.eq('categoria', category);
-        if (series) query = query.eq('serie', series);
-        
-        // Si hay texto de búsqueda, obtenemos todo y filtramos localmente (por ser un filtro en múltiples campos)
-        if (searchText) {
-            const { data, error } = await query;
-            if (error) throw error;
-
-            let filteredItems = data.map(normalize).filter(obra => 
-                obra.title.toLowerCase().includes(searchText) ||
-                obra.description.toLowerCase().includes(searchText) ||
-                obra.technique.toLowerCase().includes(searchText)
-            );
-            
-            // Renderiza todo lo filtrado (el scroll infinito no aplica bien con filtros de texto combinados con paginación)
-            renderGallery(filteredItems, false);
-            hasMore = false; // Deshabilitar scroll infinito en modo filtrado complejo
-            status.textContent = filteredItems.length > 0 ? '' : 'No se encontraron obras que coincidan con los filtros.';
-            
-        } else {
-            // Si no hay filtro de texto, usamos paginación de Supabase para los filtros simples
-            const from = page * PAGE_SIZE;
-            const to = from + PAGE_SIZE - 1;
-            
-            const { data, error } = await query.range(from, to);
-            if (error) throw error;
-
-            const newWorks = data.map(normalize);
-            renderGallery(newWorks, page !== 0); 
-
-            if (newWorks.length < PAGE_SIZE) {
-                hasMore = false;
-                status.textContent = "Fin de la galería.";
-            } else {
-                page++;
-                status.textContent = "";
-            }
-        }
-    } catch (error) {
-        console.error("Error al cargar obras filtradas:", error);
-        status.textContent = "Error al filtrar obras.";
-    } finally {
+        console.error("Error al cargar la galería:", error);
+        status.textContent = "Error al cargar la galería.";
         loadingOverlay.classList.add('hidden');
-        isLoading = false;
     }
 }
 
 
 function applyFilters() {
-    // Reiniciar paginación al aplicar nuevos filtros
-    page = 0;
-    hasMore = true;
-    galleryContainer.innerHTML = '';
-    productos = [];
-    loadFilteredWorks();
+    let filteredItems = [...productos];
+    const query = searchInput.value.toLowerCase().trim();
+    const year = filterYear.value;
+    const category = filterCategory.value;
+    const series = filterSeries.value;
+
+    if (query) {
+        filteredItems = filteredItems.filter(obra => 
+            obra.title.toLowerCase().includes(query) ||
+            obra.description.toLowerCase().includes(query) ||
+            obra.technique.toLowerCase().includes(query)
+        );
+    }
+
+    if (year) {
+        filteredItems = filteredItems.filter(obra => obra.year == year);
+    }
+
+    if (category) {
+        filteredItems = filteredItems.filter(obra => obra.category === category);
+    }
+
+    if (series) {
+        filteredItems = filteredItems.filter(obra => obra.serie === series);
+    }
+
+    renderGallery(filteredItems);
 }
 
-function populateFilterOptions(allWorks) {
-    const years = [...new Set(allWorks.map(p => p.year).filter(y => y))].sort((a, b) => b - a);
-    const categories = [...new Set(allWorks.map(p => p.category).filter(c => c))].sort();
-    const seriesList = [...new Set(allWorks.map(p => p.serie).filter(s => s))].sort();
+function populateFilterOptions() {
+    const years = [...new Set(productos.map(p => p.year).filter(y => y))].sort((a, b) => b - a);
+    const categories = [...new Set(productos.map(p => p.category).filter(c => c))].sort();
+    const seriesList = [...new Set(productos.map(p => p.serie).filter(s => s))].sort();
 
-    filterYear.innerHTML = '<option value="">Todos</option>';
-    filterCategory.innerHTML = '<option value="">Todas</option>';
-    filterSeries.innerHTML = '<option value="">Todas</option>';
-    
     years.forEach(year => filterYear.innerHTML += `<option value="${year}">${year}</option>`);
     categories.forEach(cat => filterCategory.innerHTML += `<option value="${cat}">${cat}</option>`);
     seriesList.forEach(ser => filterSeries.innerHTML += `<option value="${ser}">${ser}</option>`);
@@ -410,24 +282,17 @@ window.openModal = (id) => {
     // Generar el carrusel de imágenes del modal
     const imageCarousel = obra.images.map((img, index) => `
         <div class="modal-carousel-item ${index === 0 ? 'active' : ''}" data-index="${index}">
-            <div class="image-zoom-container cursor-move h-full w-full" onmousemove="zoomImage(event, this)" onmouseleave="resetZoom(this)">
-                <img 
-                    src="${img.url}" 
-                    alt="${obra.title} - Imagen ${index + 1}" 
-                    class="zoom-image w-full h-full object-contain transition-transform duration-300" 
-                    onerror="this.onerror=null;this.src='https://via.placeholder.com/600x450?text=Sin+Imagen';" 
-                />
+            <div class="image-zoom-container cursor-move" onmousemove="zoomImage(event, this)" onmouseleave="resetZoom(this)">
+                <img src="${img.url}" alt="${obra.title} - Imagen ${index + 1}" class="zoom-image w-full h-full object-contain transition-transform duration-300" />
             </div>
-            ${img.name ? `<p class="text-xs text-center text-text-muted mt-2">${img.name}</p>` : ''}
+            <p class="text-xs text-center text-text-muted mt-2">${img.name || `Imagen ${index + 1}`}</p>
         </div>
     `).join('');
     
-    // SOLO generar navegación si hay MÁS de una imagen
-    const hasMultipleImages = obra.images.length > 1;
-    const navDots = hasMultipleImages ? obra.images.map((_, index) => `
+    const navDots = obra.images.map((_, index) => `
         <button class="w-2 h-2 rounded-full bg-text-muted transition-colors duration-300 ${index === 0 ? 'bg-pantone-magenta' : ''}" 
                 onclick="goToSlide(${index})"></button>
-    `).join('') : '';
+    `).join('');
 
 
     // Lógica de Precio y Disponibilidad
@@ -435,26 +300,26 @@ window.openModal = (id) => {
         ? formatPrice(obra.price) // <- USA LA FUNCIÓN CREADA
         : 'Consultar';
         
-    const availabilityText = obra.is_available ? 'Disponible' : 'Vendida'; // <- CORREGIDO
+    const availabilityText = obra.is_available ? 'Disponible' : 'Vendida'; // <- MODIFICADO
     const availabilityClass = obra.is_available ? 'text-green-600' : 'text-red-500';
 
     const whatsappLink = `https://wa.me/5491100000000?text=Hola%2C%20estoy%20interesado%20en%20la%20obra%20%22${encodeURIComponent(obra.title)}%22%20(ID:%20${obra.id}).%20Me%20gustar%C3%ADa%20consultar%20el%20precio%20y%2Fo%20disponibilidad.`;
     
     // Contenido del modal
     modalContent.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-0"> 
-            <div class="image-column **aspect-[4/3] md:aspect-auto**">
-                <div id="modal-image-carousel" class="relative overflow-hidden h-full w-full bg-bg-principal rounded-md">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="image-column">
+                <div id="modal-image-carousel" class="relative overflow-hidden aspect-[4/3] bg-bg-principal">
                     ${imageCarousel}
                 </div>
-                ${hasMultipleImages ? `
+                ${obra.images.length > 1 ? `
                     <div class="carousel-nav flex justify-center space-x-2 mt-4">
                         ${navDots}
                     </div>
                 ` : ''}
             </div>
             
-            <div class="info-column p-0"> 
+            <div class="info-column p-4 md:p-0">
                 <h2 class="text-3xl font-light text-text-dark mb-2">${obra.title}</h2>
                 <p class="text-xl font-semibold text-pantone-magenta mb-4">${obra.year || 'Año N/A'}</p>
                 
@@ -485,45 +350,49 @@ window.openModal = (id) => {
     `;
 
     modal.classList.remove('hidden');
-    // Se elimina esta línea para que el modal ya tenga la clase 'flex' y así se centre correctamente
-    // modal.classList.add('flex');
     document.body.classList.add('overflow-hidden');
     
     // Iniciar carrusel del modal
-    if (hasMultipleImages) {
+    if (obra.images.length > 1) {
         initModalCarousel();
-    } else {
-        // Asegurarse de que el zoom funcione si es una sola imagen
-        const zoomContainer = document.querySelector('.image-zoom-container');
-        if (zoomContainer) {
-            zoomContainer.onmousemove = (e) => zoomImage(e, zoomContainer);
-            zoomContainer.onmouseleave = () => resetZoom(zoomContainer);
-        }
     }
 };
 
 window.closeModal = (event) => {
-    // Si el evento es un clic fuera del contenedor (directamente en el modal), ciérralo.
-    // O si se llama sin evento (desde el botón X).
-    if (!event || event.target === modal || event.target.closest('#modal-container') === null) {
-        modal.classList.add('hidden');
-        // modal.classList.remove('flex'); // Ya se maneja con 'hidden'
-        document.body.classList.remove('overflow-hidden');
-        
-        // Resetear el carrusel y zoom
-        const zoomContainers = document.querySelectorAll('.image-zoom-container');
-        zoomContainers.forEach(resetZoom);
-    }
+    if (event && event.target !== modal) return;
+    
+    modal.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+    
+    // Resetear el carrusel
+    const items = document.querySelectorAll('#modal-image-carousel .modal-carousel-item');
+    items.forEach((item, index) => {
+        item.classList.remove('active');
+        if (index === 0) item.classList.add('active');
+    });
+    const dots = document.querySelectorAll('.carousel-nav button');
+    dots.forEach((dot, index) => {
+        dot.classList.remove('bg-pantone-magenta');
+        dot.classList.remove('bg-text-muted');
+        if (index === 0) dot.classList.add('bg-pantone-magenta');
+        else dot.classList.add('bg-text-muted');
+    });
+    
+    // Resetear zoom
+    const zoomContainers = document.querySelectorAll('.image-zoom-container');
+    zoomContainers.forEach(resetZoom);
 };
 
 let currentSlide = 0;
 
 function initModalCarousel() {
     currentSlide = 0;
+    // Asegurar que solo el primer elemento esté activo
     const items = document.querySelectorAll('#modal-image-carousel .modal-carousel-item');
     items.forEach((item, index) => {
         item.classList.toggle('active', index === 0);
     });
+    // Asegurar que solo el primer dot esté activo
     const dots = document.querySelectorAll('.carousel-nav button');
     dots.forEach((dot, index) => {
         dot.classList.toggle('bg-pantone-magenta', index === 0);
@@ -536,10 +405,12 @@ window.goToSlide = (index) => {
     const dots = document.querySelectorAll('.carousel-nav button');
     
     if (index >= 0 && index < items.length) {
+        // Ocultar actual
         items[currentSlide].classList.remove('active');
         dots[currentSlide].classList.remove('bg-pantone-magenta');
         dots[currentSlide].classList.add('bg-text-muted');
         
+        // Mostrar nueva
         currentSlide = index;
         items[currentSlide].classList.add('active');
         dots[currentSlide].classList.add('bg-pantone-magenta');
@@ -552,17 +423,12 @@ function zoomImage(event, container) {
     const img = container.querySelector('.zoom-image');
     if (!img) return;
 
-    // Obtener la posición relativa dentro del contenedor
-    const rect = container.getBoundingClientRect();
-    const offsetX = event.clientX - rect.left;
-    const offsetY = event.clientY - rect.top;
-
-    const { offsetWidth, offsetHeight } = container;
+    const { offsetX, offsetY, target } = event;
+    const { offsetWidth, offsetHeight } = target;
 
     const xPercent = (offsetX / offsetWidth) * 100;
     const yPercent = (offsetY / offsetHeight) * 100;
     const zoomScale = 2.5; 
-    
     img.style.transformOrigin = `${xPercent}% ${yPercent}%`;
     img.style.transform = `scale(${zoomScale})`;
 }
@@ -646,14 +512,17 @@ if (editToggleButton) {
                 sortableInstance.destroy();
                 sortableInstance = null;
             }
+            // Si salimos de edición y hay cambios sin guardar, preguntar.
+            if (!saveOrderButton.disabled) {
+                 // Aquí se podría poner un confirm, pero por simplicidad lo dejamos sin guardar automáticamente al salir
+            }
             saveOrderButton.disabled = true;
-            // Al salir, recargamos el primer lote por si hubo cambios de orden no guardados
-            initGallery(); 
+            applyFilters(); // Para restaurar el orden si no se guardó
         }
     });
 }
 
-// Listener para el botón guardar orden
+// Listener para el botón guardar orden (SOLO EN INDEX.HTML)
 if (saveOrderButton) {
     saveOrderButton.addEventListener('click', saveOrder);
 }
@@ -666,27 +535,17 @@ window.addEventListener('scroll', () => {
     
     const firstSectionHeight = firstSection.offsetHeight;
     
-    // Controlar visibilidad del Footer
     if (window.scrollY > firstSectionHeight - 100) { 
         mainFooter.classList.remove('translate-y-full');
     } else {
         mainFooter.classList.add('translate-y-full');
     }
 
-    // Controlar visibilidad del botón de WhatsApp
     const gallerySectionTop = gallerySection ? gallerySection.offsetTop : firstSectionHeight;
     if (window.scrollY > gallerySectionTop - window.innerHeight / 2) { 
         whatsappButton.classList.add('show');
     } else {
         whatsappButton.classList.remove('show');
-    }
-    
-    // Lógica de Scroll Infinito
-    if (hasMore && !isLoading && !isEditing && !searchInput.value && (filterYear.value === '' && filterCategory.value === '' && filterSeries.value === '') ) {
-        const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-        if (scrollTop + clientHeight >= scrollHeight - 300) {
-            loadMoreWorks();
-        }
     }
 });
 
@@ -700,6 +559,7 @@ if (filterSeries) filterSeries.addEventListener('change', applyFilters);
 document.addEventListener('DOMContentLoaded', async () => {
     mainFooter.classList.add('translate-y-full');
     whatsappButton.classList.remove('show');
-    await initGallery(); // Llamar a la nueva función de inicialización
+    await fetchGallery();
+    populateFilterOptions();
     checkAdminStatus();
 });

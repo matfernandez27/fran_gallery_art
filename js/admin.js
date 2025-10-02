@@ -13,7 +13,7 @@ const adminHeader = document.getElementById('admin-header');
 const obraFormContainer = document.getElementById('obra-form-container');
 const obraForm = document.getElementById('obra-form');
 const logoutButton = document.getElementById('logout-button');
-const saveOrderButton = document.getElementById('save-order-button');
+// ELIMINADO: const saveOrderButton = document.getElementById('save-order-button');
 const currentImagesList = document.getElementById('current-images-list');
 const currentImagesContainer = document.getElementById('current-images-container');
 const alertDiv = document.getElementById('alert');
@@ -550,7 +550,7 @@ document.addEventListener('DOMContentLoaded', checkAuth);
 obraForm.addEventListener('submit', handleSubmit);
 document.getElementById('login-form').addEventListener('submit', handleLogin);
 logoutButton.addEventListener('click', handleLogout);
-saveOrderButton.addEventListener('click', saveOrder); // Aunque se usa auto-save, mantenemos por si se añade la funcionalidad
+// ELIMINADO: saveOrderButton.addEventListener('click', saveOrder);
 document.getElementById('show-add-form-button').addEventListener('click', showAddForm);
 document.getElementById('cancel-edit-button').addEventListener('click', showWorksList);
 

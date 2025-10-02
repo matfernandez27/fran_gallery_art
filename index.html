@@ -46,15 +46,14 @@
         /* Estilos del Overlay de Carga (Spinner) */
         .loading-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(250, 235, 240, 0.95); /* bg-principal con opacidad */
+            background: rgba(250, 235, 240, 0.95);
             display: flex; justify-content: center; align-items: center; z-index: 1000;
         }
-        /* Color del spinner ajustado al PANTONE Magenta */
         .lds-ring div { 
             box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; 
-            border: 8px solid #DE3B89; /* pantone-magenta */
+            border: 8px solid #DE3B89;
             border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; 
-            border-color: #DE3B89 transparent transparent transparent; /* pantone-magenta */
+            border-color: #DE3B89 transparent transparent transparent;
         }
         
         /* --- ESTILOS DEL CARRUSEL DE FONDO (DINÁMICO) --- */
@@ -66,11 +65,10 @@
             position: absolute;
             width: 100%;
             height: 100%;
-            /* CORRECCIÓN FINAL: Contain para ver la imagen completa sin estirar */
             background-size: contain; 
             background-position: center;
             background-repeat: no-repeat;
-            background-color: #F5E5EC; /* Fondo suave para rellenar */
+            background-color: #F5E5EC; 
             opacity: 0;
             transition: opacity 1.5s ease-in-out; 
             transform: scale(1.05); 
@@ -94,19 +92,15 @@
             align-items: start;
         }
         
-        /* Contenedor de la Imagen */
         .bio-image-container {
-            /* flex justify-center se aplica en el HTML */
             display: flex; 
             justify-content: center; 
         }
 
-        /* Estilo de la imagen para asegurar que el rostro se vea */
         .bio-image-focus {
             width: 100%; 
             height: 100%; 
             object-fit: cover; 
-            /* CLAVE: Centra el enfoque de la imagen en la parte superior */
             object-position: top center; 
         }
 
@@ -196,16 +190,9 @@
     </section>
     <section id="bio-section" class="py-20 bg-bg-card">
         <div class="max-w-6xl mx-auto px-6">
+            
             <div class="grid md:grid-cols-3 gap-16 items-start">
                 
-                <div class="md:col-span-1 flex justify-center bio-image-container">
-                    <div class="w-64 h-64 md:w-80 md:h-80 rounded-sm overflow-hidden border-2 border-pantone-magenta/50 shadow-2xl">
-                        <img src="./img/img_perfil.jpg" 
-                            alt="Retrato de Francisco Fernández, artista plástico de la Patagonia."
-                            class="bio-image-focus"/>
-                    </div>
-                </div>
-
                 <div class="md:col-span-2 flex flex-col justify-start">
                     
                     <div class="w-16 h-px bg-pantone-magenta mb-8"></div>
@@ -213,33 +200,32 @@
                     <h3 class="text-2xl font-medium text-text-dark mb-6">Francisco Fernández</h3>
                     
                     <div id="bio-text-content">
-                        <p id="bio-short-text" class="text-lg text-text-dark leading-relaxed mb-4">
+                        <p class="text-lg text-text-dark leading-relaxed mb-4">
                             Nacido en Trelew, Chubut hace 33 años y residente en la Patagonia, Francisco Fernández se destaca por su activa participación en exhibiciones itinerantes a lo largo del país.
                         </p>
                         
-                        <div id="bio-full-text" class="hidden">
-                            <p class="text-base text-text-muted leading-relaxed mb-4">
-                                <strong>Su obra explora con maestría la intersección entre lo ancestral y lo contemporáneo, tejiendo un diálogo visual potente entre la inmensidad del paisaje patagónico y la vibrante experiencia urbana moderna.</strong>
-                            </p>
-
-                            <p class="text-base text-text-muted leading-relaxed mb-4">
-                                Cada pieza es un puente hacia lo inhóspito y lo íntimo. Su técnica no solo captura la dualidad de un paisaje vasto, sino que también ofrece una mirada profunda y reflexiva sobre el alma de ese territorio.
-                            </p>
-                            
-                            <p class="text-base text-text-muted leading-relaxed">
-                                Su trabajo se ha presentado en diversas galerías, mostrando un compromiso constante con la exploración de técnicas de grabado y dibujo contemporáneo.
-                            </p>
-                        </div>
+                        <p class="text-base text-text-muted leading-relaxed mb-6">
+                            Cada pieza es un puente hacia lo inhóspito y lo íntimo. Su técnica no solo captura la dualidad de un paisaje vasto, sino que también ofrece una mirada profunda y reflexiva sobre el alma de ese territorio.
+                        </p>
                     </div>
                     
-                    <button id="read-more-btn" 
-                        class="mt-4 text-pantone-magenta font-semibold hover:text-text-dark transition-colors duration-300 text-sm self-start"
-                        onclick="toggleBio()">
-                        Leer biografía completa
-                    </button>
-                    
-
+                    <a href="biografia-completa.html" 
+                        class="mt-4 text-pantone-magenta font-semibold hover:text-text-dark transition-colors duration-300 text-sm self-start inline-flex items-center space-x-2">
+                        <span>LEER BIOGRAFÍA COMPLETA</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </a>
                 </div>
+
+                <div class="md:col-span-1 md:order-last flex justify-center bio-image-container">
+                    <div class="w-64 h-64 md:w-80 md:h-80 rounded-sm overflow-hidden border-2 border-pantone-magenta/50 shadow-2xl">
+                        <img src="./img/img_perfil.jpg" 
+                            alt="Retrato de Francisco Fernández, artista plástico de la Patagonia."
+                            class="bio-image-focus"/>
+                    </div>
+                </div>
+
             </div>
         </div>
     </section>
@@ -409,22 +395,8 @@
             items[currentCarouselIndex].classList.add('active');
         }
 
-        // --- LÓGICA DE BIOGRAFÍA (NUEVA FUNCIÓN) ---
-        function toggleBio() {
-            const fullText = document.getElementById('bio-full-text');
-            const button = document.getElementById('read-more-btn');
-            
-            const isExpanded = fullText.classList.contains('hidden');
+        // NOTA: La función toggleBio ha sido eliminada ya que ahora usamos un enlace a biografia-completa.html.
 
-            if (isExpanded) {
-                fullText.classList.remove('hidden');
-                button.textContent = 'Ocultar biografía';
-            } else {
-                fullText.classList.add('hidden');
-                button.textContent = 'Leer biografía completa';
-            }
-        }
-        window.toggleBio = toggleBio; 
 
         // --- FUNCIONES CORE ---
         function normalize(p) {

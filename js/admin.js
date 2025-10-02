@@ -382,8 +382,10 @@ window.editWork = (id) => {
     document.getElementById('titulo').value = obra.titulo || '';
     document.getElementById('descripcion').value = obra.descripcion || '';
     document.getElementById('anio').value = obra.anio || '';
+    // ESTOS CAMPOS FUERON EL ORIGEN DEL ERROR SI NO ESTABAN EN EL HTML:
     document.getElementById('tecnica').value = obra.tecnica || '';
     document.getElementById('medidas').value = obra.medidas || '';
+    // -------------------------------------------------------------
     document.getElementById('categoria').value = obra.categoria || '';
     document.getElementById('serie').value = obra.serie || '';
 

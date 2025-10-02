@@ -155,12 +155,14 @@
 
 
     <script>
+        /* global supabase, window, Sortable */ 
+        
         // --- CONFIGURACIÓN DE SUPABASE ---
         const supabaseUrl = window.supabaseUrl;
         const supabaseAnonKey = window.supabaseAnonKey;
         const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
         
-        // !!! CORRECCIÓN CRÍTICA DE TABLA
+        // --- CONFIGURACIÓN DE TABLA Y BUCKET ---
         const TABLE_NAME = 'productos'; 
         const BUCKET_NAME = 'imagenes';
         
@@ -263,13 +265,12 @@
                 }));
 
                 const updatePromises = newOrder.map(item => 
-                    // !!! CORRECCIÓN: Usar TABLE_NAME y la columna 'orden'
+                    // CORRECCIÓN: Usar TABLE_NAME ('productos') y la columna 'orden'
                     client.from(TABLE_NAME).update({ orden: item.position }).eq('id', item.id)
                 );
                 
                 const results = await Promise.all(updatePromises);
                 
-                // Verificar si alguna promesa falló
                 const failed = results.some(r => r.error);
                 if (failed) throw new Error('Falló la actualización de una o más posiciones.');
 
@@ -297,8 +298,9 @@
             worksList.innerHTML = '';
             
             try {
+                // CORRECCIÓN: Uso de TABLE_NAME
                 const { data, error } = await client
-                    .from(TABLE_NAME) // !!! USA TABLE_NAME
+                    .from(TABLE_NAME) 
                     .select("id, titulo, tecnica, anio, orden, imagenes, is_available")
                     .order("orden", { ascending: true })
                     .order("anio", { ascending: false });
@@ -309,7 +311,7 @@
                 renderWorksList(data);
                 
                 loadingStatus.classList.add('hidden');
-                initializeSortable(); // Inicializar Sortable después de cargar
+                initializeSortable(); 
 
             } catch (error) {
                 console.error("Error al cargar las obras:", error);
@@ -364,7 +366,6 @@
                 obra.tecnica.toLowerCase().includes(searchTerm)
             );
             renderWorksList(filteredWorks);
-            // No se reinicia el sortable aquí, ya que solo es un filtro visual
         }
 
         searchInput.addEventListener('input', filterWorks);
@@ -499,8 +500,9 @@
                 const currentImages = currentWorks[obraIndex].imagenes || [];
                 const newImages = currentImages.filter(img => img.path !== imagePath);
 
+                // CORRECCIÓN: Uso de TABLE_NAME
                 const { error: dbError } = await client
-                    .from(TABLE_NAME) // !!! USA TABLE_NAME
+                    .from(TABLE_NAME) 
                     .update({ imagenes: newImages })
                     .eq('id', obraId);
 
@@ -578,12 +580,14 @@
                 let response;
                 if (id) {
                     // Update
-                    response = await client.from(TABLE_NAME).update(payload).eq('id', id).select(); // !!! USA TABLE_NAME
+                    // CORRECCIÓN: Uso de TABLE_NAME
+                    response = await client.from(TABLE_NAME).update(payload).eq('id', id).select(); 
                 } else {
                     // Insert - Obtener el orden máximo para colocar la nueva obra al final
                     const maxOrder = currentWorks.length > 0 ? Math.max(...currentWorks.map(w => w.orden)) : 0;
                     payload.orden = maxOrder + 1;
-                    response = await client.from(TABLE_NAME).insert(payload).select(); // !!! USA TABLE_NAME
+                    // CORRECCIÓN: Uso de TABLE_NAME
+                    response = await client.from(TABLE_NAME).insert(payload).select(); 
                 }
 
                 if (response.error) throw response.error;
@@ -619,7 +623,8 @@
                 if (!obra) throw new Error("Obra no encontrada localmente.");
 
                 // 2. Eliminar de la DB
-                const { error: dbError } = await client.from(TABLE_NAME).delete().eq('id', id); // !!! USA TABLE_NAME
+                // CORRECCIÓN: Uso de TABLE_NAME
+                const { error: dbError } = await client.from(TABLE_NAME).delete().eq('id', id); 
                 if (dbError) throw dbError;
 
                 // 3. Eliminar archivos del Storage

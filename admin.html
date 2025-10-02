@@ -74,512 +74,564 @@
                                     <option value="grabado">Grabado</option>
                                     <option value="dibujo">Dibujo</option>
                                     <option value="pintura">Pintura</option>
-                                    <option value="otro">Otro</option>
+                                    <option value="tecnica-mixta">Técnica Mixta</option>
                                 </select>
                             </label>
                         </div>
                         <label class="block">
-                            <span class="text-gray-700">Técnica:</span>
-                            <input type="text" id="form-tecnica" name="tecnica" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
-                        </label>
-                        <label class="block">
-                            <span class="text-gray-700">Medidas:</span>
-                            <input type="text" id="form-medidas" name="medidas" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
-                        </label>
-                        <label class="block">
                             <span class="text-gray-700">Serie (Opcional):</span>
                             <input type="text" id="form-serie" name="serie" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
+                        </label>
+                        <label class="block">
+                            <span class="text-gray-700">Medidas (Ej: 50x70 cm):</span>
+                            <input type="text" id="form-medidas" name="medidas" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
+                        </label>
+                        <label class="block">
+                            <span class="text-gray-700">Descripción:</span>
+                            <textarea id="form-descripcion" name="descripcion" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2"></textarea>
+                        </label>
+                        <div class="flex items-center space-x-4">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="form-disponible" name="disponible" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <span class="ml-2 text-gray-700">Disponible (Venta)</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="form-destacada" name="destacada" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <span class="ml-2 text-gray-700">Destacada (Carrusel)</span>
+                            </label>
+                        </div>
+                        <label class="block">
+                            <span class="text-gray-700">Imagen Principal (URL Pública):</span>
+                            <input type="url" id="form-imagen-principal" name="imagen_principal" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
                         </label>
                     </div>
 
                     <div class="space-y-4">
-                        <label class="block">
-                            <span class="text-gray-700">Descripción:</span>
-                            <textarea id="form-descripcion" name="descripcion" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2"></textarea>
-                        </label>
-                        <label class="block">
-                            <span class="text-gray-700">Imágenes (Máx. 4, la primera será la principal):</span>
-                            <input type="file" id="image-files" name="imageFiles" multiple accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                        </label>
+                        <h3 class="text-gray-700 font-semibold border-b pb-1">Imágenes Secundarias (Galería)</h3>
                         
-                        <div id="current-images-container" class="mt-4 border-t pt-4 hidden">
-                            <p class="text-gray-700 mb-2">Imágenes Actuales (Click para eliminar):</p>
-                            <div id="current-images-list" class="flex flex-wrap gap-3">
-                                </div>
-                        </div>
+                        <div id="existing-images-container" class="grid grid-cols-3 gap-4 border p-4 rounded-md bg-gray-50 hidden">
+                            </div>
+
+                        <label class="block">
+                            <span class="text-gray-700">Subir Nuevas Imágenes (Múltiples):</span>
+                            <input type="file" id="form-imagenes-secundarias" name="imagenes_secundarias" accept="image/*" multiple class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pantone-magenta file:text-white hover:file:bg-opacity-90">
+                        </label>
+
+                        <div id="image-preview" class="flex flex-wrap gap-4 mt-2">
+                            </div>
                     </div>
                 </div>
 
-                <div class="mt-6 border-t pt-6 flex justify-end space-x-3">
-                    <button type="button" onclick="resetForm()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-300">
+                <div class="flex justify-end space-x-4 mt-6 border-t pt-4">
+                    <button type="button" onclick="resetForm()" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
                         Cancelar
                     </button>
-                    <button type="submit" id="submit-button" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-300">
-                        Guardar Obra
+                    <button type="submit" id="submit-button" class="bg-pantone-magenta hover:bg-pink-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
+                        Crear Obra
                     </button>
                 </div>
             </form>
         </div>
 
-        <div class="bg-white p-6 rounded-lg shadow-xl">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-semibold text-gray-700">Listado de Obras</h3>
-                <button id="save-order-button" class="hidden px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-300" disabled>
-                    Guardar Orden
-                </button>
-            </div>
-            
-            <div id="works-list" class="space-y-3">
-                </div>
+        <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-2">Obras Publicadas</h2>
+        
+        <div id="sort-controls" class="mb-4 hidden">
+             <button id="save-order-button" class="bg-pantone-magenta hover:bg-pink-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 hidden">
+                Guardar Nuevo Orden
+            </button>
+            <p class="text-sm text-gray-600 mt-2">Arrastra los elementos para cambiar el orden de visualización en la web.</p>
         </div>
 
-        <div id="login-container" class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-xl hidden">
-            <h2 class="text-3xl font-light text-gray-800 mb-6 text-center">Acceso de Administrador</h2>
-            <form id="login-form" class="space-y-4">
-                <label class="block">
-                    <span class="text-gray-700">Email:</span>
-                    <input type="email" id="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                </label>
-                <label class="block">
-                    <span class="text-gray-700">Contraseña:</span>
-                    <input type="password" id="password" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                </label>
-                <button type="submit" class="w-full py-2 px-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition duration-300">
-                    Iniciar Sesión
+        <div id="works-list" class="space-y-4">
+            </div>
+
+        <div id="login-section" class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-xl mt-20 hidden">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Acceso de Administrador</h2>
+            <form id="login-form">
+                <div class="space-y-4">
+                    <label class="block">
+                        <span class="text-gray-700">Email:</span>
+                        <input type="email" id="login-email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
+                    </label>
+                    <label class="block">
+                        <span class="text-gray-700">Contraseña:</span>
+                        <input type="password" id="login-password" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
+                    </label>
+                </div>
+                <button type="submit" id="login-button" class="mt-6 w-full bg-pantone-magenta hover:bg-pink-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                    Acceder
                 </button>
             </form>
         </div>
-
+        
     </main>
 
+    <div id="image-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden" onclick="closeModal()">
+        <div class="max-w-3xl max-h-[90%] p-4 bg-white rounded-lg relative" onclick="event.stopPropagation()">
+            <button class="absolute top-2 right-2 text-white bg-black rounded-full p-2 hover:bg-gray-700" onclick="closeModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <img id="modal-image" src="" alt="Vista previa de imagen" class="max-w-full max-h-full object-contain">
+        </div>
+    </div>
+
+
     <script>
-        // Inicialización de Supabase y constantes
-        // *** CORRECCIÓN CLAVE: Nombre del bucket actualizado a 'imagenes' ***
-        const BUCKET_NAME = 'imagenes'; 
-
+        // --- CONFIGURACIÓN DE SUPABASE Y CONSTANTES ---
         const client = supabase.createClient(window.supabaseUrl, window.supabaseAnonKey);
+        const TABLE_NAME = 'works';
+        const BUCKET_NAME = 'obras';
 
+        // --- VARIABLES GLOBALES ---
         let currentWorks = [];
-        let isEditMode = false;
-        let workToEdit = null;
+        let formMode = 'create'; // 'create' o 'edit'
+        let currentEditId = null;
 
-        // Elementos del DOM
-        const worksList = document.getElementById('works-list');
-        const loginContainer = document.getElementById('login-container');
-        const adminHeader = document.getElementById('admin-header');
-        const obraFormContainer = document.getElementById('obra-form-container');
-        const obraForm = document.getElementById('obra-form');
-        const logoutButton = document.getElementById('logout-button');
-        const saveOrderButton = document.getElementById('save-order-button');
-        const currentImagesList = document.getElementById('current-images-list');
-        const currentImagesContainer = document.getElementById('current-images-container');
-        const alertDiv = document.getElementById('alert');
-        const submitButton = document.getElementById('submit-button');
+        // --- UTILIDADES ---
 
-
-        // --- FUNCIONES DE UTILIDAD ---
         function showAlert(message, type = 'success') {
-            alertDiv.textContent = message;
-            alertDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-indigo-100', 'text-indigo-700');
-            
-            if (type === 'error') {
-                alertDiv.classList.add('bg-red-100', 'text-red-700');
-            } else if (type === 'success') {
-                alertDiv.classList.add('bg-green-100', 'text-green-700');
-            } else { // info
-                 alertDiv.classList.add('bg-indigo-100', 'text-indigo-700');
-            }
-            
-            setTimeout(() => alertDiv.classList.add('hidden'), 5000);
+            const alertElement = document.getElementById('alert');
+            alertElement.textContent = message;
+            alertElement.className = `fixed top-4 left-1/2 transform -translate-x-1/2 p-4 text-sm rounded-lg shadow-xl z-50 ${type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} w-90 max-w-400`;
+            alertElement.classList.remove('hidden');
+            setTimeout(() => {
+                alertElement.classList.add('hidden');
+            }, 5000);
         }
 
-        // FUNCIÓN MEJORADA: Usa la función nativa de Supabase para obtener la URL pública
         function getPublicUrl(path) {
-            const { data } = client.storage
-                .from(BUCKET_NAME)
-                .getPublicUrl(path);
-            return data.publicUrl;
+             return `${window.supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${path}`;
         }
-        window.getPublicUrl = getPublicUrl;
+        
+        function openModal(imagePath) {
+            const modal = document.getElementById('image-modal');
+            const modalImage = document.getElementById('modal-image');
+            modalImage.src = getPublicUrl(imagePath);
+            modal.classList.remove('hidden');
+        }
 
+        function closeModal() {
+            document.getElementById('image-modal').classList.add('hidden');
+        }
+        
+        // --- GESTIÓN DE AUTENTICACIÓN ---
 
-        // --- LÓGICA DE AUTENTICACIÓN ---
         async function checkAuth() {
-            const { data: { session } } = await client.auth.getSession();
-            if (session) {
-                adminHeader.classList.remove('hidden');
-                loginContainer.classList.add('hidden');
+            const { data: { user } } = await client.auth.getUser();
+            if (user) {
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('admin-header').classList.remove('hidden');
                 loadWorks();
             } else {
-                adminHeader.classList.add('hidden');
-                loginContainer.classList.remove('hidden');
+                document.getElementById('login-section').classList.remove('hidden');
+                document.getElementById('admin-header').classList.add('hidden');
             }
         }
+        
+        document.getElementById('logout-button').addEventListener('click', async () => {
+            const { error } = await client.auth.signOut();
+            if (error) {
+                showAlert("Error al cerrar sesión.", 'error');
+            } else {
+                window.location.reload();
+            }
+        });
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const loginButton = document.getElementById('login-button');
+            
+            loginButton.textContent = 'Accediendo...';
+            loginButton.disabled = true;
 
             const { error } = await client.auth.signInWithPassword({ email, password });
 
             if (error) {
-                showAlert(`Error de login: ${error.message}`, 'error');
+                showAlert(`Error de acceso: ${error.message}`, 'error');
             } else {
-                showAlert('Inicio de sesión exitoso.', 'success');
-                checkAuth();
+                showAlert('¡Acceso exitoso! Recargando...', 'success');
+                setTimeout(() => window.location.reload(), 1000);
             }
-        });
-
-        logoutButton.addEventListener('click', async () => {
-            const { error } = await client.auth.signOut();
-            if (error) {
-                showAlert('Error al cerrar sesión.', 'error');
-            } else {
-                showAlert('Sesión cerrada correctamente.', 'success');
-                checkAuth();
-            }
+            loginButton.textContent = 'Acceder';
+            loginButton.disabled = false;
         });
 
 
-        // --- LÓGICA DE CARGA Y RENDERIZADO DE OBRAS ---
+        // --- CARGA Y RENDERIZADO DE OBRAS ---
+
         async function loadWorks() {
-            worksList.innerHTML = '<p class="text-gray-500">Cargando obras...</p>';
             try {
-                const { data, error } = await client
-                    .from('productos')
+                const { data, error } = await client.from(TABLE_NAME)
                     .select('*')
-                    .order('orden', { ascending: true })
-                    .order('anio', { ascending: false });
-
+                    .order('position', { ascending: true }); // Ordenar por posición
+                
                 if (error) throw error;
-                
-                currentWorks = data.map(p => ({
-                    ...p,
-                    // Asegurar que el array de imágenes sea un objeto manejable
-                    imagenes: Array.isArray(p.imagenes) ? p.imagenes : [] 
-                }));
-                
-                renderWorksList(currentWorks);
-                enableSorting();
+                currentWorks = data;
+                renderWorks(data);
+                initSortable();
 
             } catch (error) {
                 console.error("Error al cargar obras:", error);
-                worksList.innerHTML = '<p class="text-red-500">Error al cargar el listado de obras.</p>';
+                showAlert(`Error al cargar obras: ${error.message}`, 'error');
             }
         }
 
-        function renderWorksList(works) {
+        function renderWorks(works) {
+            const worksList = document.getElementById('works-list');
             worksList.innerHTML = '';
-            works.forEach(obra => {
-                // Se usa getPublicUrl, que usa el BUCKET_NAME CORREGIDO
-                const mainImage = obra.imagenes[0] ? getPublicUrl(obra.imagenes[0].path) : 'https://placehold.co/60x60?text=NO+IMG';
 
-                const item = document.createElement('div');
-                item.id = `obra-item-${obra.id}`;
-                item.dataset.id = obra.id;
-                item.className = 'bg-gray-50 border border-gray-200 p-4 rounded-lg flex items-center justify-between shadow-sm hover:shadow-md transition duration-300';
+            works.forEach(obra => {
+                const imagesCount = obra.imagenes ? obra.imagenes.length : 0;
+                const imageUrl = obra.imagen_principal || (imagesCount > 0 ? getPublicUrl(obra.imagenes[0].path) : 'https://via.placeholder.com/150?text=No+Image');
                 
-                item.innerHTML = `
-                    <div class="flex items-center space-x-4">
-                        <span class="drag-handle text-gray-400 hover:text-indigo-600 mr-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-                        </span>
-                        <img src="${mainImage}" alt="${obra.titulo}" class="w-16 h-16 object-cover rounded-md border border-gray-300" onerror="this.onerror=null;this.src='https://placehold.co/60x60?text=FALLO'">
-                        <div>
-                            <p class="text-lg font-semibold text-gray-800">${obra.titulo}</p>
-                            <p class="text-sm text-gray-500">${obra.tecnica} | ${obra.anio}</p>
-                            <p class="text-xs text-gray-400">Orden: ${obra.orden || 'N/A'}</p>
+                const obraItem = document.createElement('div');
+                obraItem.id = `obra-item-${obra.id}`;
+                obraItem.className = 'flex items-center bg-white p-4 rounded-lg shadow hover:shadow-lg transition duration-300';
+                obraItem.innerHTML = `
+                    <div class="drag-handle text-gray-400 p-2 mr-4 flex-shrink-0">
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </div>
+                    <img src="${imageUrl}" alt="${obra.titulo}" class="w-20 h-20 object-cover rounded-md mr-4 flex-shrink-0" onerror="this.onerror=null;this.src='https://via.placeholder.com/150?text=Error+Loading'">
+                    <div class="flex-grow">
+                        <h3 class="text-lg font-semibold text-gray-800">${obra.titulo} (${obra.anio})</h3>
+                        <p class="text-sm text-gray-600">${obra.categoria} ${obra.serie ? ` | Serie: ${obra.serie}` : ''}</p>
+                        <div class="flex items-center text-xs space-x-2 mt-1">
+                            ${obra.disponible ? '<span class="px-2 py-0.5 bg-green-200 text-green-800 rounded-full">Disponible</span>' : '<span class="px-2 py-0.5 bg-red-200 text-red-800 rounded-full">No Disponible</span>'}
+                            ${obra.destacada ? '<span class="px-2 py-0.5 bg-pantone-magenta text-white rounded-full">Destacada</span>' : ''}
+                            <span class="text-gray-500">${imagesCount} imagen(es)</span>
                         </div>
                     </div>
-                    <div class="space-x-2">
-                        <button onclick="editObra(${obra.id})" class="px-3 py-1 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition duration-300">
-                            Editar
+                    <div class="flex space-x-2 flex-shrink-0">
+                        <button onclick="editObra(${obra.id})" class="text-blue-600 hover:text-blue-800 p-2 rounded-full hover:bg-blue-100 transition duration-150" title="Editar">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-7-3l6-6m-6 6l-6-6M9 9l6-6"/>
+                            </svg>
                         </button>
-                        <button onclick="deleteObra(${obra.id}, this)" class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition duration-300">
-                            Eliminar
+                        <button onclick="deleteObra(this, ${obra.id})" class="text-red-600 hover:text-red-800 p-2 rounded-full hover:bg-red-100 transition duration-150" title="Eliminar">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
                         </button>
                     </div>
                 `;
-                worksList.appendChild(item);
+                worksList.appendChild(obraItem);
             });
         }
         
-        // --- LÓGICA DE ORDENAMIENTO (SortableJS) ---
-        function enableSorting() {
-            new Sortable(worksList, {
-                handle: '.drag-handle',
-                animation: 150,
-                ghostClass: 'sortable-ghost',
-                onEnd: function (evt) {
-                    if (evt.oldIndex !== evt.newIndex) {
-                        saveOrderButton.classList.remove('hidden');
-                        saveOrderButton.disabled = false;
-                        saveOrderButton.textContent = "Guardar Orden (Cambios Pendientes)";
-                        saveOrderButton.classList.remove('bg-red-500');
-                        saveOrderButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-                    }
-                },
-            });
+        // --- GESTIÓN DE FORMULARIO ---
+
+        function resetForm() {
+            document.getElementById('obra-form').reset();
+            document.getElementById('form-id').value = '';
+            document.getElementById('form-titulo').focus();
+            document.getElementById('form-title').textContent = 'Nueva Obra';
+            document.getElementById('submit-button').textContent = 'Crear Obra';
+            document.getElementById('image-preview').innerHTML = '';
+            document.getElementById('existing-images-container').innerHTML = '';
+            document.getElementById('existing-images-container').classList.add('hidden');
+            formMode = 'create';
+            currentEditId = null;
         }
 
-        saveOrderButton.addEventListener('click', async () => {
-            saveOrderButton.disabled = true;
-            saveOrderButton.textContent = "Guardando...";
+        function openForm(mode = 'create', id = null) {
+            document.getElementById('obra-form-container').classList.remove('hidden');
+            document.getElementById('works-list').classList.add('hidden');
+            document.getElementById('sort-controls').classList.add('hidden');
+            resetForm(); 
+
+            if (mode === 'edit' && id !== null) {
+                formMode = 'edit';
+                currentEditId = id;
+                const obra = currentWorks.find(w => w.id === id);
+                if (!obra) {
+                    showAlert('Error: Obra no encontrada para editar.', 'error');
+                    return;
+                }
+
+                // Llenar campos
+                document.getElementById('form-id').value = obra.id;
+                document.getElementById('form-titulo').value = obra.titulo;
+                document.getElementById('form-anio').value = obra.anio;
+                document.getElementById('form-categoria').value = obra.categoria;
+                document.getElementById('form-serie').value = obra.serie || '';
+                document.getElementById('form-medidas').value = obra.medidas || '';
+                document.getElementById('form-descripcion').value = obra.descripcion || '';
+                document.getElementById('form-disponible').checked = obra.disponible;
+                document.getElementById('form-destacada').checked = obra.destacada;
+                document.getElementById('form-imagen-principal').value = obra.imagen_principal || '';
+                
+                document.getElementById('form-title').textContent = `Editar Obra: ${obra.titulo}`;
+                document.getElementById('submit-button').textContent = 'Guardar Cambios';
+
+                // Mostrar imágenes existentes
+                renderExistingImages(obra);
+            }
+        }
+        
+        function renderExistingImages(obra) {
+            const container = document.getElementById('existing-images-container');
+            container.innerHTML = '';
+            
+            const allImages = [
+                ...(obra.imagen_principal ? [{ path: obra.imagen_principal_path, is_main: true, id: 'main-img' }] : []),
+                ...(obra.imagenes || [])
+            ].filter(img => img && img.path); 
+
+            if (allImages.length === 0) {
+                 container.classList.add('hidden');
+                 return;
+            }
+
+            container.classList.remove('hidden');
+            
+            allImages.forEach(img => {
+                const isMain = img.id === 'main-img';
+                const imgPath = img.path; 
+                
+                const imgDiv = document.createElement('div');
+                imgDiv.className = 'relative group';
+                imgDiv.innerHTML = `
+                    <img src="${getPublicUrl(imgPath)}" alt="Imagen" class="w-full h-20 object-cover rounded-md cursor-pointer" onclick="openModal('${imgPath}')">
+                    
+                    <button type="button" 
+                            onclick="deleteImage(this, '${obra.id}', '${imgPath}', ${isMain})" 
+                            class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition duration-300"
+                            title="Eliminar ${isMain ? 'Principal' : 'Secundaria'}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                    ${isMain ? '<span class="absolute bottom-1 left-1 px-2 py-0.5 text-xs bg-pantone-magenta text-white rounded-full">Principal</span>' : ''}
+                `;
+                container.appendChild(imgDiv);
+            });
+        }
+        
+        async function deleteImage(button, obraId, imagePath, isMain) {
+            if (!confirm(`¿Estás seguro de eliminar esta imagen? ${isMain ? '(Es la imagen principal)' : ''}`)) return;
+            
+            const originalText = button.innerHTML;
+            button.innerHTML = '<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+            button.disabled = true;
 
             try {
-                const cardElements = worksList.querySelectorAll('[data-id]');
-                const newOrder = Array.from(cardElements).map((card, index) => ({
-                    id: parseInt(card.dataset.id),
-                    orden: index + 1 // El orden empieza en 1
-                }));
+                const obra = currentWorks.find(w => w.id === parseInt(obraId));
+                if (!obra) throw new Error("Obra no encontrada.");
 
-                const updatePromises = newOrder.map(item =>
-                    client.from('productos').update({ orden: item.orden }).eq('id', item.id)
-                );
-                
-                const results = await Promise.all(updatePromises);
-                
-                const failed = results.some(r => r.error);
-                if (failed) throw new Error('Falló la actualización de una o más posiciones.');
+                // 1. Eliminar del Storage
+                const { error: storageError } = await client.storage.from(BUCKET_NAME).remove([imagePath]);
 
-                showAlert("Orden actualizado exitosamente!", 'success');
-                saveOrderButton.classList.add('hidden');
+                if (storageError && storageError.statusCode !== '200') {
+                    console.warn("Error al borrar imagen del storage:", storageError);
+                    showAlert("Advertencia: Falló el borrado del archivo del Storage. Intente manualmente.", 'error');
+                }
+
+                // 2. Actualizar la base de datos (Eliminar la referencia)
+                let updateData = {};
                 
-                // Actualizar la lista local y recargar la lista
-                await loadWorks();
+                if (isMain) {
+                    // Si es la imagen principal, se borra el path principal
+                    updateData = { imagen_principal: null, imagen_principal_path: null };
+                } else {
+                    // Si es secundaria, se filtra del array de `imagenes`
+                    const newImages = (obra.imagenes || []).filter(img => img.path !== imagePath);
+                    updateData = { imagenes: newImages };
+                }
+
+                const { error: dbError, data: updatedData } = await client.from(TABLE_NAME)
+                    .update(updateData)
+                    .eq('id', obraId)
+                    .select();
+
+                if (dbError) throw dbError;
+
+                // 3. Actualizar array local y DOM
+                if (updatedData && updatedData.length > 0) {
+                    const index = currentWorks.findIndex(w => w.id === parseInt(obraId));
+                    if (index !== -1) {
+                        currentWorks[index] = updatedData[0];
+                    }
+                }
+                
+                renderExistingImages(currentWorks.find(w => w.id === parseInt(obraId)));
+                showAlert(`Imagen eliminada exitosamente.`, 'success');
 
             } catch (error) {
-                console.error("Error al guardar el orden:", error);
-                showAlert("Error al guardar el orden. Intente nuevamente.", 'error');
+                console.error(error);
+                showAlert(`Error al eliminar imagen: ${error.message}`, 'error');
             } finally {
-                saveOrderButton.textContent = "Guardar Orden";
-                saveOrderButton.disabled = false;
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+        
+        // Función para previsualizar los archivos de entrada antes de subir
+        document.getElementById('form-imagenes-secundarias').addEventListener('change', (event) => {
+            const previewContainer = document.getElementById('image-preview');
+            previewContainer.innerHTML = ''; 
+            const files = event.target.files;
+
+            for (const file of files) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'w-16 h-16 object-cover rounded-md border border-gray-300';
+                    previewContainer.appendChild(img);
+                };
+                reader.readAsDataURL(file);
             }
         });
 
 
-        // --- LÓGICA DEL FORMULARIO (CRUD) ---
-        function resetForm() {
-            obraForm.reset();
-            document.getElementById('form-id').value = '';
-            document.getElementById('form-title').textContent = 'Nueva Obra';
-            currentImagesContainer.classList.add('hidden');
-            currentImagesList.innerHTML = '';
-            submitButton.textContent = 'Guardar Obra';
-            obraFormContainer.classList.add('hidden');
-            workToEdit = null;
-            isEditMode = false;
-        }
-        window.resetForm = resetForm;
-
-
-        function openForm(id = null) {
-            resetForm(); 
-            obraFormContainer.classList.remove('hidden');
-            
-            if (id) {
-                workToEdit = currentWorks.find(w => w.id === id);
-                if (!workToEdit) return;
-
-                isEditMode = true;
-                
-                // 1. Llenar los campos (usando los IDs CORREGIDOS)
-                document.getElementById('form-title').textContent = 'Editar Obra';
-                document.getElementById('form-id').value = workToEdit.id;
-                document.getElementById('form-titulo').value = workToEdit.titulo || '';
-                document.getElementById('form-anio').value = workToEdit.anio || '';
-                document.getElementById('form-tecnica').value = workToEdit.tecnica || '';
-                document.getElementById('form-medidas').value = workToEdit.medidas || '';
-                document.getElementById('form-categoria').value = workToEdit.categoria || 'grabado';
-                document.getElementById('form-serie').value = workToEdit.serie || '';
-                document.getElementById('form-descripcion').value = workToEdit.descripcion || '';
-                submitButton.textContent = 'Actualizar Obra';
-                
-                // 2. Mostrar imágenes actuales
-                renderCurrentImages(workToEdit.imagenes);
-            }
-            
-            // Forzar scroll al formulario
-            obraFormContainer.scrollIntoView({ behavior: 'smooth' });
-        }
-        window.openForm = openForm;
-        window.editObra = openForm; 
-        
-        function renderCurrentImages(images) {
-            currentImagesList.innerHTML = '';
-            if (images.length === 0) {
-                currentImagesContainer.classList.add('hidden');
-                return;
-            }
-
-            currentImagesContainer.classList.remove('hidden');
-            images.forEach(img => {
-                const imgElement = document.createElement('div');
-                imgElement.className = 'relative group cursor-pointer';
-                imgElement.innerHTML = `
-                    <img src="${getPublicUrl(img.path)}" data-path="${img.path}" class="w-20 h-20 object-cover rounded-md border-2 border-gray-300 group-hover:border-red-500 transition-colors">
-                    <span class="absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity" title="Click para eliminar">
-                        &times;
-                    </span>
-                `;
-                imgElement.addEventListener('click', () => deleteImageFromWork(workToEdit.id, img.path, imgElement));
-                currentImagesList.appendChild(imgElement);
-            });
-        }
-
-
-        // --- LÓGICA DE SUBIDA/ACTUALIZACIÓN ---
-        obraForm.addEventListener('submit', async (e) => {
+        document.getElementById('obra-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const id = document.getElementById('form-id').value;
-            const files = document.getElementById('image-files').files;
-
-            if (!isEditMode && files.length === 0) {
-                showAlert("Debe subir al menos una imagen para una nueva obra.", 'error');
-                return;
-            }
-
+            const form = e.target;
+            const submitButton = document.getElementById('submit-button');
+            const originalText = submitButton.textContent;
+            
+            submitButton.textContent = formMode === 'create' ? 'Creando...' : 'Guardando...';
             submitButton.disabled = true;
-            submitButton.textContent = id ? 'Actualizando...' : 'Guardando...';
 
             try {
-                let imagesToKeep = workToEdit ? workToEdit.imagenes.filter(img => !img.deleted) : [];
-                let newImages = [];
-                let currentImageCount = imagesToKeep.length;
-                const maxImages = 4;
-                
-                // 1. Subir Nuevos Archivos
-                if (files.length > 0) {
-                    if (currentImageCount + files.length > maxImages) {
-                         throw new Error(`Solo se permiten un máximo de ${maxImages} imágenes por obra (actuales: ${currentImageCount}, intentando subir: ${files.length}).`);
-                    }
+                const formData = new FormData(form);
+                const id = formData.get('id');
+                const isEdit = formMode === 'edit' && id;
+                const obraActual = isEdit ? currentWorks.find(w => w.id === parseInt(id)) : null;
 
-                    for (let i = 0; i < files.length; i++) {
-                        const file = files[i];
-                        const pathId = id ? id : Date.now(); 
-                        const filePath = `${pathId}/${file.name.replace(/\s/g, '_')}`;
-
-                        const { data: uploadData, error: uploadError } = await client.storage
-                            .from(BUCKET_NAME)
-                            .upload(filePath, file);
-
-                        if (uploadError) throw uploadError;
-                        
-                        newImages.push({ 
-                            path: uploadData.path, 
-                            // Aquí usamos el path para que getPublicUrl lo pueda procesar después de guardar
-                        });
-                    }
-                }
-                
-                // Para las nuevas imágenes, debemos obtener la URL pública si es un array de objetos con path
-                const finalImagesArray = [...imagesToKeep, ...newImages].map(img => ({
-                    path: img.path,
-                    url: getPublicUrl(img.path) // Obtener la URL pública antes de guardar en la DB
-                }));
-                
-                // 2. Preparar datos de la DB
-                const dataToSave = {
-                    titulo: document.getElementById('form-titulo').value,
-                    anio: parseInt(document.getElementById('form-anio').value),
-                    tecnica: document.getElementById('form-tecnica').value,
-                    medidas: document.getElementById('form-medidas').value,
-                    categoria: document.getElementById('form-categoria').value,
-                    serie: document.getElementById('form-serie').value,
-                    descripcion: document.getElementById('form-descripcion').value,
-                    imagenes: finalImagesArray // Guardar el array de imágenes actualizado
+                let dataToInsert = {
+                    titulo: formData.get('titulo'),
+                    anio: parseInt(formData.get('anio')),
+                    categoria: formData.get('categoria'),
+                    serie: formData.get('serie') || null,
+                    medidas: formData.get('medidas') || null,
+                    descripcion: formData.get('descripcion') || null,
+                    disponible: formData.get('disponible') === 'on',
+                    destacada: formData.get('destacada') === 'on',
+                    imagen_principal: formData.get('imagen_principal') || null,
+                    imagenes: isEdit ? obraActual.imagenes : [] 
                 };
+                
+                // 1. Manejo de archivos de la Galería (Secundarias)
+                const newFiles = formData.get('imagenes_secundarias').files;
+                let newImagePaths = [];
 
-                // 3. Insertar o Actualizar
-                let dbResponse;
-                if (id) {
-                    dbResponse = await client.from('productos').update(dataToSave).eq('id', id).select();
-                } else {
-                    // Si es nueva obra, establecemos el 'orden' al final de la lista (+1)
-                    dataToSave.orden = currentWorks.length + 1; 
-                    dbResponse = await client.from('productos').insert(dataToSave).select();
+                if (newFiles && newFiles.length > 0) {
+                    const uploadPromises = Array.from(newFiles).map(file => {
+                        // Generar un path único
+                        const fileName = `${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase()}`;
+                        const filePath = `secundarias/${fileName}`;
+                        
+                        return client.storage.from(BUCKET_NAME).upload(filePath, file, {
+                            cacheControl: '3600',
+                            upsert: false
+                        }).then(({ data, error }) => {
+                            if (error) throw error;
+                            return { 
+                                path: data.path, // Esto es 'secundarias/nombre-archivo.jpg'
+                                alt: file.name 
+                            };
+                        });
+                    });
+                    
+                    const uploadedImages = await Promise.all(uploadPromises);
+                    newImagePaths = uploadedImages;
+                    
+                    // Fusionar con las imágenes existentes en modo edición
+                    dataToInsert.imagenes = [...dataToInsert.imagenes, ...newImagePaths];
                 }
+                
+                
+                // 2. Manejo de la Imagen Principal (Si se proporciona una URL o si se actualiza a nulo)
+                const newMainUrl = formData.get('imagen_principal');
+                
+                if (isEdit) {
+                    // Si se estaba editando, mantener el path de la principal
+                    dataToInsert.imagen_principal_path = obraActual.imagen_principal_path; 
+                }
+                
+                if (newMainUrl && newMainUrl !== (obraActual?.imagen_principal || '')) {
+                    // Si se ha cambiado la URL de la principal:
+                    // 2a. Si había un archivo anterior en Storage, no lo eliminamos aquí, se debería hacer con el botón de borrar imagen.
+                    // 2b. Establecer los nuevos valores
+                    dataToInsert.imagen_principal = newMainUrl;
+                    dataToInsert.imagen_principal_path = null; // Asumimos que si es una URL externa, no tiene path en Storage
+                }
+                
+                // 3. Insertar o Actualizar en la Base de Datos
+                let result;
+                if (isEdit) {
+                    result = await client.from(TABLE_NAME)
+                        .update(dataToInsert)
+                        .eq('id', id)
+                        .select();
+                } else {
+                    // En modo creación, primero obtener el 'position' para el nuevo elemento (al final)
+                    const newPosition = currentWorks.length > 0 ? currentWorks[currentWorks.length - 1].position + 1 : 1;
+                    dataToInsert.position = newPosition;
+                    result = await client.from(TABLE_NAME)
+                        .insert([dataToInsert])
+                        .select();
+                }
+                
+                if (result.error) throw result.error;
 
-                if (dbResponse.error) throw dbResponse.error;
+                showAlert(`Obra ${isEdit ? 'actualizada' : 'creada'} exitosamente!`, 'success');
                 
-                showAlert(`Obra ${id ? 'actualizada' : 'creada'} exitosamente.`, 'success');
-                
+                // Cerrar formulario y recargar
+                document.getElementById('obra-form-container').classList.add('hidden');
+                document.getElementById('works-list').classList.remove('hidden');
+                document.getElementById('sort-controls').classList.remove('hidden');
                 resetForm();
                 loadWorks(); 
 
             } catch (error) {
-                console.error("Error al guardar la obra:", error);
-                showAlert(`Error: ${error.message}. Verifique el formulario.`, 'error');
+                console.error("Error al procesar el formulario:", error);
+                showAlert(`Error: ${error.message}`, 'error');
             } finally {
+                submitButton.textContent = originalText;
                 submitButton.disabled = false;
-                submitButton.textContent = id ? 'Actualizar Obra' : 'Guardar Obra';
             }
         });
 
 
-        // --- LÓGICA DE ELIMINACIÓN DE IMÁGENES/OBRAS ---
-        async function deleteImageFromWork(workId, imagePath, elementToRemove) {
-            if (!confirm('¿Estás seguro de que quieres eliminar esta imagen?')) return;
+        // --- GESTIÓN DE BORRADO ---
 
-            try {
-                // 1. Eliminar del Storage
-                const { error: storageError } = await client.storage
-                    .from(BUCKET_NAME)
-                    .remove([imagePath]);
+        async function deleteObra(button, id) {
+            if (!confirm("¿Estás seguro de que quieres eliminar esta obra? Esto es irreversible y borrará todos los archivos asociados.")) return;
 
-                if (storageError) throw storageError;
-
-                // 2. Actualizar la DB (remover la imagen del array 'imagenes')
-                let updatedImages = workToEdit.imagenes.filter(img => img.path !== imagePath);
-
-                const { error: dbError } = await client
-                    .from('productos')
-                    .update({ imagenes: updatedImages })
-                    .eq('id', workId);
-                
-                if (dbError) throw dbError;
-                
-                // 3. Actualizar la interfaz (DOM y workToEdit local)
-                elementToRemove.remove();
-                workToEdit.imagenes = updatedImages; // Actualizar el objeto local
-                showAlert('Imagen eliminada correctamente.', 'success');
-
-                // Si no quedan imágenes, ocultar el contenedor de imágenes actuales
-                if (updatedImages.length === 0) {
-                     currentImagesContainer.classList.add('hidden');
-                }
-
-            } catch (error) {
-                console.error("Error al eliminar imagen:", error);
-                showAlert(`Error al eliminar la imagen: ${error.message}`, 'error');
-            }
-        }
-        window.deleteImageFromWork = deleteImageFromWork; 
-
-
-        async function deleteObra(id, button) {
-            if (!confirm('¿Estás seguro de que quieres eliminar esta obra COMPLETAMENTE?')) return;
-            
-            const originalText = button.textContent;
-            button.textContent = "Eliminando...";
+            const originalText = button.innerHTML;
+            button.innerHTML = '<svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
             button.disabled = true;
 
             try {
                 const obra = currentWorks.find(w => w.id === id);
                 if (!obra) throw new Error("Obra no encontrada localmente.");
 
-                // 1. Eliminar el registro de la DB
-                const { error: dbError } = await client
-                    .from('productos')
+                // 1. Eliminar de la base de datos
+                const { error: dbError } = await client.from(TABLE_NAME)
                     .delete()
                     .eq('id', id);
 
                 if (dbError) throw dbError;
 
-                // 2. Eliminar archivos del Storage
-                const filePaths = obra.imagenes.map(img => img.path).filter(Boolean);
+                // 2. Identificar y eliminar archivos del Storage
+                // Obtener paths de imágenes secundarias y el path de la imagen principal (si existe y está en Storage)
+                const secondaryPaths = (obra.imagenes || []).map(img => img.path).filter(Boolean);
+                
+                let filePaths = [...secondaryPaths];
 
+                // Si la imagen principal tiene un path en Storage (no es una URL externa)
+                if (obra.imagen_principal_path) {
+                    filePaths.push(obra.imagen_principal_path);
+                }
+                
                 if (filePaths.length > 0) {
                     const { error: storageError } = await client.storage
                         .from(BUCKET_NAME)
@@ -587,6 +639,7 @@
 
                     if (storageError && storageError.statusCode !== '200') {
                         console.warn("Error al borrar imágenes del storage:", storageError);
+                        // Emitir advertencia pero continuar, ya que la obra fue eliminada de la DB
                         showAlert(`Obra eliminada de la DB. ADVERTENCIA: Falló el borrado de ${filePaths.length} imagen(es) del Storage.`, 'error');
                         return; 
                     }
@@ -608,10 +661,90 @@
                 button.disabled = false;
             }
         }
-        window.deleteObra = deleteObra;
         
-        // Inicializar
-        checkAuth();
+        // --- GESTIÓN DE ORDENAMIENTO (DRAG & DROP) ---
+
+        function initSortable() {
+            const el = document.getElementById('works-list');
+            const saveOrderButton = document.getElementById('save-order-button');
+            document.getElementById('sort-controls').classList.remove('hidden');
+
+            new Sortable(el, {
+                animation: 150,
+                handle: '.drag-handle', // Solo se puede arrastrar por el handle
+                ghostClass: 'sortable-ghost',
+                onEnd: function (evt) {
+                    if (evt.oldIndex !== evt.newIndex) {
+                        saveOrderButton.classList.remove('hidden');
+                    }
+                },
+            });
+        }
+        
+        document.getElementById('save-order-button').addEventListener('click', async () => {
+            const saveOrderButton = document.getElementById('save-order-button');
+            saveOrderButton.textContent = "Guardando...";
+            saveOrderButton.disabled = true;
+
+            try {
+                const worksList = document.getElementById('works-list');
+                const listItems = Array.from(worksList.children);
+                
+                // Crear el nuevo orden con ID y nueva posición
+                const newOrder = listItems.map((item, index) => {
+                    const idMatch = item.id.match(/obra-item-(\d+)/);
+                    return {
+                        id: parseInt(idMatch[1]),
+                        position: index + 1
+                    };
+                });
+
+                // Crear promesas de actualización
+                const updatePromises = newOrder.map(item => 
+                    client.from(TABLE_NAME).update({ position: item.position }).eq('id', item.id)
+                );
+                
+                const results = await Promise.all(updatePromises);
+                
+                // Verificar si alguna promesa falló
+                const failed = results.some(r => r.error);
+                if (failed) throw new Error('Falló la actualización de una o más posiciones.');
+
+                showAlert("Orden actualizado exitosamente!", 'success');
+                saveOrderButton.classList.add('hidden');
+                
+                // Actualizar el array local para mantener la consistencia
+                currentWorks.forEach(work => {
+                    const newPos = newOrder.find(item => item.id === work.id)?.position;
+                    if (newPos !== undefined) {
+                        work.position = newPos;
+                    }
+                });
+                currentWorks = currentWorks.sort((a, b) => a.position - b.position);
+
+            } catch (error) {
+                console.error("Error al guardar el orden:", error);
+                showAlert("Error al guardar el orden. Intente nuevamente.", 'error');
+            } finally {
+                saveOrderButton.textContent = "Guardar Nuevo Orden";
+                saveOrderButton.disabled = false;
+            }
+        });
+
+
+        // --- FUNCIONES ACCESIBLES GLOBALMENTE (para onclick) ---
+        window.editObra = (id) => openForm('edit', id);
+        window.deleteObra = deleteObra;
+        window.deleteImage = deleteImage;
+        window.closeModal = closeModal;
+        window.openForm = openForm;
+        window.resetForm = resetForm;
+        window.getPublicUrl = getPublicUrl;
+        window.openModal = openModal;
+
+
+        // Inicializar la aplicación
+        document.addEventListener('DOMContentLoaded', checkAuth);
     </script>
 </body>
 </html>

@@ -105,6 +105,37 @@
             padding: 1rem; border-radius: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             font-weight: 500;
         }
+
+        /* --- ESTILOS DE CARROUSEL --- */
+        .carousel-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden;
+            z-index: 0; 
+        }
+
+        .carousel-bg-image {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; opacity: 0;
+            transition: opacity 2s ease-in-out;
+            will-change: opacity;
+        }
+        
+        .carousel-bg-image.active {
+            opacity: 0.2; /* Opacidad para que el texto sea legible */
+        }
+
+        /* Estilo para la imagen del perfil centrada verticalmente */
+        .profile-image-container {
+            display: flex;
+            align-items: center; /* Alineación vertical */
+            justify-content: center; /* Alineación horizontal */
+        }
+
+        /* Estilo para el carrusel y el texto principal */
+        .hero-content {
+            position: relative;
+            z-index: 10;
+        }
+
     </style>
 </head>
 <body class="bg-bg-principal text-text-dark font-sans min-h-screen">
@@ -121,8 +152,10 @@
         <svg fill="#FFF" viewBox="0 0 24 24" width="28" height="28" class="whatsapp-icon"><path d="M12 2C6.48 2 2 6.48 2 12c0 3.25 1.5 6.2 3.88 8.1l-1.38 5.02L7.6 21.62C9.5 22.18 11.08 22 12 22c5.52 0 10-4.48 10-10C22 6.48 17.52 2 12 2zM17.43 15.4c-.09-.15-.36-.24-.77-.42-.42-.18-2.52-1.24-2.91-1.38-.39-.14-.67-.21-.95.21-.28.42-1.09 1.38-1.34 1.66-.25.28-.5.31-.92.21-.42-.1-.71-.34-1.27-.64-.47-.25-1.07-.65-2.03-1.89-.75-.98-1.25-1.95-1.38-2.2-.14-.25-.02-.38.11-.5.1-.11.23-.26.35-.4.12-.14.16-.25.25-.42.09-.17.04-.32-.02-.45-.06-.13-.57-1.36-.78-1.87-.2-.5-.41-.42-.56-.42-.15 0-.33-.02-.51-.02-.18 0-.47.07-.72.35-.25.28-.95.93-.95 2.27 0 1.34.97 2.64 1.1 2.82.13.18 1.92 3.03 4.6 4.24 2.68 1.21 2.68.85 2.97.8.29-.05.95-.39 1.08-.77.13-.38.13-.7.09-.77z"/></svg>
     </a>
 
-    <section class="min-h-screen flex items-center justify-center bg-bg-principal">
-        <div class="text-center max-w-4xl mx-auto px-6">
+    <section class="min-h-screen flex items-center justify-center bg-bg-principal relative">
+        <div id="carousel-bg" class="carousel-bg">
+            </div>
+        <div class="hero-content text-center max-w-4xl mx-auto px-6">
             <h1 class="text-6xl md:text-8xl font-light text-text-dark mb-8 tracking-tight">
                 Francisco<br>
                 <span class="text-pantone-magenta">Fernández</span>
@@ -151,21 +184,48 @@
                     </p>
                     
                     <p class="text-base text-text-muted leading-relaxed mb-6">
-                        <strong>Su obra explora con maestría la intersección entre lo ancestral y lo contemporáneo, tejiendo un diálogo visual potente entre la inmensidad del paisaje patagónico y la vibrante experiencia urbana moderna.</strong>
-                    </p>
-
-                    <p class="text-base text-text-muted leading-relaxed">
                         Cada pieza es un puente hacia lo inhóspito y lo íntimo. Su técnica no solo captura la dualidad de un paisaje vasto, sino que también ofrece una mirada profunda y reflexiva sobre el alma de ese territorio.
                     </p>
 
+                    <button onclick="document.getElementById('biography-full').scrollIntoView({behavior: 'smooth'})"
+                            class="text-sm uppercase tracking-wider font-semibold text-pantone-magenta hover:text-text-dark transition-colors duration-300 mt-4">
+                        Leer Biografía Completa →
+                    </button>
+
                 </div>
-                <div class="flex justify-center">
+                <div class="profile-image-container">
                     <div class="w-80 h-80 rounded-sm overflow-hidden border-2 border-border-light shadow-xl">
                         <img src="./img/img_perfil.jpg" 
                             alt="Retrato de Francisco Fernández, artista plástico de la Patagonia."
                             class="w-full h-full object-cover"/>
                     </div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="biography-full" class="py-20 bg-bg-principal">
+        <div class="max-w-4xl mx-auto px-6">
+            <h2 class="text-4xl md:text-5xl font-light text-text-dark mb-8 text-center">
+                Biografía
+            </h2>
+            <div class="w-16 h-px bg-pantone-magenta mx-auto mb-12"></div>
+            
+            <p class="text-lg text-text-dark leading-relaxed mb-6">
+                Francisco Fernández, un talentoso artista nacido en Trelew, Chubut, ha dedicado 33 años a explorar las complejidades del arte. Residente de la Patagonia, su obra es un reflejo de la inmensidad y el misticismo de este territorio. Ha participado activamente en numerosas exhibiciones itinerantes, llevando su visión única a lo largo del país.
+            </p>
+            <p class="text-lg text-text-dark leading-relaxed mb-6">
+                Su especialidad radica en la intersección entre lo ancestral y lo contemporáneo. Sus grabados, dibujos y pinturas tejen un diálogo visual potente, contrastando la vastedad del paisaje patagónico con la experiencia urbana moderna.
+            </p>
+            <p class="text-lg text-pantone-magenta font-semibold leading-relaxed">
+                Cada pieza es un puente hacia lo inhóspito y lo íntimo. Su técnica no solo captura la dualidad de un paisaje vasto, sino que también ofrece una mirada profunda y reflexiva sobre el alma de ese territorio.
+            </p>
+            
+            <div class="mt-12 text-center">
+                <button onclick="document.getElementById('gallery-section').scrollIntoView({behavior: 'smooth'})"
+                        class="text-sm uppercase tracking-wider font-semibold text-text-dark hover:text-pantone-magenta transition-colors duration-300">
+                    Ir a la Galería →
+                </button>
             </div>
         </div>
     </section>
@@ -199,6 +259,9 @@
                 </select>
 
                 <div id="admin-controls" class="hidden flex gap-2">
+                    <a href="./login.html" class="p-3 rounded-sm bg-border-light hover:bg-pantone-magenta transition duration-300 text-text-dark hover:text-white text-sm flex items-center">
+                        Admin
+                    </a>
                     <button id="edit-toggle" class="p-3 rounded-sm bg-border-light hover:bg-pantone-magenta transition duration-300 text-text-dark hover:text-white text-sm">
                         Activar Edición
                     </button>
@@ -212,6 +275,8 @@
 
             <div id="gallery-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 </div>
+
+            <div id="load-more-trigger" class="mt-8 h-px"></div>
         </div>
     </section>
 
@@ -245,15 +310,20 @@
         const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
         
         let productos = [];
+        let filteredProducts = [];
         let isEditing = false;
         let sortableInstance = null;
-        
+        let currentPage = 1;
+        const ITEMS_PER_PAGE = 8; // Número de elementos a cargar inicialmente y por scroll
+
         const galleryContainer = document.getElementById("gallery-container");
         const status = document.getElementById("status");
         const loadingOverlay = document.getElementById("loading-overlay");
         const modal = document.getElementById("modal");
         const modalContent = document.getElementById("modal-content");
         const alertDiv = document.getElementById('alert');
+        const loadMoreTrigger = document.getElementById('load-more-trigger');
+        const carouselBg = document.getElementById('carousel-bg');
 
         // Elementos de Filtro
         const searchInput = document.getElementById("search");
@@ -269,9 +339,7 @@
         // Elementos de interacción dinámica
         const whatsappButton = document.getElementById('whatsapp-btn');
         const mainFooter = document.getElementById('main-footer');
-        const gallerySection = document.getElementById('gallery-section');
-
-
+        
         // --- FUNCIONES DE UTILIDAD ---
         function showAlert(message, type = 'success') {
             alertDiv.textContent = message;
@@ -312,38 +380,86 @@
                 category: p.categoria || "",
                 serie: p.serie || "",
                 images,
-                mainImage: (images.length ? images[0].url : "")
+                // ASEGURAR QUE LA VISTA PREVIA ES LA PRIMERA IMAGEN SUBIDA
+                mainImage: (images.length ? images[0].url : ""),
+                price: p.price, // Nuevo
+                isAvailable: p.is_available, // Nuevo
+                showPrice: p.show_price, // Nuevo
             };
         }
         
-        function renderGallery(items) {
-            galleryContainer.innerHTML = '';
-            if (items.length === 0) {
-                galleryContainer.innerHTML = '<p class="col-span-full text-center text-text-muted">No se encontraron obras que coincidan con los filtros.</p>';
-                return;
+        function renderCard(obra, index) {
+            const card = document.createElement("div");
+            // Se usa aspect-square para una vista previa completa
+            card.className = "bg-bg-card rounded-sm overflow-hidden cursor-pointer shadow-lg hover:shadow-xl transition duration-500 transform hover:-translate-y-1 hover:rotate-1 group border border-border-light";
+            card.setAttribute('data-id', obra.id); 
+            card.setAttribute('onclick', `openModal(${obra.id})`);
+            
+            const isLazy = index >= ITEMS_PER_PAGE;
+
+            card.innerHTML = `
+                <div class="aspect-square overflow-hidden">
+                    <img src="${obra.mainImage}" 
+                         alt="Obra de Francisco Fernández: ${obra.title}, ${obra.technique}" 
+                         class="w-full h-full object-cover transition duration-500 group-hover:scale-105" 
+                         ${isLazy ? 'loading="lazy"' : ''} 
+                         onerror="this.onerror=null;this.src='[URL_IMAGEN_DEFAULT]';" />
+                </div>
+                <div class="p-4 border-t border-border-light">
+                    <h3 class="text-xl font-medium text-text-dark">${obra.title}</h3>
+                    <p class="text-sm text-text-muted">${obra.technique} · <span class="text-pantone-magenta font-semibold">${obra.year}</span></p>
+                </div>
+            `;
+            galleryContainer.appendChild(card);
+        }
+
+        function renderGalleryPage(items, append = false) {
+            if (!append) {
+                galleryContainer.innerHTML = '';
+                currentPage = 1;
             }
 
-            items.forEach(obra => {
-                const card = document.createElement("div");
-                card.className = "bg-bg-card rounded-sm overflow-hidden cursor-pointer shadow-lg hover:shadow-xl transition duration-500 transform hover:-translate-y-1 hover:rotate-1 group border border-border-light";
-                card.setAttribute('data-id', obra.id); 
-                card.setAttribute('onclick', `openModal(${obra.id})`);
-                
-                card.innerHTML = `
-                    <div class="aspect-[4/3] overflow-hidden">
-                        <img src="${obra.mainImage}" alt="Obra de Francisco Fernández: ${obra.title}, ${obra.technique}" class="w-full h-full object-cover transition duration-500 group-hover:scale-105" onerror="this.onerror=null;this.src='[URL_IMAGEN_DEFAULT]';" />
-                    </div>
-                    <div class="p-4 border-t border-border-light">
-                        <h3 class="text-xl font-medium text-text-dark">${obra.title}</h3>
-                        <p class="text-sm text-text-muted">${obra.technique} · <span class="text-pantone-magenta font-semibold">${obra.year}</span></p>
-                    </div>
-                `;
-                galleryContainer.appendChild(card);
+            const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+            const itemsToRender = items.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+            if (itemsToRender.length === 0 && !append) {
+                galleryContainer.innerHTML = '<p class="col-span-full text-center text-text-muted">No se encontraron obras que coincidan con los filtros.</p>';
+                return;
+            } else if (itemsToRender.length === 0 && append) {
+                return; // No hay más para cargar
+            }
+
+            itemsToRender.forEach((obra, index) => {
+                renderCard(obra, startIndex + index);
             });
             
             if (isEditing) {
                 enableSorting();
             }
+
+            currentPage++;
+        }
+
+        let carouselImages = [];
+
+        function startCarousel() {
+            if (carouselImages.length === 0) return;
+
+            // 1. Insertar todas las imágenes en el DOM inicialmente
+            carouselBg.innerHTML = carouselImages.map((img, index) => `
+                <img src="${img.url}" 
+                     class="carousel-bg-image ${index === 0 ? 'active' : ''}" 
+                     alt="Obra de arte en la galería" />
+            `).join('');
+
+            const images = carouselBg.querySelectorAll('.carousel-bg-image');
+            let currentIndex = 0;
+
+            setInterval(() => {
+                images[currentIndex].classList.remove('active');
+                currentIndex = (currentIndex + 1) % images.length;
+                images[currentIndex].classList.add('active');
+            }, 5000); // Cambia cada 5 segundos
         }
         
         // --- FUNCIÓN INITGALLERY MÁS ROBUSTA CON TRY/CATCH ---
@@ -352,6 +468,7 @@
             loadingOverlay.classList.remove('hidden');
 
             try {
+                // Se obtiene TODA la data ordenada por orden (para el reordenamiento) y por año
                 const { data, error } = await client
                     .from('productos')
                     .select('*')
@@ -361,26 +478,30 @@
                 loadingOverlay.classList.add('hidden');
                 
                 if (error) {
-                    // Si hay un error de Supabase (ej: RLS o conexión), lanza una excepción
                     throw new Error(`Error de Supabase: ${error.message}`);
                 }
 
                 productos = data.map(normalize);
+                filteredProducts = productos;
 
-                // Poblar Filtros (Año)
+                // Lógica del Carrusel (Máximo 5 imágenes aleatorias que tengan imagen principal)
+                const carouselCandidates = productos.filter(p => p.mainImage).sort(() => 0.5 - Math.random());
+                carouselImages = carouselCandidates.slice(0, 5).map(p => ({ url: p.mainImage, title: p.title }));
+                startCarousel();
+
+                // Poblar Filtros (Año, Serie)
                 const years = [...new Set(productos.map(a => a.year).filter(Boolean))].sort((a, b) => b - a);
                 filterYear.innerHTML = '<option value="">Todos los años</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
 
-                // Poblar Filtros (Serie)
                 const series = [...new Set(productos.map(a => a.serie).filter(s => s && s.trim() !== ''))].sort((a, b) => a.localeCompare(b));
                 filterSeries.innerHTML = '<option value="">Todas las series</option>' + series.map(s => `<option value="${s}">${s}</option>`).join('');
 
-                renderGallery(productos);
+                renderGalleryPage(productos);
                 status.textContent = "";
 
                 await checkAdminStatus(); 
+                setupIntersectionObserver();
             } catch (e) {
-                // Si algo falla, esconde la capa de carga y muestra el error en la pantalla.
                 loadingOverlay.classList.add('hidden');
                 status.textContent = `¡ERROR AL CARGAR LA GALERÍA! Verifique su archivo config.js o la Consola del Navegador. Detalle: ${e.message}`;
                 console.error("Error crítico al cargar initGallery:", e);
@@ -393,7 +514,7 @@
             const c = filterCategory.value;
             const s = filterSeries.value;
 
-            let filtered = productos.filter(p => {
+            filteredProducts = productos.filter(p => {
                 const hay = `${p.title || ""} ${p.technique || ""} ${p.year || ""} ${p.description || ""} ${p.serie || ""} ${p.category || ""}`.toLowerCase();
                 
                 let textMatch = hay.includes(q);
@@ -404,7 +525,39 @@
                 return textMatch && yearMatch && categoryMatch && seriesMatch;
             });
 
-            renderGallery(filtered);
+            renderGalleryPage(filteredProducts, false); // Vuelve a la página 1 y reemplaza contenido
+        }
+        
+        // --- LÓGICA DE INFINITE SCROLL ---
+        let observer;
+
+        function setupIntersectionObserver() {
+            if (observer) {
+                observer.disconnect();
+            }
+
+            observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        loadMoreItems();
+                    }
+                });
+            }, {
+                root: null,
+                rootMargin: '0px 0px 100px 0px', // Carga cuando está a 100px del final
+                threshold: 0.01
+            });
+            
+            observer.observe(loadMoreTrigger);
+        }
+
+        function loadMoreItems() {
+            const totalRendered = (currentPage - 1) * ITEMS_PER_PAGE;
+            if (totalRendered < filteredProducts.length) {
+                renderGalleryPage(filteredProducts, true);
+            } else {
+                observer.unobserve(loadMoreTrigger); // Deja de observar si no hay más elementos
+            }
         }
 
         // --- LÓGICA DE REORDENAMIENTO (MANTENIDA) ---
@@ -439,6 +592,7 @@
                 saveOrderButton.classList.remove('hidden');
                 galleryContainer.style.cursor = 'grab';
                 enableSorting();
+                if (observer) observer.unobserve(loadMoreTrigger); // Deshabilitar infinite scroll en modo edición
             } else {
                 editToggleButton.textContent = 'Activar Edición';
                 editToggleButton.classList.replace('bg-red-500', 'bg-border-light');
@@ -452,7 +606,7 @@
                     sortableInstance.destroy();
                     sortableInstance = null;
                 }
-                initGallery(); 
+                initGallery(); // Recargar la galería al salir
             }
         });
 
@@ -472,25 +626,19 @@
                 const existingObra = productos.find(item => item.id === obraId);
                 
                 if (existingObra) {
+                    // Solo enviamos el ID y el nuevo orden. RLS de UPDATE debe estar configurado para permitir solo estos campos.
                     updates.push({
                         id: existingObra.id,
-                        orden: newOrder,
-                        // Mantener todos los demás campos para el upsert
-                        titulo: existingObra.title,
-                        anio: existingObra.year,
-                        tecnica: existingObra.technique,
-                        medidas: existingObra.size,
-                        descripcion: existingObra.description,
-                        imagenes: existingObra.images,
-                        categoria: existingObra.category,
-                        serie: existingObra.serie,
+                        orden: newOrder
                     });
                 }
             });
             
+            // Para el upsert simple, Supabase requiere que se incluyan las PK. 
+            // Si el RLS permite UPDATE solo en la columna 'orden', solo se actualizará esa.
             const { error } = await client
                 .from('productos')
-                .upsert(updates); 
+                .upsert(updates, { onConflict: 'id' }); 
 
             if (error) {
                 status.textContent = `Error al guardar el orden: ${error.message}`;
@@ -503,11 +651,12 @@
             saveOrderButton.classList.add('bg-green-600', 'hover:bg-green-700', 'text-white');
             saveOrderButton.classList.remove('bg-gray-500', 'hover:bg-gray-600', 'bg-pantone-magenta'); 
             
-            productos = updates.map(update => {
-                const p = productos.find(item => item.id === update.id);
-                if (p) p.order = update.orden;
-                return p;
-            }).filter(Boolean).sort((a, b) => a.order - b.order);
+            // Re-sincronizar el array local para mantener el orden correcto
+            productos.forEach(p => {
+                const update = updates.find(u => u.id === p.id);
+                if (update) p.order = update.orden;
+            });
+            productos.sort((a, b) => a.order - b.order);
         });
 
 
@@ -518,6 +667,7 @@
             const form = event.target;
             const saveButton = form.querySelector('button[type="submit"]');
 
+            // Recoger los valores del formulario
             const updatedData = {
                 titulo: form.titulo.value.trim(),
                 anio: parseInt(form.anio.value.trim()),
@@ -526,6 +676,10 @@
                 categoria: form.categoria.value,
                 serie: form.serie.value.trim(),
                 descripcion: form.descripcion.value.trim(),
+                // Nuevos campos
+                price: parseFloat(form.price.value) || null,
+                is_available: form.is_available.value === 'true',
+                show_price: form.show_price.value === 'true',
             };
 
             saveButton.textContent = "Guardando...";
@@ -589,7 +743,26 @@
                                     <p class="text-sm"><strong class="text-text-dark">Técnica:</strong> <input name="tecnica" value="${obra.technique}" class="ml-2 border-b border-border-light focus:outline-none p-1 w-2/3 text-text-dark" required /></p>
                                     <p class="text-sm"><strong class="text-text-dark">Medidas:</strong> <input name="medidas" value="${obra.size}" class="ml-2 border-b border-border-light focus:outline-none p-1 w-2/3 text-text-dark" required /></p>
                                 </div>
-                                
+
+                                <div class="space-y-3 text-text-dark mb-6 border-b border-border-light pb-4">
+                                    <p class="text-sm">
+                                        <strong class="text-text-dark">Precio (Numérico):</strong> <input name="price" type="number" step="0.01" value="${obra.price || ''}" class="ml-2 border-b border-border-light focus:outline-none p-1 w-1/3 text-text-dark" />
+                                    </p>
+                                    <p class="text-sm">
+                                        <strong class="text-text-dark">Disponible:</strong> 
+                                        <select name="is_available" class="ml-2 border border-border-light rounded-sm p-1 text-text-dark">
+                                            <option value="true" ${obra.isAvailable ? 'selected' : ''}>Sí</option>
+                                            <option value="false" ${!obra.isAvailable ? 'selected' : ''}>No</option>
+                                        </select>
+                                    </p>
+                                    <p class="text-sm">
+                                        <strong class="text-text-dark">Mostrar Precio:</strong> 
+                                        <select name="show_price" class="ml-2 border border-border-light rounded-sm p-1 text-text-dark">
+                                            <option value="true" ${obra.showPrice ? 'selected' : ''}>Sí</option>
+                                            <option value="false" ${!obra.showPrice ? 'selected' : ''}>No</option>
+                                        </select>
+                                    </p>
+                                </div>
                                 <h3 class="text-xl font-medium border-b border-border-light pb-1 mb-2 text-text-dark">Descripción</h3>
                                 <textarea name="descripcion" class="text-text-muted whitespace-pre-wrap text-sm w-full h-32 border border-border-light p-2 focus:border-pantone-magenta rounded-sm">${obra.description || 'Sin descripción.'}</textarea>
                                 
@@ -611,6 +784,15 @@
                 `;
             } else {
                 // MODO LECTURA: RENDERIZAR VISTA NORMAL (CON ZOOM Y WHATSAPP)
+                const statusHtml = obra.isAvailable 
+                    ? `<span class="text-green-600 font-semibold">Disponible</span>`
+                    : `<span class="text-red-500 font-semibold">No Disponible</span>`;
+                
+                const priceHtml = obra.showPrice && obra.price
+                    ? `<p class="text-xl font-semibold text-pantone-magenta mb-4">${obra.price.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 })}</p>`
+                    : obra.showPrice ? `<p class="text-xl font-semibold text-pantone-magenta mb-4">Precio a Consultar</p>` : '';
+
+
                 modalHtml = `
                     <div class="grid md:grid-cols-2 gap-8">
                         <div id="zoom-container-${id}" class="md:h-[65vh] h-80 overflow-hidden flex items-center justify-center bg-bg-principal rounded-sm zoom-container">
@@ -622,7 +804,9 @@
 
                         <div>
                             <h2 class="text-3xl font-light text-text-dark mb-2">${obra.title}</h2>
-                            <p class="text-xl text-pantone-magenta mb-4">${obra.year}</p>
+                            <p class="text-xl text-text-muted mb-2">${obra.year}</p>
+                            ${priceHtml} 
+                            <p class="text-sm mb-4">Estado: ${statusHtml}</p>
                             
                             <div class="space-y-3 text-text-dark mb-6 border-b border-border-light pb-4">
                                 <p class="text-sm"><strong>Categoría:</strong> ${obra.category || 'N/A'}</p>
@@ -710,7 +894,6 @@
         }
 
         const firstSection = document.querySelector('section.min-h-screen'); 
-        const gallerySectionTop = document.getElementById('gallery-section').offsetTop;
         
         window.addEventListener('scroll', () => {
             const firstSectionHeight = firstSection.offsetHeight;
@@ -721,7 +904,11 @@
                 mainFooter.classList.add('translate-y-full');
             }
 
-            if (window.scrollY > gallerySectionTop / 2) { 
+            // Usamos un punto de referencia más estable, como la sección de Bio, para mostrar el WhatsApp
+            const bioSection = document.getElementById('bio-section');
+            const bioSectionTop = bioSection ? bioSection.offsetTop : Infinity;
+
+            if (window.scrollY > bioSectionTop / 2) { 
                 whatsappButton.classList.add('show');
             } else {
                 whatsappButton.classList.remove('show');

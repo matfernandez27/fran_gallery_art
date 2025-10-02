@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso a Administración</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <style>
+        /* Estilos del Overlay de Carga (Spinner) - Copiados de index.html */
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(250, 235, 240, 0.95);
+            display: flex; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .lds-ring div { 
+            box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; 
+            border: 8px solid #DE3B89; 
+            border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; 
+            border-color: #DE3B89 transparent transparent transparent; 
+        }
+        #alert {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 1001; 
+            padding: 1rem; border-radius: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    
+    <div id="alert" class="hidden" role="alert"></div>
+
+    <div id="login-section" class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-xl w-full">
+        <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Panel de Acceso</h2>
+        <form id="login-form" class="space-y-4">
+            <input id="login-email" type="email" placeholder="Correo Electrónico" class="w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500" required />
+            <input id="login-password" type="password" placeholder="Contraseña" class="w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500" required />
+            <button type="submit" id="login-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 w-full">
+                Acceder
+            </button>
+            <div class="text-center pt-4">
+                <a href="./index.html" class="text-indigo-600 hover:text-indigo-800 text-sm">← Volver a la Galería</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Inicialización de Supabase
+        const supabaseUrl = window.supabaseUrl;
+        const supabaseAnonKey = window.supabaseAnonKey;
+        const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+        // --- ELEMENTOS DEL DOM ---
+        const loginForm = document.getElementById("login-form");
+        const alertDiv = document.getElementById("alert");
+        
+        // --- FUNCIONES DE UTILIDAD ---
+
+        function showAlert(message, type = 'success') {
+            alertDiv.textContent = message;
+            alertDiv.classList.remove('hidden');
+            alertDiv.classList.remove('bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+
+            if (type === 'error') {
+                alertDiv.classList.add('bg-red-100', 'text-red-700');
+            } else {
+                alertDiv.classList.add('bg-green-100', 'text-green-700');
+            }
+            setTimeout(() => alertDiv.classList.add('hidden'), 5000);
+        }
+
+        // --- GESTIÓN DE AUTH ---
+
+        async function checkAuth() {
+            const { data: { user } } = await client.auth.getUser();
+            if (user) {
+                // Si ya está logueado, redirigir al panel de administración
+                window.location.href = './admin.html';
+            }
+        }
+
+        loginForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const email = document.getElementById("login-email").value;
+            const password = document.getElementById("login-password").value;
+            const loginButton = document.getElementById("login-button");
+            
+            loginButton.textContent = "Accediendo...";
+            loginButton.disabled = true;
+
+            const { error } = await client.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                showAlert(`Error de acceso: ${error.message}`, 'error');
+            } else {
+                showAlert("¡Acceso exitoso! Redirigiendo...", 'success');
+                // Redirigir al panel de administración
+                setTimeout(() => {
+                    window.location.href = './admin.html';
+                }, 1000);
+            }
+            loginButton.textContent = "Acceder";
+            loginButton.disabled = false;
+        });
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+</html>

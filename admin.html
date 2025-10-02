@@ -7,12 +7,20 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <style>
+        #alert {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 1001; 
+            padding: 1rem; border-radius: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            font-weight: 500;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
     
     <div id="alert" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 p-4 text-sm rounded-lg shadow-xl z-50 w-11/12 md:w-auto" role="alert"></div>
 
-    <header id="admin-header" class="bg-white shadow hidden">
+    <header id="admin-header" class="bg-white shadow">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <h1 class="text-2xl font-bold text-gray-800">Panel de Administración</h1>
             <button id="logout-button" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
@@ -23,18 +31,7 @@
 
     <main class="container mx-auto px-6 py-8">
         
-        <div id="login-section" class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-xl mt-20">
-            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Iniciar Sesión</h2>
-            <form id="login-form" class="space-y-4">
-                <input id="login-email" type="email" placeholder="Correo Electrónico" class="w-full p-3 border rounded-lg" required />
-                <input id="login-password" type="password" placeholder="Contraseña" class="w-full p-3 border rounded-lg" required />
-                <button type="submit" id="login-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 w-full">
-                    Acceder
-                </button>
-            </form>
-        </div>
-
-        <div id="admin-section" class="hidden">
+        <div id="admin-section">
             <h2 class="text-xl font-semibold text-gray-700 mb-6">Gestionar obras y catálogo</h2>
             
             <div class="bg-white p-6 rounded-lg shadow-lg mb-8">
@@ -55,9 +52,20 @@
 
                     <input id="serie" type="text" placeholder="Serie (opcional)" class="w-full p-3 border rounded-lg" />
                     
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <input id="price" type="number" step="0.01" placeholder="Precio (Opcional)" class="p-3 border rounded-lg" />
+                        <select id="is-available" class="p-3 border rounded-lg" required>
+                            <option value="true">Disponible (Sí)</option>
+                            <option value="false">Disponible (No)</option>
+                        </select>
+                        <select id="show-price" class="p-3 border rounded-lg" required>
+                            <option value="false">No mostrar Precio</option>
+                            <option value="true">Mostrar Precio</option>
+                        </select>
+                    </div>
                     <textarea id="description" placeholder="Descripción de la obra" class="w-full p-3 border rounded-lg h-32"></textarea>
                     
-                    <label class="block text-gray-700 font-semibold pt-2">Seleccionar Imágenes (Múltiples)</label>
+                    <label class="block text-gray-700 font-semibold pt-2">Seleccionar Imágenes (Múltiples) *</label>
                     <input id="image-files" type="file" accept="image/*" multiple required class="w-full p-3 border rounded-lg bg-gray-50" />
                     
                     <button type="submit" id="save-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 w-full">
@@ -82,10 +90,6 @@
         const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
 
         // --- ELEMENTOS DEL DOM ---
-        const loginSection = document.getElementById("login-section");
-        const loginForm = document.getElementById("login-form");
-        const adminSection = document.getElementById("admin-section");
-        const adminHeader = document.getElementById("admin-header");
         const obraForm = document.getElementById("obra-form");
         const logoutButton = document.getElementById("logout-button");
         const imageFilesInput = document.getElementById("image-files");
@@ -111,52 +115,25 @@
             setTimeout(() => alertDiv.classList.add('hidden'), 5000);
         }
 
-        function toggleAdminView(isAuthenticated) {
-            if (isAuthenticated) {
-                loginSection.classList.add('hidden');
-                adminSection.classList.remove('hidden');
-                adminHeader.classList.remove('hidden');
-                loadObraList(); 
-            } else {
-                loginSection.classList.remove('hidden');
-                adminSection.classList.add('hidden');
-                adminHeader.classList.add('hidden');
-            }
-        }
-
         async function checkAuth() {
             const { data: { user } } = await client.auth.getUser();
-            toggleAdminView(!!user);
+            if (!user) {
+                // Si no hay usuario, redirigir al login
+                window.location.href = './login.html';
+            } else {
+                loadObraList();
+            }
         }
         
         // --- GESTIÓN DE AUTH ---
 
-        loginForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const email = document.getElementById("login-email").value;
-            const password = document.getElementById("login-password").value;
-            const loginButton = document.getElementById("login-button");
-            
-            loginButton.textContent = "Accediendo...";
-            loginButton.disabled = true;
-
-            const { error } = await client.auth.signInWithPassword({ email, password });
-
-            if (error) {
-                showAlert(`Error de acceso: ${error.message}`, 'error');
-            } else {
-                showAlert("¡Acceso exitoso!", 'success');
-                checkAuth();
-            }
-            loginButton.textContent = "Acceder";
-            loginButton.disabled = false;
-        });
-
         logoutButton.addEventListener("click", async () => {
             const { error } = await client.auth.signOut();
             if (!error) {
-                showAlert("Sesión cerrada.", 'success');
-                checkAuth();
+                showAlert("Sesión cerrada. Redirigiendo...", 'success');
+                setTimeout(() => {
+                    window.location.href = './login.html';
+                }, 1000);
             } else {
                 showAlert("Error al cerrar sesión.", 'error');
             }
@@ -167,6 +144,7 @@
             const uploadedImages = [];
             
             for (const file of files) {
+                // Se garantiza que el orden en el array 'imagenes' de la DB es el orden de subida
                 const safeTitle = obraTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
                 const filePath = `${IMAGE_FOLDER}/${safeTitle}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
 
@@ -199,6 +177,11 @@
             const files = imageFilesInput.files;
             const category = document.getElementById("category").value; 
             const serie = document.getElementById("serie").value.trim(); 
+            // Nuevos campos
+            const priceValue = document.getElementById("price").value.trim();
+            const price = priceValue ? parseFloat(priceValue) : null;
+            const isAvailable = document.getElementById("is-available").value === 'true';
+            const showPrice = document.getElementById("show-price").value === 'true';
             
             if (!files.length) {
                 showAlert("Debe seleccionar al menos una imagen.", 'error');
@@ -222,7 +205,9 @@
                     .from("productos")
                     .insert([{
                         titulo: title, anio: year, tecnica: technique, medidas: size, descripcion: description, 
-                        imagenes: uploadedImages, orden: newOrder, categoria: category, serie: serie
+                        imagenes: uploadedImages, orden: newOrder, categoria: category, serie: serie,
+                        // Insertar nuevos campos
+                        price: price, is_available: isAvailable, show_price: showPrice 
                     }]);
 
                 if (insertError) throw new Error("Error al insertar en DB: " + insertError.message);
@@ -246,7 +231,7 @@
             
             const { data, error } = await client
                 .from('productos')
-                .select('id, titulo, anio, tecnica, imagenes, created_at')
+                .select('id, titulo, anio, tecnica, imagenes, created_at, is_available, show_price')
                 .order('created_at', { ascending: false }); 
 
             if (error) {
@@ -268,16 +253,22 @@
                 item.className = 'flex items-center space-x-4 p-3 border-b hover:bg-gray-50 rounded-lg transition duration-150';
                 item.setAttribute('id', `obra-item-${obra.id}`); 
                 
-                // 1. Convertir el objeto imágenes a una cadena JSON.
                 const jsonString = JSON.stringify(obra.imagenes);
-                // 2. CODIFICAR LA CADENA JSON a Base64 para evitar CUALQUIER error de sintaxis en el HTML.
                 const base64Images = btoa(jsonString);
+
+                const statusColor = obra.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                const statusText = obra.is_available ? 'DISPONIBLE' : 'NO DISPONIBLE';
+                const priceStatusText = obra.show_price ? 'PRECIO SÍ' : 'PRECIO NO';
 
                 item.innerHTML = `
                     <img src="${mainImage}" alt="${obra.titulo}" class="w-16 h-16 object-cover rounded-md" onerror="this.style.display='none'" />
                     <div class="flex-1">
                         <h4 class="font-semibold text-gray-800">${obra.titulo} (${obra.anio})</h4>
                         <p class="text-sm text-gray-500">${obra.tecnica}</p>
+                        <div class="flex gap-2 mt-1">
+                             <span class="text-xs font-medium px-2 py-0.5 rounded ${statusColor}">${statusText}</span>
+                             <span class="text-xs font-medium px-2 py-0.5 rounded ${obra.show_price ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">${priceStatusText}</span>
+                        </div>
                     </div>
                     <div>
                         <button id="delete-btn-${obra.id}" onclick="deleteObra(${obra.id}, '${base64Images}', this)" class="bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-3 rounded-lg transition duration-300">
@@ -356,7 +347,7 @@
         window.deleteObra = deleteObra;
 
         // Inicializar
-        checkAuth();
+        document.addEventListener('DOMContentLoaded', checkAuth);
     </script>
 </body>
 </html>

@@ -437,5 +437,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     fetchAndPopulateFilters(); 
     
     checkAdminStatus(); // Verifica si el usuario es administrador
-    // git status testing
 });

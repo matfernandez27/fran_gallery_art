@@ -13,7 +13,6 @@ const adminHeader = document.getElementById('admin-header');
 const obraFormContainer = document.getElementById('obra-form-container');
 const obraForm = document.getElementById('obra-form');
 const logoutButton = document.getElementById('logout-button');
-// ELIMINADO: const saveOrderButton = document.getElementById('save-order-button');
 const currentImagesList = document.getElementById('current-images-list');
 const currentImagesContainer = document.getElementById('current-images-container');
 const alertDiv = document.getElementById('alert');
@@ -34,18 +33,16 @@ function showAlert(message, type = 'success') {
         alertDiv.classList.add('bg-indigo-100', 'text-indigo-700');
     }
 
-    // Mostrar con transición
     setTimeout(() => {
         alertDiv.classList.add('opacity-100');
     }, 10);
     
-    // Ocultar después de 5 segundos
     setTimeout(() => {
         alertDiv.classList.remove('opacity-100');
         alertDiv.classList.add('opacity-0');
         setTimeout(() => {
             alertDiv.classList.add('hidden');
-        }, 300); // Esperar a que termine la transición
+        }, 300);
     }, 5000);
 }
 
@@ -63,7 +60,6 @@ function showLoginView() {
     obraFormContainer.classList.add('hidden');
 }
 
-// Función auxiliar para obtener la URL pública de una imagen
 function getPublicImageUrl(path) {
     if (!path) return 'https://via.placeholder.com/100x100?text=No+Image';
     const { data } = client.storage.from(BUCKET_NAME).getPublicUrl(path);
@@ -117,9 +113,6 @@ function renderWorksList(works) {
     });
 }
 
-/**
- * Filtra la lista de obras mostradas basándose en el valor del input de búsqueda.
- */
 function filterWorks() {
     const query = searchInput.value.toLowerCase().trim();
     
@@ -159,14 +152,14 @@ async function fetchWorks() {
 
         currentWorks = data || [];
         renderWorksList(currentWorks);
-        initSortable(); // Reinicializar SortableJS con la lista cargada
+        initSortable(); 
+        handleUrlParameters(); // <- LLAMAR DESPUÉS DE CARGAR LAS OBRAS
     } catch (error) {
         console.error("Error al cargar obras:", error);
         showAlert("Error al cargar las obras: " + error.message, 'error');
     }
 }
 
-// Lógica de Supabase para subir una imagen
 async function uploadImage(file, workId) {
     const fileExtension = file.name.split('.').pop();
     const fileName = `${workId}_${Date.now()}.${fileExtension}`;
@@ -176,7 +169,7 @@ async function uploadImage(file, workId) {
         .from(BUCKET_NAME)
         .upload(filePath, file, {
             cacheControl: '3600',
-            upsert: false // No sobrescribir
+            upsert: false
         });
 
     if (error) throw error;
@@ -203,8 +196,8 @@ async function handleSubmit(event) {
             tecnica: data.get('tecnica') || '',
             medidas: data.get('medidas') || '',
             price: priceValue ? parseFloat(priceValue) : null,
-            is_available: data.get('is_available') === 'on', // Checkbox
-            show_price: data.get('show_price') === 'on' // Checkbox
+            is_available: data.get('is_available') === 'on',
+            show_price: data.get('show_price') === 'on'
         };
 
         const imageFiles = data.getAll('imagenes').filter(file => file.name);
@@ -212,8 +205,6 @@ async function handleSubmit(event) {
         let result;
         
         if (isEditMode) {
-            // --- MODO EDICIÓN ---
-            
             const existingImagesJSON = currentImagesList.dataset.currentImages;
             let existingImages = existingImagesJSON ? JSON.parse(existingImagesJSON) : [];
             
@@ -236,10 +227,7 @@ async function handleSubmit(event) {
             result = updateData;
 
         } else {
-            // --- MODO CREACIÓN ---
-            
-            // 1. Obtener el último orden para el nuevo item
-            const lastOrder = currentWorks.length > 0 ? Math.max(...currentWorks.map(w => w.orden)) : -1;
+            const lastOrder = currentWorks.length > 0 ? Math.max(...currentWorks.map(w => w.orden || 0)) : -1;
             obraData.orden = lastOrder + 1;
 
             const { data: insertData, error: insertError } = await client
@@ -266,12 +254,11 @@ async function handleSubmit(event) {
             }
         }
         
-        // Actualizar lista local y UI
         if (isEditMode) {
             currentWorks = currentWorks.map(w => w.id === result.id ? result : w);
         } else {
             currentWorks.push(result);
-            currentWorks.sort((a, b) => a.orden - b.orden);
+            currentWorks.sort((a, b) => (a.orden || 0) - (b.orden || 0));
         }
         renderWorksList(currentWorks);
         
@@ -303,11 +290,6 @@ function resetForm() {
 
 function showAddForm() {
     resetForm();
-    const categorySelect = document.getElementById('categoria');
-    if (categorySelect && categorySelect.options.length > 0) {
-        categorySelect.value = categorySelect.options[0].value;
-    }
-    
     obraFormContainer.classList.remove('hidden');
     document.getElementById('works-container').classList.add('hidden');
     document.getElementById('show-add-form-button').classList.add('hidden');
@@ -317,7 +299,7 @@ function showWorksList() {
     obraFormContainer.classList.add('hidden');
     document.getElementById('works-container').classList.remove('hidden');
     document.getElementById('show-add-form-button').classList.remove('hidden');
-    filterWorks(); // Refrescar la lista, aplicando el filtro si lo hay
+    filterWorks(); 
 }
 
 
@@ -341,11 +323,11 @@ window.editWork = (id) => {
     document.getElementById('serie').value = obra.serie || '';
 
     document.getElementById('price').value = obra.price || '';
-    document.getElementById('is_available').checked = obra.is_available || false;
-    document.getElementById('show_price').checked = obra.show_price || false;
+    document.getElementById('is_available').checked = obra.is_available;
+    document.getElementById('show_price').checked = obra.show_price;
 
     currentImagesContainer.classList.remove('hidden');
-    renderCurrentImages(obra.imagenes);
+    renderCurrentImages(obra.imagenes || []);
 
     obraFormContainer.classList.remove('hidden');
     document.getElementById('works-container').classList.add('hidden');
@@ -354,30 +336,23 @@ window.editWork = (id) => {
 
 function renderCurrentImages(images) {
     currentImagesList.innerHTML = '';
-    
     currentImagesList.dataset.currentImages = JSON.stringify(images);
 
     images.forEach(img => {
         const imageUrl = getPublicImageUrl(img.path);
-        
         const imgItem = document.createElement('div');
         imgItem.className = 'relative group w-24 h-24 cursor-pointer';
         imgItem.dataset.path = img.path;
         imgItem.dataset.name = img.name;
-        
         imgItem.innerHTML = `
             <img src="${imageUrl}" alt="${img.name}" class="w-full h-full object-cover rounded-md border border-gray-300">
             <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 rounded-md">
-                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-            </div>
-        `;
-        
+                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </div>`;
         imgItem.addEventListener('click', (e) => removeCurrentImage(e, img.path));
-        
         currentImagesList.appendChild(imgItem);
     });
     
-    // Inicializar SortableJS para las imágenes actuales
     new Sortable(currentImagesList, {
         animation: 150,
         ghostClass: 'bg-indigo-200',
@@ -387,10 +362,9 @@ function renderCurrentImages(images) {
 
 function removeCurrentImage(event, path) {
     event.stopPropagation();
-    const itemToRemove = event.currentTarget;
-    itemToRemove.remove();
-    updateCurrentImagesData(); // Actualizar el dataset después de la eliminación
-    showAlert("Imagen marcada para eliminación/reordenamiento. Confirma en 'Guardar Cambios'.", 'info');
+    event.currentTarget.remove();
+    updateCurrentImagesData();
+    showAlert("Imagen marcada para eliminación. Guarda los cambios para confirmar.", 'info');
 }
 
 function updateCurrentImagesData() {
@@ -402,9 +376,7 @@ function updateCurrentImagesData() {
 }
 
 window.deleteWork = async (id, button) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar esta obra y todas sus imágenes? Esta acción es irreversible.")) {
-        return;
-    }
+    if (!confirm("¿Estás seguro de que quieres eliminar esta obra? Esta acción es irreversible.")) return;
     
     const originalText = button.textContent;
     button.textContent = "Eliminando...";
@@ -412,35 +384,19 @@ window.deleteWork = async (id, button) => {
 
     try {
         const obra = currentWorks.find(w => w.id === id);
-        if (!obra) throw new Error("Obra no encontrada localmente.");
+        if (!obra) throw new Error("Obra no encontrada.");
 
-        // 1. Eliminar de la Base de Datos
-        const { error: dbError } = await client
-            .from('productos')
-            .delete()
-            .eq('id', id);
-
+        const { error: dbError } = await client.from('productos').delete().eq('id', id);
         if (dbError) throw dbError;
 
-        // 2. Eliminar del Storage
-        const filePaths = obra.imagenes.map(img => img.path).filter(Boolean);
-
+        const filePaths = (obra.imagenes || []).map(img => img.path).filter(Boolean);
         if (filePaths.length > 0) {
-            const { error: storageError } = await client.storage
-                .from(BUCKET_NAME)
-                .remove(filePaths);
-
-            if (storageError && storageError.statusCode !== '200' && storageError.statusCode !== '404') {
-                console.warn("Error al borrar imágenes del storage:", storageError);
-                showAlert(`Obra eliminada de la DB. ADVERTENCIA: Falló el borrado de ${filePaths.length} imagen(es) del Storage.`, 'error');
-                return; 
-            }
+            const { error: storageError } = await client.storage.from(BUCKET_NAME).remove(filePaths);
+            if (storageError) console.warn("Error al borrar imágenes del storage:", storageError);
         }
 
-        showAlert("Obra y archivos eliminados exitosamente!", 'success');
+        showAlert("Obra eliminada exitosamente.", 'success');
         document.getElementById(`obra-item-${id}`).remove(); 
-        
-        // 3. Actualizar array local
         currentWorks = currentWorks.filter(w => w.id !== id);
         filterWorks(); 
 
@@ -455,34 +411,23 @@ window.deleteWork = async (id, button) => {
 
 
 // --- SORTABLEJS (DRAG & DROP) ---
-
 let sortableInstance = null;
 
 async function saveNewOrder(evt) {
-    // FUNCIÓN PARA GUARDAR AUTOMÁTICAMENTE EL ORDEN AL SOLTAR UN ITEM
     const orderUpdates = Array.from(worksList.children).map((item, index) => ({
         id: parseInt(item.dataset.id),
         orden: index 
     }));
     
     try {
-        // Mapea los updates a la estructura que requiere Supabase (objeto con id y orden)
-        const updates = orderUpdates.map(u => ({ id: u.id, orden: u.orden }));
-
-        const { error } = await client
-            .from('productos')
-            .upsert(updates); 
-
+        const { error } = await client.from('productos').upsert(orderUpdates); 
         if (error) throw error;
 
-        // Actualizar el array local para mantener sincronización
-        updates.forEach(update => {
-            const index = currentWorks.findIndex(w => w.id === update.id);
-            if (index !== -1) {
-                currentWorks[index].orden = update.orden;
-            }
+        orderUpdates.forEach(update => {
+            const work = currentWorks.find(w => w.id === update.id);
+            if (work) work.orden = update.orden;
         });
-        currentWorks.sort((a, b) => a.orden - b.orden);
+        currentWorks.sort((a, b) => (a.orden || 0) - (b.orden || 0));
 
         showAlert("Orden actualizado automáticamente.", 'success');
     } catch (error) {
@@ -492,21 +437,17 @@ async function saveNewOrder(evt) {
 }
 
 function initSortable() {
-    if (sortableInstance) {
-        sortableInstance.destroy();
-    }
-    
+    if (sortableInstance) sortableInstance.destroy();
     sortableInstance = new Sortable(worksList, {
         animation: 150,
         handle: '.drag-handle', 
         ghostClass: 'bg-indigo-100', 
-        onEnd: saveNewOrder // Llamar a la función de guardado automático
+        onEnd: saveNewOrder
     });
 }
 
 
 // --- INICIALIZACIÓN Y LISTENERS ---
-
 async function checkAuth() {
     const { data: { session } } = await client.auth.getSession();
     if (session) {
@@ -514,6 +455,21 @@ async function checkAuth() {
         await fetchWorks();
     } else {
         showLoginView();
+    }
+}
+
+function handleUrlParameters() {
+    const params = new URLSearchParams(window.location.search);
+    const workIdToEdit = params.get('edit');
+    if (workIdToEdit && currentWorks.length > 0) {
+        const workId = parseInt(workIdToEdit, 10);
+        if (currentWorks.some(w => w.id === workId)) {
+            window.editWork(workId);
+        } else {
+            console.warn(`Obra con ID ${workId} no encontrada para editar.`);
+            // Limpiar la URL para evitar confusiones
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
     }
 }
 
@@ -525,7 +481,6 @@ async function handleLogin(event) {
     try {
         const { error } = await client.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        
         await checkAuth(); 
         showAlert("¡Bienvenido!", 'success');
     } catch (error) {
@@ -550,15 +505,12 @@ document.addEventListener('DOMContentLoaded', checkAuth);
 obraForm.addEventListener('submit', handleSubmit);
 document.getElementById('login-form').addEventListener('submit', handleLogin);
 logoutButton.addEventListener('click', handleLogout);
-// ELIMINADO: saveOrderButton.addEventListener('click', saveOrder);
 document.getElementById('show-add-form-button').addEventListener('click', showAddForm);
 document.getElementById('cancel-edit-button').addEventListener('click', showWorksList);
-
 searchInput.addEventListener('input', filterWorks);
 
-
 client.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        setTimeout(checkAuth, 100);
+    if (event === 'SIGNED_OUT') {
+        window.location.reload();
     }
 });

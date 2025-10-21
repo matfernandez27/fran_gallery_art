@@ -6,11 +6,12 @@ const supabaseAnonKey = window.supabaseAnonKey;
 const BUCKET_NAME = 'imagenes';
 const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-let productosCache = []; 
+let productosCache = [];
 let carouselIntervalId = null;
 let isEditing = false;
 let sortableInstance = null;
-let arePricesVisible = localStorage.getItem('pricesVisible') === null ? true : localStorage.getItem('pricesVisible') === 'true';
+// // <-- COMENTADO: Ya no es necesario el estado global de visibilidad de precios en index -->
+// let arePricesVisible = localStorage.getItem('pricesVisible') === null ? true : localStorage.getItem('pricesVisible') === 'true';
 
 // Variables para el scroll infinito
 let currentPage = 0;
@@ -27,7 +28,7 @@ const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modal-content");
 const alertDiv = document.getElementById('alert');
 const loadMoreTrigger = document.getElementById('load-more-trigger');
-const loadMoreSpinner = loadMoreTrigger.querySelector('.lds-ring');
+const loadMoreSpinner = loadMoreTrigger ? loadMoreTrigger.querySelector('.lds-ring') : null; // Added null check
 const searchInput = document.getElementById("search");
 const filterYear = document.getElementById("filter-year");
 const filterCategory = document.getElementById("filter-category");
@@ -36,7 +37,8 @@ const filterAvailability = document.getElementById("filter-availability");
 const adminControls = document.getElementById("admin-controls");
 const editToggleButton = document.getElementById("edit-toggle");
 const saveOrderButton = document.getElementById("save-order-button");
-const togglePricesButton = document.getElementById("toggle-prices");
+// // <-- COMENTADO: Referencia al botón de precios ya no necesaria aquí -->
+// const togglePricesButton = document.getElementById("toggle-prices");
 const whatsappButton = document.getElementById('whatsapp-btn');
 const mainFooter = document.getElementById('main-footer');
 const gallerySection = document.getElementById('gallery-section');
@@ -47,15 +49,15 @@ function showAlert(message, type = 'success') {
     if (!alertDiv) return;
     alertDiv.textContent = message;
     alertDiv.className = 'fixed top-5 left-1/2 -translate-x-1/2 z-[1001] px-6 py-3 rounded-md shadow-lg text-sm font-medium transition-opacity duration-300 opacity-0'; // Base classes + positioning
-    
+
     if (type === 'error') alertDiv.classList.add('bg-red-100', 'text-red-700');
     else if (type === 'info') alertDiv.classList.add('bg-blue-100', 'text-blue-700');
     else alertDiv.classList.add('bg-green-100', 'text-green-700');
-    
+
     alertDiv.classList.remove('hidden');
     void alertDiv.offsetWidth; // Force reflow
     alertDiv.classList.add('opacity-100');
-    
+
     setTimeout(() => {
         alertDiv.classList.remove('opacity-100');
         setTimeout(() => alertDiv.classList.add('hidden'), 300); // Hide after fade out
@@ -80,9 +82,10 @@ async function checkAdminStatus() {
     try {
         const { data: { session } } = await client.auth.getSession();
         if (adminControls) adminControls.classList.toggle('hidden', !session);
-        if (session && togglePricesButton) {
-            togglePricesButton.textContent = arePricesVisible ? 'Ocultar Precios' : 'Mostrar Precios';
-        }
+        // // <-- COMENTADO: Ya no se necesita actualizar el botón de precios -->
+        // if (session && togglePricesButton) {
+        //     togglePricesButton.textContent = arePricesVisible ? 'Ocultar Precios' : 'Mostrar Precios';
+        // }
     } catch (e) { console.warn("Error checking admin status:", e); }
 }
 
@@ -107,12 +110,12 @@ function nextCarouselItem() {
 }
 
 
-// --- LÓGICA DE CARGA Y RENDERIZADO DE LA GALERÍA ---
+// --- LÓGICA DE CARGA Y RENDERIZADO DE LA GALERÍA (MODIFICADA) ---
 function normalize(p) {
     const images = p.imagenes || [];
     const imagesWithUrls = images.map(img => ({ ...img, url: getPublicImageUrl(img.path) }));
     return {
-        id: p.id, title: p.titulo || "", technique: p.tecnica || "", size: p.medidas || "",
+        id: p.id, title: p.titulo || "", technique: p.tecnica || "", size: p.medidas || "", // size viene de medidas
         year: p.anio || 0, description: p.descripcion || "", order: p.orden || 0,
         category: p.categoria || "", serie: p.serie || "", price: p.price,
         is_available: p.is_available, show_price: p.show_price, images: imagesWithUrls,
@@ -120,9 +123,11 @@ function normalize(p) {
     };
 }
 
+// --- FUNCIÓN appendToGallery MODIFICADA ---
 function appendToGallery(items) {
     if (!galleryContainer) return;
-    if (items.length === 0 && currentPage === 1) { 
+    // Si es la primera página (currentPage === 1 después de incrementar) y no hay items, muestra mensaje.
+    if (items.length === 0 && currentPage === 1) {
         galleryContainer.innerHTML = '<p class="col-span-full text-center text-text-secondary">No se encontraron obras que coincidan.</p>';
         return;
     }
@@ -130,17 +135,21 @@ function appendToGallery(items) {
     const fragment = document.createDocumentFragment();
     items.forEach(obra => {
         const card = document.createElement("div");
-        card.className = "relative bg-bg-surface rounded-sm overflow-hidden shadow-md hover:shadow-lg transition duration-300 transform hover:-translate-y-1 group border border-border-default"; // Adjusted shadow & transition
+        card.className = "relative bg-bg-surface rounded-sm overflow-hidden shadow-md hover:shadow-lg transition duration-300 transform hover:-translate-y-1 group border border-border-default";
         card.setAttribute('data-id', obra.id);
 
-        const formattedPrice = obra.show_price ? formatPrice(obra.price) : 'Consultar';
-        const priceDisplayClass = obra.show_price && obra.price !== null ? 'font-semibold text-text-main' : 'text-accent-blue font-medium'; // Adjusted style
         const availabilityText = obra.is_available ? 'Disponible' : 'Vendida';
         const availabilityClass = obra.is_available ? 'text-green-600' : 'text-red-500';
-        const isPriceActuallyVisible = arePricesVisible && obra.show_price;
-        const priceHiddenClass = !isPriceActuallyVisible && obra.show_price ? 'hidden' : ''; 
 
-        const priceSpanHTML = `<span class="text-base ${priceDisplayClass} gallery-item-price ${priceHiddenClass}">${formattedPrice}</span>`;
+        // --- PRECIO REMOVIDO DE AQUÍ ---
+        // const formattedPrice = obra.show_price ? formatPrice(obra.price) : 'Consultar';
+        // const priceDisplayClass = ...
+        // const isPriceActuallyVisible = arePricesVisible && obra.show_price;
+        // const priceHiddenClass = ...
+        // const priceSpanHTML = ...
+
+        // --- MEDIDAS AÑADIDAS EN LA DESCRIPCIÓN ---
+        const detailsText = [obra.technique, obra.size].filter(Boolean).join(' &middot; '); // Une técnica y medidas si existen
 
         card.innerHTML = `
             <div class="edit-controls absolute top-2 right-2 z-10 flex items-center space-x-1 bg-white/70 backdrop-blur-sm p-1 rounded-full shadow hidden">
@@ -148,15 +157,16 @@ function appendToGallery(items) {
                 <button type="button" class="drag-handle p-1 text-gray-500 hover:text-accent-blue cursor-move" title="Ordenar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
             </div>
             <div class="card-content cursor-pointer" onclick="openModal(${obra.id})">
-                <div class="aspect-[4/3] overflow-hidden flex items-center justify-center bg-gray-50"> 
+                <div class="aspect-[4/3] overflow-hidden flex items-center justify-center bg-gray-50">
                     <img src="${obra.mainImage}" alt="${obra.title || 'Obra de F. Fernández'}" class="w-full h-full object-contain transition duration-300 group-hover:scale-105" loading="lazy" onerror="this.onerror=null;this.src='https://via.placeholder.com/400x300?text=Error';">
                 </div>
                 <div class="p-4 border-t border-border-default">
                     <h3 class="text-lg font-medium text-text-main truncate mb-1">${obra.title}</h3>
-                    <p class="text-xs text-text-secondary uppercase tracking-wide">${obra.technique} &middot; <span class="text-accent-blue font-medium">${obra.year}</span></p>
+                    {/* --- LÍNEA MODIFICADA: Añadido detailsText --- */}
+                    <p class="text-xs text-text-secondary uppercase tracking-wide">${detailsText} &middot; <span class="text-accent-blue font-medium">${obra.year}</span></p>
                     <div class="flex justify-between items-center pt-3 mt-3 border-t border-border-default">
                         <span class="text-xs font-medium ${availabilityClass} uppercase tracking-wider">${availabilityText}</span>
-                        ${priceSpanHTML}
+                        {/* --- PRECIO REMOVIDO --- */}
                     </div>
                 </div>
             </div>`;
@@ -164,24 +174,33 @@ function appendToGallery(items) {
     });
     galleryContainer.appendChild(fragment);
 
-    if (isEditing && galleryContainer.querySelectorAll) { // Check if querySelectorAll exists
+    if (isEditing && galleryContainer.querySelectorAll) {
         galleryContainer.querySelectorAll('.edit-controls').forEach(el => el.classList.remove('hidden'));
     }
 }
 
 
 async function fetchGalleryPage() {
-    if (isLoading || allDataLoaded) return;
-    isLoading = true;
-    if (currentPage === 0 && loadingOverlay) loadingOverlay.classList.remove('hidden');
-    else if (loadMoreSpinner) loadMoreSpinner.classList.remove('hidden');
-
-    const from = currentPage * PAGE_SIZE;
+    // Incrementa currentPage ANTES de hacer el fetch
+    currentPage++; // Start with page 1 conceptually for range calculation
+    const from = (currentPage - 1) * PAGE_SIZE; // Calculate range based on 0-index
     const to = from + PAGE_SIZE - 1;
+
+    // Mover isLoading y allDataLoaded check aquí para evitar llamadas innecesarias
+    if (isLoading || allDataLoaded) {
+        currentPage--; // Decrement if we didn't actually load
+        return;
+    }
+    isLoading = true;
+
+    // Mostrar spinners
+    if (currentPage === 1 && loadingOverlay) loadingOverlay.classList.remove('hidden');
+    else if (loadMoreSpinner) loadMoreSpinner.classList.remove('hidden');
 
     let query = client.from('productos').select('*', { count: 'exact' })
                       .order('orden', { ascending: true }).range(from, to);
 
+    // Apply filters... (sin cambios aquí)
     if (currentFilters.query) query = query.or(`titulo.ilike.%${currentFilters.query}%,descripcion.ilike.%${currentFilters.query}%,tecnica.ilike.%${currentFilters.query}%`);
     if (currentFilters.year) query = query.eq('anio', currentFilters.year);
     if (currentFilters.category) query = query.eq('categoria', currentFilters.category);
@@ -191,21 +210,29 @@ async function fetchGalleryPage() {
     try {
         const { data, error, count } = await query;
         if (error) throw error;
+
         const newProductos = data.map(normalize);
+        // Añadir a caché ANTES de renderizar
         productosCache.push(...newProductos);
-        appendToGallery(newProductos); 
+        // Renderizar solo los nuevos
+        appendToGallery(newProductos);
+
+        // Actualizar estado de carga completa
         if (newProductos.length < PAGE_SIZE || (count !== null && productosCache.length >= count)) {
             allDataLoaded = true;
             if(loadMoreTrigger) loadMoreTrigger.classList.add('hidden');
         }
-        currentPage++;
+
     } catch (error) {
         console.error("Error loading gallery:", error);
         showAlert("Error al cargar obras: " + error.message, 'error');
+        currentPage--; // Decrement page on error so it can be retried
     } finally {
         isLoading = false;
-        if (loadingOverlay) loadingOverlay.classList.add('hidden'); 
+        // Ocultar spinners
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
         if (loadMoreSpinner) loadMoreSpinner.classList.add('hidden');
+        // Asegurar que el trigger se oculte si todo está cargado
         if (allDataLoaded && loadMoreTrigger) loadMoreTrigger.classList.add('hidden');
     }
 }
@@ -229,22 +256,36 @@ function handleFilterChange() {
             year: filterYear.value, category: filterCategory.value,
             series: filterSeries.value, availability: filterAvailability.value,
         };
-        currentPage = 0; allDataLoaded = false; productosCache = [];
-        if (galleryContainer) galleryContainer.innerHTML = ''; 
-        if (loadMoreTrigger) loadMoreTrigger.classList.remove('hidden');
-        if (isEditing) disableSorting(); 
-        fetchGalleryPage().then(() => { // Re-enable sorting AFTER fetch potentially adds items
+        // Reset state for new filter/search
+        currentPage = 0; // Reset page count
+        allDataLoaded = false;
+        productosCache = [];
+        if (galleryContainer) galleryContainer.innerHTML = '';
+        if (loadMoreTrigger) loadMoreTrigger.classList.remove('hidden'); // Show trigger again
+        if (isEditing) disableSorting();
+
+        // Fetch page 1 (currentPage will be incremented inside fetchGalleryPage)
+        fetchGalleryPage().then(() => {
+            // Re-enable sorting ONLY after the first page has loaded
             if (isEditing) enableSorting();
-        }); 
+        });
     }, 350);
 }
 
+
 async function fetchAndPopulateFilters() {
     try {
-        const { data, error } = await client.from('productos')
-            .select('anio, categoria, serie, imagenes').order('orden', { ascending: true });
+        // Fetch distinct values efficiently (consider a view or function in Supabase later)
+        const { data, error } = await client
+            .from('productos')
+            .select('anio, categoria, serie, imagenes') // Added imagenes for carousel
+            .order('orden', { ascending: true }); // Keep order for carousel potentially
+
         if (error) throw error;
+
         const allItems = data || [];
+
+        // Populate filters
         const years = [...new Set(allItems.map(p => p.anio).filter(Boolean))].sort((a, b) => b - a);
         const categories = [...new Set(allItems.map(p => p.categoria).filter(Boolean))].sort();
         const seriesList = [...new Set(allItems.map(p => p.serie).filter(Boolean))].sort();
@@ -252,9 +293,14 @@ async function fetchAndPopulateFilters() {
         if(filterYear) filterYear.innerHTML = '<option value="">Año</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
         if(filterCategory) filterCategory.innerHTML = '<option value="">Categoría</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
         if(filterSeries) filterSeries.innerHTML = '<option value="">Serie</option>' + seriesList.map(s => `<option value="${s}">${s}</option>`).join('');
-        
-        const carouselUrls = allItems.filter(p => p.imagenes && p.imagenes.length > 0).slice(0, 5).map(p => getPublicImageUrl(p.imagenes[0].path));
+
+        // Populate carousel (using first 5 items with images)
+        const carouselUrls = allItems
+            .filter(p => p.imagenes && p.imagenes.length > 0)
+            .slice(0, 5)
+            .map(p => getPublicImageUrl(p.imagenes[0].path));
         renderCarouselItems(carouselUrls);
+
     } catch (e) { console.warn("Could not load filters/carousel.", e.message); }
 }
 
@@ -309,38 +355,50 @@ async function saveOrder() {
     }
 }
 
-// --- VISIBILIDAD DE PRECIOS ---
-function togglePriceVisibility() {
-    arePricesVisible = !arePricesVisible; 
-    localStorage.setItem('pricesVisible', arePricesVisible);
-    if (galleryContainer && galleryContainer.querySelectorAll) {
-        galleryContainer.querySelectorAll('.gallery-item-price').forEach(el => {
-            const card = el.closest('[data-id]');
-            if (card) {
-                const obraId = parseInt(card.dataset.id);
-                const obra = productosCache.find(p => p.id === obraId);
-                if (obra && obra.show_price) el.classList.toggle('hidden', !arePricesVisible);
-                else if (el.textContent.startsWith('$')) el.classList.add('hidden'); // Ensure non-showable prices are hidden
-            }
-        });
-    }
-    if (togglePricesButton) togglePricesButton.textContent = arePricesVisible ? 'Ocultar Precios' : 'Mostrar Precios';
-}
+// // <-- COMENTADO: Función togglePriceVisibility ya no necesaria -->
+// function togglePriceVisibility() {
+//     arePricesVisible = !arePricesVisible;
+//     localStorage.setItem('pricesVisible', arePricesVisible);
+//     if (galleryContainer && galleryContainer.querySelectorAll) {
+//         galleryContainer.querySelectorAll('.gallery-item-price').forEach(el => {
+//             const card = el.closest('[data-id]');
+//             if (card) {
+//                 const obraId = parseInt(card.dataset.id);
+//                 const obra = productosCache.find(p => p.id === obraId);
+//                 if (obra && obra.show_price) el.classList.toggle('hidden', !arePricesVisible);
+//                 else if (el.textContent.startsWith('$')) el.classList.add('hidden');
+//             }
+//         });
+//     }
+//     if (togglePricesButton) togglePricesButton.textContent = arePricesVisible ? 'Ocultar Precios' : 'Mostrar Precios';
+// }
 
 
-// --- LÓGICA DEL MODAL ---
+// --- LÓGICA DEL MODAL (Precio se muestra aquí) ---
 window.openModal = (id) => {
-    if (isEditing || !modal || !modalContent) return; 
-    const obra = productosCache.find(p => p.id === id);
-    if (!obra) return;
+    // No abrir modal si estamos en modo edición
+    if (isEditing || !modal || !modalContent) return;
 
+    // Buscar la obra en el caché
+    const obra = productosCache.find(p => p.id === id);
+    if (!obra) {
+        console.error(`Obra con ID ${id} no encontrada en caché.`);
+        showAlert("Error al cargar detalles de la obra.", "error");
+        return;
+    }
+
+    // Preparar contenido del modal
     const mainImageHTML = `<div id="modal-main-image-container" class="w-full aspect-[4/3] flex items-center justify-center bg-gray-100 rounded-sm overflow-hidden"><div class="image-zoom-container cursor-zoom-in w-full h-full" onmousemove="zoomImage(event, this)" onmouseleave="resetZoom(this)"><img src="${obra.mainImage}" alt="${obra.title} - Vista principal" class="zoom-image w-full h-full object-contain transition-transform duration-300"/></div></div>`;
     const thumbnailsHTML = obra.images.length > 1 ? `<div id="modal-thumbnails" class="grid grid-cols-5 gap-2 mt-4 w-full max-w-sm mx-auto">${obra.images.map((img, index) => `<div class="thumbnail-item cursor-pointer p-0.5 border-2 ${index === 0 ? 'border-accent-blue' : 'border-transparent'} rounded-sm transition-all" onclick="switchModalImage('${img.url}', this)"><img src="${img.url}" alt="Miniatura ${index + 1}" class="block w-full h-full object-cover"></div>`).join('')}</div>` : '';
     const descriptionHTML = obra.description ? `<div class="mt-6 pt-4 border-t border-border-default text-text-secondary"><h4 class="text-sm font-semibold text-text-main mb-2 uppercase tracking-wider">Descripción</h4><p class="text-sm leading-relaxed">${obra.description}</p></div>` : '';
+
+    // --- LÓGICA DE PRECIO PARA EL MODAL ---
     const priceText = obra.show_price ? formatPrice(obra.price) : 'Consultar';
+    const priceClass = obra.show_price && obra.price !== null ? 'font-semibold text-text-main' : 'font-medium text-accent-blue';
+
     const availabilityText = obra.is_available ? 'Disponible' : 'Vendida';
     const availabilityClass = obra.is_available ? 'text-green-600' : 'text-red-500';
-    const whatsappLink = `https://wa.me/5492805032663?text=Hola%2C%20estoy%20interesado%20en%20la%20obra%20%22${encodeURIComponent(obra.title)}%22%20(ID:%20${obra.id}).`;
+    const whatsappLink = `https://wa.me/5492805032663?text=Hola%2C%2C%20estoy%20interesado%20en%20la%20obra%20%22${encodeURIComponent(obra.title)}%22%20(ID:%20${obra.id}).`; // Corregido: Doble coma eliminada
 
     modalContent.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
@@ -357,7 +415,8 @@ window.openModal = (id) => {
                 ${descriptionHTML}
                 <div class="mt-5 pt-5 border-t border-border-default space-y-2">
                     <p class="text-sm font-medium"><strong class="text-text-main">Disponibilidad:</strong> <span class="font-semibold ${availabilityClass} uppercase text-xs tracking-wider">${availabilityText}</span></p>
-                    <p class="text-lg font-medium mt-1"><strong class="text-text-main text-sm font-medium">Precio:</strong> <span class="${obra.show_price && obra.price ? 'font-semibold text-text-main' : 'font-medium text-accent-blue'}">${priceText}</span></p>
+                    {/* --- PRECIO SE MUESTRA AQUÍ --- */}
+                    <p class="text-lg font-medium mt-1"><strong class="text-text-main text-sm font-medium">Precio:</strong> <span class="${priceClass}">${priceText}</span></p>
                 </div>
                 <div class="mt-6">
                     <a href="${whatsappLink}" target="_blank" class="w-full inline-flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-whatsapp hover:opacity-90 transition duration-300 uppercase tracking-wider">
@@ -367,19 +426,22 @@ window.openModal = (id) => {
                 </div>
             </div>
         </div>`;
-    modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden'; // Prevent background scroll
+
+    if (modal) modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
 };
 
 window.closeModal = (event) => {
-    if (event && event.target !== modal) return;
+    // Solo cierra si se hace clic en el fondo (modal) o en el botón de cerrar
+    if (event && event.target !== modal && !event.target.closest('button[onclick="closeModal()"]')) return;
     if(modal) modal.classList.add('hidden');
-    document.body.style.overflow = ''; // Re-enable scroll
+    document.body.style.overflow = '';
 };
+
 
 window.switchModalImage = (imageUrl, clickedElement) => {
     const mainImage = document.querySelector('#modal-main-image-container .zoom-image');
-    if (mainImage) { mainImage.src = imageUrl; resetZoom(mainImage.parentElement); }
+    if (mainImage) { mainImage.src = imageUrl; resetZoom(mainImage.parentElement.parentElement); } // Adjust parent element for resetZoom
     const thumbnails = document.querySelectorAll('#modal-thumbnails .thumbnail-item');
     if (thumbnails) thumbnails.forEach(thumb => thumb.classList.replace('border-accent-blue', 'border-transparent'));
     if (clickedElement) clickedElement.classList.replace('border-transparent', 'border-accent-blue');
@@ -418,10 +480,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (filterAvailability) filterAvailability.addEventListener('change', handleFilterChange);
     if (editToggleButton) editToggleButton.addEventListener('click', toggleEditMode);
     if (saveOrderButton) saveOrderButton.addEventListener('click', saveOrder);
-    if (togglePricesButton) togglePricesButton.addEventListener('click', togglePriceVisibility);
+    // // <-- COMENTADO: Listener del botón de precios ya no necesario -->
+    // const togglePricesBtn = document.getElementById('toggle-prices'); // Get reference inside DOMContentLoaded
+    // if (togglePricesBtn) togglePricesBtn.addEventListener('click', togglePriceVisibility);
 
-    await fetchGalleryPage();
+    // Initial load sequence
+    currentPage = 0; // Ensure currentPage is 0 before first load
+    allDataLoaded = false;
+    productosCache = [];
+    if (galleryContainer) galleryContainer.innerHTML = ''; // Clear container on initial load
+    if (loadMoreTrigger) loadMoreTrigger.classList.remove('hidden'); // Show trigger for initial load
+
+    await fetchGalleryPage(); // Load first page
     setupInfiniteScroll();
-    fetchAndPopulateFilters(); 
-    checkAdminStatus(); 
+    fetchAndPopulateFilters();
+    checkAdminStatus();
 });

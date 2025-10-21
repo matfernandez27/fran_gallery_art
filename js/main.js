@@ -10,6 +10,7 @@ let productosCache = []; // Caché para guardar los detalles de las obras cargad
 let carouselIntervalId = null;
 let isEditing = false;
 let sortableInstance = null;
+let arePricesVisible = true; // <-- 1. VARIABLE AÑADIDA
 
 // Variables para el scroll infinito
 let currentPage = 0;
@@ -39,6 +40,7 @@ const filterAvailability = document.getElementById("filter-availability");
 const adminControls = document.getElementById("admin-controls");
 const editToggleButton = document.getElementById("edit-toggle");
 const saveOrderButton = document.getElementById("save-order-button");
+const togglePricesButton = document.getElementById("toggle-prices"); // <-- 2. ELEMENTO AÑADIDO
 
 // Elementos de interacción dinámica
 const whatsappButton = document.getElementById('whatsapp-btn');
@@ -152,6 +154,12 @@ function appendToGallery(items) {
         const availabilityText = obra.is_available ? 'Disponible' : 'Vendida';
         const availabilityClass = obra.is_available ? 'text-green-600' : 'text-red-500';
 
+        // <-- 3. LÍNEA DEL PRECIO ACTUALIZADA -->
+        const priceSpanHTML = `
+            <span class="text-lg ${priceDisplayClass} gallery-item-price ${!arePricesVisible ? 'hidden' : ''}">
+                ${formattedPrice}
+            </span>`;
+
         card.innerHTML = `
             <div class="edit-controls absolute top-2 right-2 z-10 flex items-center space-x-2 bg-white/80 backdrop-blur-sm p-1 rounded-full shadow-md hidden">
                 <a href="./admin.html?edit=${obra.id}" target="_blank" class="edit-link text-gray-600 hover:text-indigo-600" title="Editar Obra">
@@ -173,8 +181,7 @@ function appendToGallery(items) {
                     <p class="text-sm text-text-muted">${obra.technique} · <span class="text-pantone-magenta font-semibold">${obra.year}</span></p>
                     <div class="flex justify-between items-center pt-2 mt-2 border-t border-border-light">
                         <span class="text-xs font-semibold ${availabilityClass}">${availabilityText}</span>
-                        <span class="text-lg ${priceDisplayClass}">${formattedPrice}</span>
-                    </div>
+                        ${priceSpanHTML} </div>
                 </div>
             </div>`;
         fragment.appendChild(card);
@@ -264,18 +271,12 @@ function handleFilterChange() {
         galleryContainer.innerHTML = '';
         loadMoreTrigger.classList.remove('hidden');
         
-        // Si el modo edición está activo, hay que desactivarlo (y destruir la instancia)
-        // antes de limpiar el HTML, para evitar errores.
         if (isEditing) {
             disableSorting();
         }
         
         fetchGalleryPage();
         
-        // Si estábamos en modo edición, lo reactivamos para los nuevos items.
-        // (La carga de 'fetchGalleryPage' es asíncrona, pero 'enableSorting'
-        // se puede llamar síncronamente aquí, ya que 'appendToGallery'
-        // habrá sido llamada dentro de 'fetchGalleryPage' antes de que esto importe)
         if (isEditing) {
             enableSorting();
         }
@@ -333,17 +334,16 @@ function toggleEditMode() {
 
 function enableSorting() {
     if (sortableInstance) disableSorting();
-    // Asegurarse de que el contenedor existe
     if (!galleryContainer) {
         console.error("No se encontró el galleryContainer para activar el ordenamiento.");
         return;
     }
     sortableInstance = new Sortable(galleryContainer, {
         animation: 150,
-        handle: '.drag-handle', // El elemento que activa el arrastre
-        ghostClass: 'sortable-ghost', // La clase CSS para el fantasma
+        handle: '.drag-handle', 
+        ghostClass: 'sortable-ghost', 
         onUpdate: () => {
-            saveOrderButton.disabled = false; // Activa el botón de guardar al reordenar
+            saveOrderButton.disabled = false; 
         },
     });
 }
@@ -355,24 +355,18 @@ function disableSorting() {
     }
 }
 
-// --- ESTA ES LA FUNCIÓN CORREGIDA ---
 async function saveOrder() {
     if (!sortableInstance) return;
     
     saveOrderButton.textContent = "Guardando...";
     saveOrderButton.disabled = true;
 
-    // Obtener el nuevo orden desde el DOM
     const orderedItems = Array.from(galleryContainer.children).map((card, index) => ({
         id: parseInt(card.dataset.id),
         orden: index,
     }));
 
     try {
-        // --- INICIO DE LA CORRECCIÓN ---
-        // En lugar de un 'upsert' masivo, iteramos y enviamos
-        // una actualización explícita por cada item.
-        // Esto evita el error de "not-null constraint"
         for (const item of orderedItems) {
             const { error } = await client
                 .from('productos')
@@ -380,13 +374,10 @@ async function saveOrder() {
                 .eq('id', item.id);           // Donde el 'id' coincida
 
             if (error) {
-                // Si un item falla, detenemos todo y mostramos el error
                 throw error;
             }
         }
-        // --- FIN DE LA CORRECCIÓN ---
         
-        // Actualizar el caché local para que los filtros funcionen correctamente
         orderedItems.forEach(item => {
             const product = productosCache.find(p => p.id === item.id);
             if(product) product.order = item.orden;
@@ -400,9 +391,22 @@ async function saveOrder() {
         showAlert(`Error al guardar: ${error.message}`, 'error');
     } finally {
         saveOrderButton.textContent = "Guardar Orden";
-        // El botón de guardar se mantiene deshabilitado hasta un nuevo cambio
         saveOrderButton.disabled = true; 
     }
+}
+
+// --- 4. FUNCIÓN NUEVA AÑADIDA ---
+function togglePriceVisibility() {
+    arePricesVisible = !arePricesVisible; // Invierte el estado
+    
+    // Selecciona todos los elementos de precio en la galería
+    const allPriceElements = document.querySelectorAll('.gallery-item-price');
+    allPriceElements.forEach(el => {
+        el.classList.toggle('hidden', !arePricesVisible);
+    });
+
+    // Actualiza el texto del botón
+    togglePricesButton.textContent = arePricesVisible ? 'Ocultar Precios' : 'Mostrar Precios';
 }
 
 
@@ -436,7 +440,7 @@ window.openModal = (id) => {
     const priceText = obra.show_price ? formatPrice(obra.price) : 'Consultar';
     const availabilityText = obra.is_available ? 'Disponible' : 'Vendida';
     const availabilityClass = obra.is_available ? 'text-green-600' : 'text-red-500';
-    const whatsappLink = `https://wa.me/54928050303?text=Hola%2C%20estoy%20interesado%20en%20la%20obra%20%22${encodeURIComponent(obra.title)}%22%20(ID:%20${obra.id}).%20Me%20gustar%C3%ADa%20consultar%20sobre%20ella.`;
+    const whatsappLink = `https://wa.me/5492805032663?text=Hola%2C%20estoy%20interesado%20en%20la%20obra%20%22${encodeURIComponent(obra.title)}%22%20(ID:%20${obra.id}).%20Me%20gustar%C3%ADa%20consultar%20sobre%20ella.`;
 
     modalContent.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -541,6 +545,7 @@ filterSeries.addEventListener('change', handleFilterChange);
 filterAvailability.addEventListener('change', handleFilterChange); 
 editToggleButton.addEventListener('click', toggleEditMode);
 saveOrderButton.addEventListener('click', saveOrder);
+togglePricesButton.addEventListener('click', togglePriceVisibility); // <-- 5. LISTENER AÑADIDO
 
 
 // --- INICIALIZACIÓN DE LA APLICACIÓN ---

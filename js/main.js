@@ -51,7 +51,7 @@ function showAlert(message, type = 'success') {
     alertDiv.textContent = message;
     alertDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-blue-100', 'text-blue-700');
     if (type === 'error') {
-        alertDiv.classList.add('bg-red-100', 'text-red-7col-span-full');
+        alertDiv.classList.add('bg-red-100', 'text-red-700');
     } else if (type === 'info') {
         alertDiv.classList.add('bg-blue-100', 'text-blue-700');
     } else {
@@ -264,7 +264,6 @@ function handleFilterChange() {
         galleryContainer.innerHTML = '';
         loadMoreTrigger.classList.remove('hidden');
         
-        // --- REPARACIÓN: DESACTIVAR SORTABLE ANTES DE LIMPIAR ---
         // Si el modo edición está activo, hay que desactivarlo (y destruir la instancia)
         // antes de limpiar el HTML, para evitar errores.
         if (isEditing) {
@@ -273,8 +272,10 @@ function handleFilterChange() {
         
         fetchGalleryPage();
         
-        // --- REPARACIÓN: REACTIVAR SORTABLE DESPUÉS DE FILTRAR ---
         // Si estábamos en modo edición, lo reactivamos para los nuevos items.
+        // (La carga de 'fetchGalleryPage' es asíncrona, pero 'enableSorting'
+        // se puede llamar síncronamente aquí, ya que 'appendToGallery'
+        // habrá sido llamada dentro de 'fetchGalleryPage' antes de que esto importe)
         if (isEditing) {
             enableSorting();
         }
@@ -354,6 +355,7 @@ function disableSorting() {
     }
 }
 
+// --- ESTA ES LA FUNCIÓN CORREGIDA ---
 async function saveOrder() {
     if (!sortableInstance) return;
     
@@ -367,9 +369,22 @@ async function saveOrder() {
     }));
 
     try {
-        // Actualizar la base de datos (Supabase)
-        const { error } = await client.from('productos').upsert(orderedItems);
-        if (error) throw error;
+        // --- INICIO DE LA CORRECCIÓN ---
+        // En lugar de un 'upsert' masivo, iteramos y enviamos
+        // una actualización explícita por cada item.
+        // Esto evita el error de "not-null constraint"
+        for (const item of orderedItems) {
+            const { error } = await client
+                .from('productos')
+                .update({ orden: item.orden }) // Actualiza SOLO la columna 'orden'
+                .eq('id', item.id);           // Donde el 'id' coincida
+
+            if (error) {
+                // Si un item falla, detenemos todo y mostramos el error
+                throw error;
+            }
+        }
+        // --- FIN DE LA CORRECCIÓN ---
         
         // Actualizar el caché local para que los filtros funcionen correctamente
         orderedItems.forEach(item => {
@@ -379,11 +394,14 @@ async function saveOrder() {
         productosCache.sort((a, b) => a.order - b.order);
 
         showAlert("¡Orden guardado exitosamente!", 'success');
+
     } catch (error) {
         console.error("Error al guardar el orden:", error);
         showAlert(`Error al guardar: ${error.message}`, 'error');
     } finally {
         saveOrderButton.textContent = "Guardar Orden";
+        // El botón de guardar se mantiene deshabilitado hasta un nuevo cambio
+        saveOrderButton.disabled = true; 
     }
 }
 
@@ -418,7 +436,7 @@ window.openModal = (id) => {
     const priceText = obra.show_price ? formatPrice(obra.price) : 'Consultar';
     const availabilityText = obra.is_available ? 'Disponible' : 'Vendida';
     const availabilityClass = obra.is_available ? 'text-green-600' : 'text-red-500';
-    const whatsappLink = `https://wa.me/5492805032663?text=Hola%2C%20estoy%20interesado%20en%20la%20obra%20%22${encodeURIComponent(obra.title)}%22%20(ID:%20${obra.id}).%20Me%20gustar%C3%ADa%20consultar%20sobre%20ella.`;
+    const whatsappLink = `https://wa.me/54928050303?text=Hola%2C%20estoy%20interesado%20en%20la%20obra%20%22${encodeURIComponent(obra.title)}%22%20(ID:%20${obra.id}).%20Me%20gustar%C3%ADa%20consultar%20sobre%20ella.`;
 
     modalContent.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">

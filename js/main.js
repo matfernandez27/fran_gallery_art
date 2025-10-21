@@ -75,10 +75,6 @@ async function checkAdminStatus() {
     try {
         const { data: { session } } = await client.auth.getSession();
         if (adminControls) adminControls.classList.toggle('hidden', !session);
-        // Comentado: No hay botón de precios que actualizar
-        // if (session && togglePricesButton) {
-        //     togglePricesButton.textContent = arePricesVisible ? 'Ocultar Precios' : 'Mostrar Precios';
-        // }
     } catch (e) { console.warn("Error checking admin status:", e); }
 }
 
@@ -114,7 +110,7 @@ function normalize(p) {
     };
 }
 
-// --- appendToGallery CORREGIDA ---
+// --- appendToGallery CON COMENTARIOS ELIMINADOS ---
 function appendToGallery(items) {
     if (!galleryContainer) return;
     if (items.length === 0 && currentPage === 1) {
@@ -131,9 +127,8 @@ function appendToGallery(items) {
         const availabilityText = obra.is_available ? 'Disponible' : 'Vendida';
         const availabilityClass = obra.is_available ? 'text-green-600' : 'text-red-500';
 
-        // --- CORREGIDO: Formato de detailsText ---
-        const detailsParts = [obra.technique, obra.size].filter(Boolean); // Filtra partes vacías
-        const detailsText = detailsParts.join(' &middot; '); // Une con separador
+        const detailsParts = [obra.technique, obra.size].filter(Boolean);
+        const detailsText = detailsParts.join(' &middot; ');
 
         card.innerHTML = `
             <div class="edit-controls absolute top-2 right-2 z-10 flex items-center space-x-1 bg-white/70 backdrop-blur-sm p-1 rounded-full shadow hidden">
@@ -146,13 +141,12 @@ function appendToGallery(items) {
                 </div>
                 <div class="p-4 border-t border-border-default">
                     <h3 class="text-lg font-medium text-text-main truncate mb-1">${obra.title}</h3>
-                    {/* --- CORREGIDO: Línea de detalles --- */}
                     <p class="text-xs text-text-secondary uppercase tracking-wide">
                         ${detailsText ? `${detailsText} &middot; ` : ''}<span class="text-accent-blue font-medium">${obra.year}</span>
                     </p>
                     <div class="flex justify-between items-center pt-3 mt-3 border-t border-border-default">
                         <span class="text-xs font-medium ${availabilityClass} uppercase tracking-wider">${availabilityText}</span>
-                        </div>
+                    </div>
                 </div>
             </div>`;
         fragment.appendChild(card);
@@ -164,7 +158,7 @@ function appendToGallery(items) {
     }
 }
 
-// --- fetchGalleryPage (Sin cambios funcionales, pero revisada) ---
+
 async function fetchGalleryPage() {
     currentPage++;
     const from = (currentPage - 1) * PAGE_SIZE;
@@ -206,7 +200,7 @@ async function fetchGalleryPage() {
     }
 }
 
-// --- setupInfiniteScroll (Sin cambios) ---
+
 function setupInfiniteScroll() {
     if (!loadMoreTrigger) return;
     const observer = new IntersectionObserver((entries) => {
@@ -215,7 +209,7 @@ function setupInfiniteScroll() {
     observer.observe(loadMoreTrigger);
 }
 
-// --- handleFilterChange (Sin cambios) ---
+
 function handleFilterChange() {
     clearTimeout(filterDebounceTimer);
     filterDebounceTimer = setTimeout(() => {
@@ -232,7 +226,7 @@ function handleFilterChange() {
     }, 350);
 }
 
-// --- fetchAndPopulateFilters (Sin cambios) ---
+
 async function fetchAndPopulateFilters() {
     try {
         const { data, error } = await client.from('productos')
@@ -252,7 +246,7 @@ async function fetchAndPopulateFilters() {
     } catch (e) { console.warn("Could not load filters/carousel.", e.message); }
 }
 
-// --- MODO EDICIÓN (Sin cambios funcionales) ---
+
 function toggleEditMode() {
     isEditing = !isEditing;
     if (editToggleButton) editToggleButton.textContent = isEditing ? 'Salir Edición' : 'Activar Edición';
@@ -282,10 +276,7 @@ async function saveOrder() {
     } finally { if (saveOrderButton) { saveOrderButton.textContent = "Guardar Orden"; saveOrderButton.disabled = true; } }
 }
 
-// --- VISIBILIDAD DE PRECIOS (Función comentada, ya no se usa) ---
-// function togglePriceVisibility() { ... }
-
-// --- LÓGICA DEL MODAL (CORREGIDO Comentario) ---
+// --- LÓGICA DEL MODAL (CON COMENTARIOS ELIMINADOS) ---
 window.openModal = (id) => {
     if (isEditing || !modal || !modalContent) return;
     const obra = productosCache.find(p => p.id === id);
@@ -376,18 +367,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (filterAvailability) filterAvailability.addEventListener('change', handleFilterChange);
     if (editToggleButton) editToggleButton.addEventListener('click', toggleEditMode);
     if (saveOrderButton) saveOrderButton.addEventListener('click', saveOrder);
-    // Comentado: Listener del botón de precios ya no necesario
-    // const togglePricesBtn = document.getElementById('toggle-prices');
-    // if (togglePricesBtn) togglePricesBtn.addEventListener('click', togglePriceVisibility);
+    // const togglePricesBtn = document.getElementById('toggle-prices'); // Comentado
+    // if (togglePricesBtn) togglePricesBtn.addEventListener('click', togglePriceVisibility); // Comentado
 
-    // Initial load sequence
-    currentPage = 0;
-    allDataLoaded = false;
-    productosCache = [];
+    currentPage = 0; allDataLoaded = false; productosCache = [];
     if (galleryContainer) galleryContainer.innerHTML = '';
     if (loadMoreTrigger) loadMoreTrigger.classList.remove('hidden');
 
-    await fetchGalleryPage(); // Load first page
+    await fetchGalleryPage();
     setupInfiniteScroll();
     fetchAndPopulateFilters();
     checkAdminStatus();

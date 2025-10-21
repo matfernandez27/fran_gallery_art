@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Biografía | Francisco Fernández</title> <script src="https://cdn.tailwindcss.com"></script>
+    <title>Biografía | Francisco Fernández - Artista Patagónico</title> <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'accent-blue': '#7BA4C0',
-                        'text-main': '#5A6349',
-                        'text-secondary': '#6B7280',
-                        'bg-main': '#F9FAFB',
-                        'bg-surface': '#FFFFFF',
-                        'border-default': '#E5E7EB',
+                        'accent-blue': '#7BA4C0',    // Granada Sky
+                        'text-main': '#5A6349',      // Kale
+                        'text-secondary': '#6B7280', // Gray 500
+                        'bg-main': '#F9FAFB',        // Gray 50
+                        'bg-surface': '#FFFFFF',     // White
+                        'border-default': '#E5E7EB', // Gray 200
                         'whatsapp': '#25D366',
                     },
                     fontFamily: {
@@ -29,9 +29,27 @@
     <style>
         body { background-color: #F9FAFB; color: #5A6349; } /* bg-main, text-main */
         ::selection { background-color: #7BA4C0; color: #FFFFFF; }
-        .divider-line { width: 4rem; height: 1px; } 
-        /* Botón estilo admin */
+        .divider-line { width: 4rem; height: 1px; background-color: #7BA4C0; } /* accent-blue */
+        
+        /* Estilo para los encabezados de sección */
+        .section-heading {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.875rem; /* text-3xl */
+            letter-spacing: 0.05em; /* tracking-wide */
+            color: #5A6349; /* text-main */
+            margin-bottom: 1rem; /* mb-4 */
+            margin-top: 2.5rem; /* mt-10 */
+            padding-bottom: 0.5rem; /* pb-2 */
+            border-bottom: 1px solid #E5E7EB; /* border-default */
+        }
+        .section-heading:first-of-type {
+             margin-top: 0; /* Sin margen superior para el primer título */
+             border-top: none;
+        }
+
+         /* Estilo botones */
          .action-button {
+            display: inline-block; /* Asegura que funcione el text-align */
             padding: 0.75rem 1.5rem; /* py-3 px-6 */
             border-radius: 0.125rem; /* rounded-sm */
             text-transform: uppercase;
@@ -47,38 +65,53 @@
 </head>
 <body class="bg-bg-main text-text-main font-sans min-h-screen"> 
 
-    <main class="py-24"> 
-        <div class="max-w-3xl mx-auto px-6 bg-bg-surface p-10 md:p-16 rounded-lg shadow-xl border border-border-default"> 
+    <main class="py-24"> {/* Padding vertical aumentado */}
+        <div class="max-w-3xl mx-auto px-6 bg-bg-surface p-10 md:p-16 rounded-lg shadow-lg border border-border-default"> {/* Sombra más suave */}
             
-            <a href="./index.html" class="text-sm uppercase tracking-wider font-semibold text-text-secondary hover:text-accent-blue transition-colors duration-300 mb-10 inline-block"> 
-                ← Volver a la Galería
-            </a>
+            <header class="mb-10"> {/* Encabezado semántico */}
+                <a href="./index.html" class="text-xs uppercase tracking-wider font-semibold text-text-secondary hover:text-accent-blue transition-colors duration-300 inline-block mb-6"> 
+                    ← Volver a la Galería
+                </a>
+                <h1 class="text-4xl md:text-5xl font-display tracking-wider text-text-main"> 
+                    Francisco Fernández
+                </h1>
+                <div class="divider-line mt-3 mb-1"></div> 
+                <p class="text-lg text-text-secondary font-light">Artista Visual Patagónico</p>
+            </header>
 
-            <h1 class="text-4xl md:text-5xl font-display tracking-wide text-text-main mb-4 mt-2"> 
-                Biografía
-            </h1>
-            <div class="divider-line bg-accent-blue mb-12"></div> 
-            
-            <article class="prose prose-lg prose-headings:font-display prose-headings:tracking-wide prose-headings:text-text-main prose-p:text-text-main prose-strong:text-text-main prose-a:text-accent-blue max-w-none space-y-6"> 
-                <p>
-                    Francisco Fernández, nacido en Trelew, Chubut, en octubre del año 1991. Es un artista con más de 10 muestras individuales, y más de 25 exposiciones grupales y colectivas, tanto en espacios formales como Museos, galerías, y otros espacios culturales.
-                </p>
-                <p>
-                    Sus obras exploran diversas técnicas como el grabado, dibujo, pintura, objetos escultóricos y el arte gráfico, donde todo eso teje un diálogo visual potente, contrastando la vastedad del paisaje patagónico con la experiencia urbana moderna. Y a través de ellas, logra capturar la textura y el silencio de la estepa, fusionándolos con la energía de la vida actual.
-                </p>
-                <p>
-                    A lo largo de su carrera, Francisco ha desarrollado un estilo que es inconfundiblemente suyo, utilizando paletas de colores que van desde los tonos terrosos y azules apagados hasta explosiones de colores vibrantes que representan la dualidad de su entorno y la profundidad de sus emociones.
-                </p>
-                <p class="text-accent-blue font-semibold pt-6 border-t border-border-default"> 
-                    Cada pieza es un puente hacia lo inhóspito y lo íntimo. Su técnica no solo captura la dualidad de un paisaje vasto, sino que también ofrece una mirada profunda y reflexiva sobre el alma de ese territorio, invitando al espectador a una introspección.
-                </p>
+            <article class="space-y-8 text-base leading-relaxed"> {/* Contenedor principal del texto, espacio aumentado */}
+                
+                <section>
+                    <h2 class="section-heading">Orígenes y Trayectoria</h2>
+                    <p>
+                        Nacido en Trelew, Chubut, en octubre del año 1991. Francisco Fernández es un artista con una sólida presencia en la escena artística, acumulando más de 10 muestras individuales y participando en más de 25 exposiciones grupales y colectivas. Su trabajo ha sido exhibido tanto en espacios formales como Museos y galerías, así como en diversos centros culturales a lo largo del país.
+                    </p>
+                </section>
+
+                <section>
+                     <h2 class="section-heading">Técnica y Estilo</h2>
+                     <p>
+                        Las obras de Fernández exploran un amplio espectro de técnicas, incluyendo el grabado, dibujo, pintura, objetos escultóricos y arte gráfico. A través de ellas, teje un diálogo visual potente que contrasta la inmensidad y crudeza del paisaje patagónico con la dinámica de la experiencia urbana moderna. Logra capturar la textura áspera y el silencio profundo de la estepa, fusionándolos con la energía vibrante de la vida contemporánea.
+                    </p>
+                    <p>
+                        A lo largo de su carrera, ha desarrollado un estilo distintivo. Utiliza paletas de colores que oscilan entre tonos terrosos y azules apagados —evocando la calma del sur— y explosiones de colores vibrantes que representan la dualidad de su entorno y la profundidad de sus reflexiones emocionales.
+                    </p>
+                </section>
+               
+                <section>
+                     <h2 class="section-heading">Enfoque Artístico</h2>
+                    <p class="text-accent-blue font-medium italic text-lg leading-relaxed pt-4 border-t border-border-default mt-6"> {/* Texto destacado */}
+                        "Cada pieza es un puente hacia lo inhóspito y lo íntimo. Mi técnica busca no solo capturar la dualidad de un paisaje vasto, sino también ofrecer una mirada profunda y reflexiva sobre el alma de ese territorio, invitando al espectador a una introspección."
+                    </p>
+                </section>
+
             </article> 
             
-            <div class="mt-16 text-center"> 
+            <footer class="mt-16 text-center border-t border-border-default pt-10"> {/* Footer semántico */}
                 <a href="./index.html#gallery-section" class="action-button action-button-primary"> 
-                    Ver Catálogo de Obras
+                    Explorar Obras
                 </a>
-            </div>
+            </footer>
         </div>
     </main>
 </body>

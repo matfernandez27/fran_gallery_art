@@ -32,15 +32,18 @@
                     },
                     fontFamily: {
                         'sans': ['Inter', 'system-ui', 'sans-serif'],
+                        'display': ['Bebas Neue', 'sans-serif'] 
                     }
                 }
             }
         }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script> <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="config.js"></script> 
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     
     <style>
         /* Estilos del Overlay de Carga (Spinner) */
@@ -193,10 +196,12 @@
         <div class="carousel-overlay"></div>
 
         <div class="text-center max-w-4xl mx-auto px-6 z-10">
-            <h1 class="text-6xl md:text-8xl font-light text-text-dark mb-8 tracking-tight">
+            
+            <h1 class="text-6xl md:text-8xl text-text-dark mb-8 tracking-wide font-display">
                 Francisco<br>
                 <span class="text-pantone-magenta">Fernández</span>
             </h1>
+            
             <p class="text-xl md:text-2xl text-text-muted font-light mb-12 max-w-2xl mx-auto">
                 Galería Personal
             </p>
@@ -220,7 +225,7 @@
                     
                     <div id="bio-text-content">
                         <p class="text-lg text-text-dark leading-relaxed mb-4">
-                            Nacido en Trelew, Chubut hace 33 años y residente en la Patagonia, Francisco Fernández se destaca por su activa participación en exhibiciones itinerantes a lo largo del país.
+                            Nacido en Trelew, Chubut (1991). Es un artista con más de 10 muestras individuales y más de 25 exposiciones colectivas en museos, galerías y otros espacios culturales.
                         </p>
                         
                         <p class="text-base text-text-muted leading-relaxed mb-6">
@@ -275,6 +280,13 @@
                     <select id="filter-year" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
                         <option value="">Año</option>
                     </select>
+
+                    <select id="filter-availability" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
+                        <option value="">Disponibilidad (Todas)</option>
+                        <option value="true">Obras Disponibles</option>
+                        <option value="false">Obras No Disponibles</option>
+                    </select>
+
                 </div>
                 
                 <div id="admin-controls" class="hidden flex-wrap gap-2">

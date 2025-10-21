@@ -16,7 +16,7 @@ let currentPage = 0;
 const PAGE_SIZE = 8;
 let isLoading = false;
 let allDataLoaded = false;
-let currentFilters = { query: '', year: '', category: '', series: '' };
+let currentFilters = { query: '', year: '', category: '', series: '', availability: '' };
 let filterDebounceTimer;
 
 // --- ELEMENTOS DEL DOM ---
@@ -33,6 +33,7 @@ const searchInput = document.getElementById("search");
 const filterYear = document.getElementById("filter-year");
 const filterCategory = document.getElementById("filter-category");
 const filterSeries = document.getElementById("filter-series");
+const filterAvailability = document.getElementById("filter-availability"); 
 
 // Elementos de Control de Administrador
 const adminControls = document.getElementById("admin-controls");
@@ -50,7 +51,7 @@ function showAlert(message, type = 'success') {
     alertDiv.textContent = message;
     alertDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-blue-100', 'text-blue-700');
     if (type === 'error') {
-        alertDiv.classList.add('bg-red-100', 'text-red-700');
+        alertDiv.classList.add('bg-red-100', 'text-red-7col-span-full');
     } else if (type === 'info') {
         alertDiv.classList.add('bg-blue-100', 'text-blue-700');
     } else {
@@ -206,6 +207,9 @@ async function fetchGalleryPage() {
     if (currentFilters.year) query = query.eq('anio', currentFilters.year);
     if (currentFilters.category) query = query.eq('categoria', currentFilters.category);
     if (currentFilters.series) query = query.eq('serie', currentFilters.series);
+    if (currentFilters.availability !== "") {
+        query = query.eq('is_available', currentFilters.availability === 'true');
+    }
 
     try {
         const { data, error, count } = await query;
@@ -251,6 +255,7 @@ function handleFilterChange() {
             year: filterYear.value,
             category: filterCategory.value,
             series: filterSeries.value,
+            availability: filterAvailability.value,
         };
         // Resetear todo para una nueva búsqueda
         currentPage = 0;
@@ -258,7 +263,22 @@ function handleFilterChange() {
         productosCache = [];
         galleryContainer.innerHTML = '';
         loadMoreTrigger.classList.remove('hidden');
+        
+        // --- REPARACIÓN: DESACTIVAR SORTABLE ANTES DE LIMPIAR ---
+        // Si el modo edición está activo, hay que desactivarlo (y destruir la instancia)
+        // antes de limpiar el HTML, para evitar errores.
+        if (isEditing) {
+            disableSorting();
+        }
+        
         fetchGalleryPage();
+        
+        // --- REPARACIÓN: REACTIVAR SORTABLE DESPUÉS DE FILTRAR ---
+        // Si estábamos en modo edición, lo reactivamos para los nuevos items.
+        if (isEditing) {
+            enableSorting();
+        }
+        
     }, 350); 
 }
 
@@ -312,12 +332,17 @@ function toggleEditMode() {
 
 function enableSorting() {
     if (sortableInstance) disableSorting();
+    // Asegurarse de que el contenedor existe
+    if (!galleryContainer) {
+        console.error("No se encontró el galleryContainer para activar el ordenamiento.");
+        return;
+    }
     sortableInstance = new Sortable(galleryContainer, {
         animation: 150,
-        handle: '.drag-handle',
-        ghostClass: 'sortable-ghost',
+        handle: '.drag-handle', // El elemento que activa el arrastre
+        ghostClass: 'sortable-ghost', // La clase CSS para el fantasma
         onUpdate: () => {
-            saveOrderButton.disabled = false;
+            saveOrderButton.disabled = false; // Activa el botón de guardar al reordenar
         },
     });
 }
@@ -335,12 +360,14 @@ async function saveOrder() {
     saveOrderButton.textContent = "Guardando...";
     saveOrderButton.disabled = true;
 
+    // Obtener el nuevo orden desde el DOM
     const orderedItems = Array.from(galleryContainer.children).map((card, index) => ({
         id: parseInt(card.dataset.id),
         orden: index,
     }));
 
     try {
+        // Actualizar la base de datos (Supabase)
         const { error } = await client.from('productos').upsert(orderedItems);
         if (error) throw error;
         
@@ -493,6 +520,7 @@ searchInput.addEventListener('input', handleFilterChange);
 filterYear.addEventListener('change', handleFilterChange);
 filterCategory.addEventListener('change', handleFilterChange);
 filterSeries.addEventListener('change', handleFilterChange);
+filterAvailability.addEventListener('change', handleFilterChange); 
 editToggleButton.addEventListener('click', toggleEditMode);
 saveOrderButton.addEventListener('click', saveOrder);
 

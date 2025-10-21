@@ -9,7 +9,7 @@ let workToEdit = null;
 
 // --- VARIABLES DE PAGINACIÓN ---
 let currentPage = 0;
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 20; // Podemos cargar más en el admin
 let isLoading = false;
 let allDataLoaded = false;
 let currentSearchQuery = '';
@@ -41,7 +41,7 @@ loadMoreTrigger.textContent = 'Cargando más...';
 function showAlert(message, type = 'success') {
     alertDiv.textContent = message;
     alertDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-indigo-100', 'text-indigo-700', 'opacity-0');
-    
+
     if (type === 'error') {
         alertDiv.classList.add('bg-red-100', 'text-red-700');
     } else if (type === 'success') {
@@ -51,10 +51,10 @@ function showAlert(message, type = 'success') {
     }
 
     // Force reflow before adding opacity class
-    void alertDiv.offsetWidth; 
+    void alertDiv.offsetWidth;
 
     alertDiv.classList.add('opacity-100');
-    
+
     setTimeout(() => {
         alertDiv.classList.remove('opacity-100');
         alertDiv.classList.add('opacity-0');
@@ -91,19 +91,23 @@ function renderWorksList(works, isReplacing = false) {
         worksList.innerHTML = ''; // Clear only if replacing
     }
 
-    if (works.length === 0 && isReplacing && currentPage === 0) { // Check currentPage too
+    // Adjust condition to check currentPage reset
+    if (works.length === 0 && isReplacing && currentPage === 0) {
         worksList.innerHTML = `<p class="p-4 text-center text-gray-500">${currentSearchQuery ? 'No hay resultados para la búsqueda.' : 'No hay obras cargadas.'}</p>`;
+        // Ensure trigger is hidden if first page is empty
+        allDataLoaded = true; // No more data to load if first page empty
+        loadMoreTrigger.classList.add('hidden');
         return;
     }
-    
+
     const fragment = document.createDocumentFragment();
     works.forEach(obra => {
         const item = document.createElement('div');
         item.id = `obra-item-${obra.id}`;
         item.dataset.id = obra.id;
         item.className = 'bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex items-start space-x-4';
-        
-        const imageUrl = obra.imagenes && obra.imagenes.length > 0 
+
+        const imageUrl = obra.imagenes && obra.imagenes.length > 0
             ? getPublicImageUrl(obra.imagenes[0].path)
             : 'https://via.placeholder.com/100x100?text=No+Image';
 
@@ -146,15 +150,18 @@ function handleSearchChange() {
         allDataLoaded = false;
         currentWorks = []; // Clear cache
         renderWorksList([], true); // Clear DOM list
+        loadMoreTrigger.classList.add('hidden'); // Hide trigger initially
         loadWorksPage(); // Load first page of search results
-        
-        // --- IMPORTANTE: Deshabilitar SortableJS si hay búsqueda ---
-        // Reordenar una lista filtrada es confuso y propenso a errores con paginación simple.
+
+        // Disable/Enable SortableJS based on search
         if (sortableInstance) {
-            sortableInstance.option("disabled", currentSearchQuery !== ''); 
+            sortableInstance.option("disabled", currentSearchQuery !== '');
         }
         if (currentSearchQuery !== '') {
             showAlert("Ordenamiento desactivado durante la búsqueda.", "info");
+            if (saveOrderButton) saveOrderButton.disabled = true; // Disable save btn too
+        } else {
+             if (saveOrderButton) saveOrderButton.disabled = true; // Keep disabled until drag
         }
 
     }, 350);
@@ -166,7 +173,7 @@ function handleSearchChange() {
 async function loadWorksPage() {
     if (isLoading || allDataLoaded) return;
     isLoading = true;
-    loadMoreTrigger.classList.remove('hidden');
+    loadMoreTrigger.classList.remove('hidden'); // Show loader
     loadMoreTrigger.textContent = 'Cargando...';
 
     try {
@@ -175,10 +182,10 @@ async function loadWorksPage() {
 
         let query = client
             .from('productos')
-            .select('*')
+            .select('*', { count: 'exact'}) // Request count
             .order('orden', { ascending: true }) // Always order by 'orden'
             .range(from, to);
-        
+
         if (currentSearchQuery) {
             query = query.or(
                 `titulo.ilike.%${currentSearchQuery}%,` +
@@ -188,16 +195,26 @@ async function loadWorksPage() {
             );
         }
 
-        const { data, error } = await query;
+        // Get count along with data
+        const { data, error, count } = await query;
 
         if (error) throw error;
 
         const newWorks = data || [];
-        currentWorks.push(...newWorks); 
-        renderWorksList(newWorks, false); // Append new items
+        currentWorks.push(...newWorks);
+        renderWorksList(newWorks, currentPage === 0); // Replace only on first page
 
-        if (newWorks.length < PAGE_SIZE) {
+        // Check if all data is loaded based on count
+        // Note: count might be null if RLS is enabled and no policies allow count
+        if (count !== null && currentWorks.length >= count) {
+             allDataLoaded = true;
+        } else if (newWorks.length < PAGE_SIZE) {
+            // Fallback if count is not available or inaccurate
             allDataLoaded = true;
+        }
+
+
+        if (allDataLoaded) {
             loadMoreTrigger.classList.add('hidden');
         } else {
             loadMoreTrigger.textContent = 'Cargar más'; // Ready for next scroll
@@ -208,9 +225,11 @@ async function loadWorksPage() {
         console.error("Error loading works:", error);
         showAlert("Error loading works: " + error.message, 'error');
         loadMoreTrigger.textContent = 'Error loading';
+        // Optionally hide trigger on error, or allow retry?
+        // loadMoreTrigger.classList.add('hidden');
     } finally {
         isLoading = false;
-        // Hide trigger if all loaded after check
+        // Ensure trigger is hidden if all loaded
         if (allDataLoaded) {
              loadMoreTrigger.classList.add('hidden');
         }
@@ -223,14 +242,13 @@ function setupInfiniteScroll() {
         if (entries[0].isIntersecting && !isLoading && !allDataLoaded) {
             loadWorksPage();
         }
-    }, { rootMargin: '400px' }); 
+    }, { rootMargin: '400px' });
 
     observer.observe(loadMoreTrigger);
 }
 
 async function uploadImage(file, workId) {
     const fileExtension = file.name.split('.').pop();
-    // Sanitize file name slightly - replace spaces, keep it simple
     const safeFileNameBase = file.name.replace(`.${fileExtension}`, '').replace(/[^a-zA-Z0-9_-]/g, '_');
     const fileName = `${workId}_${safeFileNameBase}_${Date.now()}.${fileExtension}`;
     const filePath = `obras/${fileName}`;
@@ -244,8 +262,7 @@ async function uploadImage(file, workId) {
 
     if (error) throw error;
 
-    // Return the path and original name for storage in JSONB
-    return { path: filePath, name: file.name }; 
+    return { path: filePath, name: file.name };
 }
 
 
@@ -256,45 +273,43 @@ async function handleSubmit(event) {
 
     try {
         const data = new FormData(obraForm);
-        
+
         const priceValue = data.get('price');
         const obraData = {
             titulo: data.get('titulo') || null, // Allow null if empty, but required by DB
             descripcion: data.get('descripcion') || null,
             anio: data.get('anio') ? parseInt(data.get('anio')) : null,
             categoria: data.get('categoria') || null,
-            serie: data.get('serie') || null, 
+            serie: data.get('serie') || null,
             tecnica: data.get('tecnica') || null,
             medidas: data.get('medidas') || null,
             price: priceValue ? parseFloat(priceValue) : null,
             is_available: data.get('is_available') === 'on',
             show_price: data.get('show_price') === 'on'
         };
-        
-        // Basic validation client-side
+
         if (!obraData.titulo) {
              throw new Error("El título es obligatorio.");
         }
 
 
-        const imageFiles = data.getAll('imagenes').filter(file => file.size > 0); // Check size
+        const imageFiles = data.getAll('imagenes').filter(file => file.size > 0);
 
         let result;
-        
-        if (isEditMode && workToEdit) { // Check workToEdit exists
+
+        if (isEditMode && workToEdit) {
             const existingImagesJSON = currentImagesList.dataset.currentImages;
             let existingImages = existingImagesJSON ? JSON.parse(existingImagesJSON) : [];
-            
+
             let newImages = [];
             if (imageFiles.length > 0) {
                 showAlert(`Subiendo ${imageFiles.length} imagen(es)...`, 'info');
-                // Ensure ID exists before uploading
                 const uploadPromises = imageFiles.map(file => uploadImage(file, workToEdit.id));
                 newImages = await Promise.all(uploadPromises);
             }
 
             const updatedImages = [...existingImages, ...newImages];
-            
+
             const { data: updateData, error: updateError } = await client
                 .from('productos')
                 .update({ ...obraData, imagenes: updatedImages })
@@ -306,45 +321,37 @@ async function handleSubmit(event) {
             result = updateData;
 
         } else { // Creating new work
-             // Let Supabase/Postgres handle 'orden' via default or trigger if possible.
-             // If not, we might need a separate query to get MAX(orden) + 1,
-             // but that can have race conditions. Simplest is often a DB default/trigger.
-             // Assuming default is 0 or trigger handles it.
-
             const { data: insertData, error: insertError } = await client
                 .from('productos')
-                .insert([obraData]) // Pass obraData directly
+                .insert([obraData])
                 .select()
                 .single();
 
             if (insertError) throw insertError;
             result = insertData;
-            
+
             let uploadedImages = [];
             if (imageFiles.length > 0) {
                  showAlert(`Subiendo ${imageFiles.length} imagen(es)...`, 'info');
-                 // Ensure ID exists before uploading
                  const uploadPromises = imageFiles.map(file => uploadImage(file, result.id));
                  uploadedImages = await Promise.all(uploadPromises);
-                
-                // Update the newly created record with the image paths
+
                 const { error: updateImagesError } = await client
                     .from('productos')
                     .update({ imagenes: uploadedImages })
                     .eq('id', result.id);
 
                 if (updateImagesError) {
-                     // Log error but don't necessarily fail the whole process
                      console.warn("Error updating image paths after insert:", updateImagesError);
                      showAlert("Obra creada, pero hubo un error al guardar las imágenes.", "error");
                 } else {
-                     result.imagenes = uploadedImages; // Update local object
+                     result.imagenes = uploadedImages;
                 }
             }
         }
-        
+
         showAlert(`Obra ${isEditMode ? 'actualizada' : 'creada'} exitosamente!`, 'success');
-        
+
         resetForm();
         showWorksList(true); // Force reload of list
 
@@ -353,7 +360,7 @@ async function handleSubmit(event) {
         showAlert("Error: " + error.message, 'error');
     } finally {
         submitButton.textContent = isEditMode ? "Guardar Cambios" : "Guardar Obra";
-        submitButton.disabled = false; // Re-enable button
+        submitButton.disabled = false;
     }
 }
 
@@ -368,42 +375,40 @@ function resetForm() {
     submitButton.textContent = "Guardar Obra";
     currentImagesContainer.classList.add('hidden');
     currentImagesList.innerHTML = '';
-    currentImagesList.removeAttribute('data-current-images'); // Clear stored images data
+    currentImagesList.removeAttribute('data-current-images');
 }
 
 function showAddForm() {
     resetForm();
     obraFormContainer.classList.remove('hidden');
-    worksContainer.classList.add('hidden'); // Hide list
+    worksContainer.classList.add('hidden');
     document.getElementById('show-add-form-button').classList.add('hidden');
 }
 
 function showWorksList(forceReload = false) {
     obraFormContainer.classList.add('hidden');
-    worksContainer.classList.remove('hidden'); // Show list
+    worksContainer.classList.remove('hidden');
     document.getElementById('show-add-form-button').classList.remove('hidden');
-    
+
     if (forceReload) {
-        // Keep current search query, reset pagination, clear cache/DOM, load page 1
         currentPage = 0;
         allDataLoaded = false;
         currentWorks = [];
         renderWorksList([], true); // Clear DOM
+        loadMoreTrigger.classList.add('hidden'); // Hide trigger until load check
         loadWorksPage();
     }
-    // If not forcing reload, the existing list remains visible
 }
 
 
 // --- EDICIÓN Y ELIMINACIÓN ---
 
-window.editWork = async (id) => { // Make async
+window.editWork = async (id) => {
     let obra = currentWorks.find(w => w.id === id);
-    
+
     if (obra) {
         populateEditForm(obra);
     } else {
-        // Fetch if not in cache
         showAlert("Cargando datos de la obra...", 'info');
         try {
             const { data, error } = await client.from('productos').select('*').eq('id', id).single();
@@ -412,24 +417,23 @@ window.editWork = async (id) => { // Make async
                 populateEditForm(data);
             } else {
                 showAlert(`Error: No se encontró la obra con ID ${id}`, 'error');
-                showWorksList(); // Go back to list if not found
+                showWorksList();
             }
         } catch (err) {
             console.error(err);
             showAlert(err.message, 'error');
-            showWorksList(); // Go back on error
+            showWorksList();
         }
     }
 }
 
 function populateEditForm(obra) {
-    workToEdit = obra; // Store the full object
+    workToEdit = obra;
     isEditMode = true;
-    
+
     document.getElementById('form-title').textContent = "Editar Obra";
     submitButton.textContent = "Guardar Cambios";
-    
-    // Populate simple fields
+
     document.getElementById('titulo').value = obra.titulo || '';
     document.getElementById('descripcion').value = obra.descripcion || '';
     document.getElementById('anio').value = obra.anio || '';
@@ -437,13 +441,11 @@ function populateEditForm(obra) {
     document.getElementById('medidas').value = obra.medidas || '';
     document.getElementById('categoria').value = obra.categoria || '';
     document.getElementById('serie').value = obra.serie || '';
-    document.getElementById('price').value = obra.price !== null ? obra.price : ''; // Handle null price
+    document.getElementById('price').value = obra.price !== null ? obra.price : '';
 
-    // Populate checkboxes
-    document.getElementById('is_available').checked = obra.is_available === true; // Explicit check
-    document.getElementById('show_price').checked = obra.show_price === true;     // Explicit check
+    document.getElementById('is_available').checked = obra.is_available === true;
+    document.getElementById('show_price').checked = obra.show_price === true;
 
-    // Render current images only if they exist
     if (obra.imagenes && obra.imagenes.length > 0) {
         currentImagesContainer.classList.remove('hidden');
         renderCurrentImages(obra.imagenes);
@@ -453,28 +455,25 @@ function populateEditForm(obra) {
         currentImagesList.removeAttribute('data-current-images');
     }
 
-    // Show form, hide list
     obraFormContainer.classList.remove('hidden');
     worksContainer.classList.add('hidden');
     document.getElementById('show-add-form-button').classList.add('hidden');
 }
 
 function renderCurrentImages(images) {
-    currentImagesList.innerHTML = ''; // Clear previous
-    // Store current state in dataset for modification
-    currentImagesList.dataset.currentImages = JSON.stringify(images); 
+    currentImagesList.innerHTML = '';
+    currentImagesList.dataset.currentImages = JSON.stringify(images);
 
     images.forEach((img, index) => {
-        // Ensure img and img.path exist
         if (!img || !img.path) {
             console.warn("Skipping invalid image data:", img);
-            return; 
+            return;
         }
         const imageUrl = getPublicImageUrl(img.path);
         const imgItem = document.createElement('div');
-        imgItem.className = 'relative group w-24 h-24 cursor-pointer border border-gray-300 rounded-md overflow-hidden'; // Added overflow hidden
+        imgItem.className = 'relative group w-24 h-24 cursor-pointer border border-gray-300 rounded-md overflow-hidden';
         imgItem.dataset.path = img.path;
-        imgItem.dataset.name = img.name || `imagen_${index + 1}`; // Fallback name
+        imgItem.dataset.name = img.name || `imagen_${index + 1}`;
         imgItem.innerHTML = `
             <img src="${imageUrl}" alt="${img.name || 'Imagen actual'}" class="w-full h-full object-cover">
             <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -482,31 +481,34 @@ function renderCurrentImages(images) {
                     <svg class="h-6 w-6 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>
             </div>`;
-        
-        // Add listener to the BUTTON inside, not the whole div
+
         const deleteButton = imgItem.querySelector('.delete-image-btn');
         deleteButton.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent SortableJS drag start
-            removeCurrentImage(imgItem, img.path); 
+            e.stopPropagation();
+            removeCurrentImage(imgItem, img.path);
         });
 
         currentImagesList.appendChild(imgItem);
     });
+
+    // Destroy previous sortable instance before creating a new one
+    if (currentImagesList.sortableInstance) {
+        currentImagesList.sortableInstance.destroy();
+    }
     
-    // Initialize Sortable for images *if* there are images
     if (images.length > 0) {
-        new Sortable(currentImagesList, {
+       currentImagesList.sortableInstance = new Sortable(currentImagesList, { // Store instance on element
             animation: 150,
-            ghostClass: 'bg-indigo-200 opacity-50', // Make ghost more visible
-            onEnd: updateCurrentImagesData // Update order on drop
+            ghostClass: 'bg-indigo-200 opacity-50',
+            onEnd: updateCurrentImagesData
         });
     }
 }
 
-// Modified to accept the element to remove
-function removeCurrentImage(imageElement, path) { 
-    imageElement.remove(); // Remove from DOM
-    updateCurrentImagesData(); // Update the dataset
+
+function removeCurrentImage(imageElement, path) {
+    imageElement.remove();
+    updateCurrentImagesData();
     showAlert("Imagen marcada para eliminación. Guarda los cambios para confirmar.", 'info');
 }
 
@@ -515,13 +517,12 @@ function updateCurrentImagesData() {
         path: item.dataset.path,
         name: item.dataset.name
     }));
-    // Update the dataset which is read during form submission
     currentImagesList.dataset.currentImages = JSON.stringify(updatedImages);
 }
 
 window.deleteWork = async (id, button) => {
     if (!confirm("¿Estás seguro de que quieres eliminar esta obra? Esta acción es irreversible.")) return;
-    
+
     const originalText = button.textContent;
     button.textContent = "Eliminando...";
     button.disabled = true;
@@ -530,86 +531,81 @@ window.deleteWork = async (id, button) => {
         let obra = currentWorks.find(w => w.id === id);
         if (!obra) {
             const { data: obraData, error: fetchError } = await client.from('productos').select('id, imagenes').eq('id', id).single();
-            if (fetchError) throw new Error("Obra no encontrada para eliminar.");
+            if (fetchError || !obraData) throw new Error("Obra no encontrada para eliminar.");
             obra = obraData;
         }
 
-        // 1. Delete DB record
         const { error: dbError } = await client.from('productos').delete().eq('id', id);
         if (dbError) throw dbError;
 
-        // 2. Delete associated images from Storage
         const filePaths = (obra.imagenes || []).map(img => img.path).filter(Boolean);
         if (filePaths.length > 0) {
             const { data: deletedFiles, error: storageError } = await client.storage.from(BUCKET_NAME).remove(filePaths);
-            // Log error but don't stop the success message unless critical
             if (storageError) {
                  console.warn("Error deleting images from storage:", storageError);
-                 showAlert("Obra eliminada de la base de datos, pero hubo un error al borrar las imágenes del almacenamiento.", 'error');
+                 showAlert("Obra eliminada de la DB, error al borrar imágenes.", 'error');
             } else {
-                 showAlert("Obra eliminada exitosamente (incluyendo imágenes).", 'success');
+                 showAlert("Obra eliminada (incluyendo imágenes).", 'success');
             }
         } else {
-             showAlert("Obra eliminada exitosamente (no tenía imágenes).", 'success');
+             showAlert("Obra eliminada (no tenía imágenes).", 'success');
         }
 
-        // 3. Update UI
         const itemInDom = document.getElementById(`obra-item-${id}`);
         if(itemInDom) itemInDom.remove();
         currentWorks = currentWorks.filter(w => w.id !== id);
-        
-        // If the list becomes empty after deletion, show the message
+
         if (worksList.children.length === 0) {
-             renderWorksList([], true); 
+             renderWorksList([], true); // Show empty message if needed
         }
 
     } catch (error) {
         console.error("Error deleting work:", error);
         showAlert("Error al eliminar la obra: " + error.message, 'error');
-        // Re-enable button on error
         button.textContent = originalText;
-        button.disabled = false;
-    } 
-    // No finally block needed for button re-enabling on success, as element is removed
+        button.disabled = false; // Re-enable button on error
+    }
 }
 
 
 // --- SORTABLEJS (DRAG & DROP FOR WORKS LIST) ---
 let sortableInstance = null; // Instance for the main works list
 
-// Function called by the "Guardar Orden" button
-async function saveOrder() { 
-    if (!sortableInstance || currentSearchQuery) { // Prevent saving if searching
+async function saveOrder() {
+    if (!sortableInstance || currentSearchQuery) {
         showAlert("Desactiva la búsqueda para guardar el orden.", "error");
         return;
+    }
+
+    // Check if the button reference exists
+    if (!saveOrderButton) {
+         console.error("Save order button not found!");
+         return;
     }
 
     saveOrderButton.textContent = "Guardando...";
     saveOrderButton.disabled = true;
 
-    // Get order from current DOM state
+    // Correctly get order from current DOM state
     const orderedItems = Array.from(worksList.children).map((card, index) => ({
         id: parseInt(card.dataset.id),
         orden: index, // Simple index based on current DOM order
     }));
 
     try {
-        // --- Use individual updates to avoid not-null constraint ---
         for (const item of orderedItems) {
             const { error } = await client
                 .from('productos')
-                .update({ orden: item.orden }) // Update ONLY 'orden' column
-                .eq('id', item.id);           // Match by 'id'
-            if (error) throw error; // Stop on first error
+                .update({ orden: item.orden })
+                .eq('id', item.id);
+            if (error) throw error;
         }
-        // --- End of correction ---
 
-        // Update local cache after successful DB update
+        // Update local cache
         orderedItems.forEach(item => {
             const product = currentWorks.find(p => p.id === item.id);
             if(product) product.order = item.orden;
         });
-        // Re-sort the local cache to match DB
         currentWorks.sort((a, b) => (a.orden || 0) - (b.orden || 0));
 
         showAlert("¡Orden guardado exitosamente!", 'success');
@@ -617,21 +613,18 @@ async function saveOrder() {
     } catch (error) {
         console.error("Error saving order:", error);
         showAlert(`Error al guardar: ${error.message}`, 'error');
-        // Keep button disabled on error to prevent inconsistent state? Or re-enable?
-        // Let's re-enable so user can try again, but keep text "Guardar Orden"
-        saveOrderButton.disabled = false; 
+        if (saveOrderButton) saveOrderButton.disabled = false; // Re-enable on error
     } finally {
-        saveOrderButton.textContent = "Guardar Orden";
-        // Keep disabled until next drag event enables it
-        saveOrderButton.disabled = true; 
+        if (saveOrderButton) {
+            saveOrderButton.textContent = "Guardar Orden";
+            saveOrderButton.disabled = true; // Disable until next drag
+        }
     }
 }
 
-// Initialize SortableJS for the main works list
 function initSortable() {
-    if (sortableInstance) sortableInstance.destroy(); // Destroy previous instance if exists
+    if (sortableInstance) sortableInstance.destroy();
 
-    // Only initialize if the element exists
     if (!worksList) {
         console.error("Work list element not found for Sortable init.");
         return;
@@ -639,11 +632,11 @@ function initSortable() {
 
     sortableInstance = new Sortable(worksList, {
         animation: 150,
-        handle: '.drag-handle', // Class for drag handle
-        ghostClass: 'bg-indigo-100 opacity-50', // Style for the ghost element
-        disabled: currentSearchQuery !== '', // Initially disable if search is active
-        onEnd: () => { // Event triggered when dragging ends
-             // Enable the save button only if not searching
+        handle: '.drag-handle',
+        ghostClass: 'bg-indigo-100 opacity-50',
+        disabled: currentSearchQuery !== '', // Initial disabled state based on search
+        onEnd: () => {
+             // Enable save button only if not searching
             if(saveOrderButton && !currentSearchQuery) {
                 saveOrderButton.disabled = false;
             }
@@ -660,8 +653,12 @@ async function checkAuth() {
 
         if (session) {
             showAdminView();
-            worksContainer.appendChild(loadMoreTrigger); // Add trigger to DOM
+            // Append trigger only once
+            if (!document.getElementById(loadMoreTrigger.id)) {
+                 worksContainer.appendChild(loadMoreTrigger);
+            }
             setupInfiniteScroll();
+            loadMoreTrigger.classList.add('hidden'); // Start hidden
             await loadWorksPage(); // Initial load
             initSortable(); // Init sortable after first load
             handleUrlParameters(); // Check for ?edit=ID
@@ -671,7 +668,7 @@ async function checkAuth() {
     } catch(error) {
         console.error("Auth check failed:", error);
         showLoginView(); // Fallback to login view on error
-        showAlert("Error checking authentication: " + error.message, 'error');
+        showAlert("Error checking authentication: " + (error.message || error), 'error');
     }
 }
 
@@ -680,9 +677,9 @@ function handleUrlParameters() {
     const workIdToEdit = params.get('edit');
     if (workIdToEdit) {
         const workId = parseInt(workIdToEdit, 10);
-        // editWork will handle fetching if not in cache
-        window.editWork(workId); 
-        
+        // editWork handles fetching if needed
+        window.editWork(workId);
+
         // Clean URL after attempting to load editor
         window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -693,14 +690,14 @@ async function handleLogin(event) {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const loginButton = event.target.querySelector('button[type="submit"]');
+    if (!loginButton) return; // Guard clause
     loginButton.textContent = "Ingresando...";
     loginButton.disabled = true;
-    
+
     try {
         const { error } = await client.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        // checkAuth will be triggered by onAuthStateChange, no need to call manually
-        // showAlert("¡Bienvenido!", 'success'); // Can show success here or rely on checkAuth
+        // Auth state change will handle UI update
     } catch (error) {
         showAlert("Error de login: " + error.message, 'error');
         loginButton.textContent = "Ingresar";
@@ -712,8 +709,7 @@ async function handleLogout() {
     try {
         const { error } = await client.auth.signOut();
         if (error) throw error;
-        // onAuthStateChange will handle UI update
-        // showAlert("Sesión cerrada.", 'info'); // Optional: show message here
+        // Auth state change will handle UI update
     } catch (error) {
         console.error("Error logging out:", error);
         showAlert("Error logging out: " + error.message, 'error');
@@ -726,29 +722,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const showAddButton = document.getElementById('show-add-form-button');
     const cancelEditButton = document.getElementById('cancel-edit-button');
-    
+
+    // Add checks for element existence before adding listeners
     if (loginForm) loginForm.addEventListener('submit', handleLogin);
     if (obraForm) obraForm.addEventListener('submit', handleSubmit);
     if (logoutButton) logoutButton.addEventListener('click', handleLogout);
     if (showAddButton) showAddButton.addEventListener('click', showAddForm);
     if (cancelEditButton) cancelEditButton.addEventListener('click', () => showWorksList(false));
     if (searchInput) searchInput.addEventListener('input', handleSearchChange);
-    if (saveOrderButton) saveOrderButton.addEventListener('click', saveOrder); // Attach save order listener
+    // Ensure saveOrderButton exists before adding listener
+    if (saveOrderButton) saveOrderButton.addEventListener('click', saveOrder); 
 
     checkAuth(); // Initial auth check
 });
 
 // Listen for auth changes (login/logout)
 client.auth.onAuthStateChange((event, session) => {
-    console.log("Auth event:", event);
-    if (event === 'SIGNED_IN') {
-        window.location.reload(); // Reload to ensure clean state after login
+    console.log("Auth event:", event, session ? "Session exists" : "No session");
+    if (event === 'INITIAL_SESSION') {
+        // Handled by DOMContentLoaded checkAuth
+    } else if (event === 'SIGNED_IN') {
+        // --- CORRECCIÓN: REMOVIDO window.location.reload() ---
+        // Let checkAuth handle showing the view and loading data if needed
+        checkAuth(); // Re-run checkAuth to load data and show admin view
     } else if (event === 'SIGNED_OUT') {
-         // Optionally clear cache or state before showing login
          currentWorks = [];
          currentPage = 0;
-         // etc.
-        showLoginView();
-        showAlert("Sesión cerrada.", 'info');
+         allDataLoaded = false;
+         isLoading = false;
+         currentSearchQuery = '';
+         showLoginView();
+         showAlert("Sesión cerrada.", 'info');
     }
 });

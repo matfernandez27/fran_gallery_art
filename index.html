@@ -4,31 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <title>Francisco Fernández | Galería de Arte Patagónico, Dibujo y Grabado Contemporáneo</title>
-    
-    <meta name="description" content="Galería oficial de Francisco Fernández. Descubre obras de arte patagónico, grabados, dibujos y pintura que exploran la dualidad entre lo ancestral y lo moderno.">
+    <title>Francisco Fernández | Galería de Arte Patagónico</title> <meta name="description" content="Galería oficial de Francisco Fernández. Explora arte patagónico contemporáneo: grabado, dibujo y pintura.">
 
-    <meta property="og:title" content="Francisco Fernández - Arte Patagónico y Grabado Contemporáneo">
-    <meta property="og:description" content="Descubre la Galería Personal de Francisco Fernández: un diálogo visual entre la inmensidad de la Patagonia y la experiencia urbana moderna.">
+    <meta property="og:title" content="Francisco Fernández - Arte Patagónico Contemporáneo">
+    <meta property="og:description" content="Descubre la galería personal de Francisco Fernández: un diálogo visual entre la Patagonia y la experiencia urbana.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://fran-faf.vercel.app/">
-    <meta property="og:image" content="[URL_IMAGEN_DESTACADA]"> 
-    <meta property="og:locale" content="es_AR">
+    <meta property="og:url" content="https://fran-faf.vercel.app/"> <meta property="og:image" content="./img/og-image-placeholder.jpg"> <meta property="og:locale" content="es_AR">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Configuración de colores personalizados (VIVO Y CLARO)
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'pantone-magenta': '#DE3B89', // PANTONE 17-2036 TPG/TCX (Acento)
-                        'bg-principal': '#FAEBF0',    // Fondo Principal (Magenta muy pálido)
-                        'bg-card': '#FFFFFF',         // Fondo de Tarjetas/Secciones (Blanco puro)
-                        'text-dark': '#333333',       // Texto principal (Gris oscuro)
-                        'text-muted': '#666666',      // Texto secundario (Gris medio)
-                        'border-light': '#E0E0E0',    // Bordes y líneas divisorias (Gris claro)
-                        'whatsapp': '#25D366',        // Verde de WhatsApp
+                        'accent-blue': '#7BA4C0',    // Granada Sky
+                        'text-main': '#5A6349',      // Kale
+                        'text-secondary': '#6B7280', // Gray 500
+                        'bg-main': '#F9FAFB',        // Gray 50
+                        'bg-surface': '#FFFFFF',     // White
+                        'border-default': '#E5E7EB', // Gray 200
+                        'whatsapp': '#25D366',
                     },
                     fontFamily: {
                         'sans': ['Inter', 'system-ui', 'sans-serif'],
@@ -46,263 +41,183 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     
     <style>
-        /* Estilos del Overlay de Carga (Spinner) */
-        .loading-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(250, 235, 240, 0.95);
-            display: flex; justify-content: center; align-items: center; z-index: 1000;
-            transition: opacity 0.3s ease-in-out;
-        }
-        .lds-ring {
-            display: inline-block;
-            position: relative;
-            width: 80px;
-            height: 80px;
-        }
-        .lds-ring div { 
-            box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; 
-            border: 8px solid #DE3B89;
-            border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; 
-            border-color: #DE3B89 transparent transparent transparent;
-        }
-        @keyframes lds-ring {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .lds-ring div:nth-child(1) { animation-delay: -0.45s; }
-        .lds-ring div:nth-child(2) { animation-delay: -0.3s; }
-        .lds-ring div:nth-child(3) { animation-delay: -0.15s; }
+        /* Estilos Generales Refinados */
+        body { background-color: #F9FAFB; color: #5A6349; } /* bg-main, text-main */
+        ::selection { background-color: #7BA4C0; color: #FFFFFF; }
 
-        
-        /* --- ESTILOS DEL CARRUSEL DE FONDO (DINÁMICO) --- */
-        #carousel-header {
-            position: relative;
-            overflow: hidden;
-        }
-        .carousel-item {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-size: contain; 
-            background-position: center;
-            background-repeat: no-repeat;
-            background-color: #F5E5EC; 
-            opacity: 0;
-            transition: opacity 1.5s ease-in-out; 
-            transform: scale(1.05); 
-        }
-        .carousel-item.active {
-            opacity: 1;
-            transform: scale(1);
-        }
-        .carousel-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(250, 235, 240, 0.5); 
-            z-index: 1;
-        }
-        
-        /* --- ESTILOS DE LA BIOGRAFÍA: CORRECCIÓN DE POSICIÓN Y CENTRADO DE FOTO --- */
-        #bio-section .grid {
-            align-items: start;
-        }
-        
-        .bio-image-container {
-            display: flex; 
-            justify-content: center; 
-        }
+        /* Spinner con nuevos colores */
+        .loading-overlay { background: rgba(249, 250, 251, 0.95); }
+        .lds-ring div { border: 8px solid #7BA4C0; border-color: #7BA4C0 transparent transparent transparent; }
+        @keyframes lds-ring { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .lds-ring div:nth-child(1) { animation-delay: -0.45s; } .lds-ring div:nth-child(2) { animation-delay: -0.3s; } .lds-ring div:nth-child(3) { animation-delay: -0.15s; }
 
-        .bio-image-focus {
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
-            object-position: top center; 
-        }
+        /* Header Carrusel */
+        #carousel-header { background-color: #F0F3F5; /* Azul muy pálido */ }
+        .carousel-item { background-color: transparent; }
+        .carousel-overlay { background: rgba(249, 250, 251, 0.3); } /* bg-main sutil */
+        
+        /* Bio Section */
+        #bio-section .grid { align-items: start; }
+        .bio-image-container { display: flex; justify-content: center; }
+        .bio-image-focus { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
 
-        /* Estilo del Botón Flotante de WhatsApp */
-        .whatsapp-float-btn {
-            position: fixed; bottom: 60px; right: 20px; width: 56px; height: 56px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-            z-index: 50; transition: transform 0.3s ease-in-out, opacity 0.5s ease-in-out;
-            opacity: 0; 
-            pointer-events: none; 
-        }
+        /* Botón WhatsApp */
+        .whatsapp-float-btn { position: fixed; bottom: 60px; right: 20px; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 50; transition: transform 0.3s, opacity 0.5s; opacity: 0; pointer-events: none; }
         .whatsapp-float-btn.show { opacity: 1; pointer-events: auto; }
         .whatsapp-float-btn:hover { transform: scale(1.1); }
 
-        /* --- ESTILOS DE ZOOM INTERACTIVO (MANTENIDOS) --- */
-        .image-zoom-container {
-            position: relative; overflow: hidden;
-        }
-        .zoom-image {
-            width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s ease-out;
-            transform-origin: center center;
-        }
+        /* Zoom Imagen */
+        .image-zoom-container { position: relative; overflow: hidden; }
+        .zoom-image { width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s ease-out; transform-origin: center center; }
 
-        /* --- NUEVOS ESTILOS PARA MINIATURAS DEL MODAL --- */
-        .thumbnail-item {
-            aspect-ratio: 1 / 1;
-        }
-        .thumbnail-item img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        /* Miniaturas Modal */
+        .thumbnail-item { aspect-ratio: 1 / 1; }
+        .thumbnail-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 0.125rem; }
+
+        /* Sortable Ghost */
+        .sortable-ghost { opacity: 0.4; background-color: #BFDBFE; border: 2px dashed #3B82F6; }
+
+        /* Footer */
+        .footer-gradient { background: #FFFFFF; border-top-color: #E5E7EB;} /* bg-surface, border-default */
+
+        /* Alerta */
+        #alert { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1001; padding: 1rem; border-radius: 0.375rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); font-weight: 500; }
+        
+        /* Línea decorativa */
+        .divider-line { width: 4rem; height: 1px; } 
+
+        /* Inputs y Selects */
+        .filter-select, .filter-input { 
+            padding: 0.75rem; /* p-3 */
             border-radius: 0.125rem; /* rounded-sm */
+            border: 1px solid #E5E7EB; /* border-border-default */
+            background-color: #FFFFFF; /* bg-white */
+            color: #6B7280; /* text-secondary */
+            box-shadow: none; /* Sin sombra */
+            font-size: 0.875rem; /* text-sm */
+            transition: border-color 0.3s, box-shadow 0.3s;
         }
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: #7BA4C0; /* accent-blue */
+            box-shadow: 0 0 0 1px #7BA4C0; /* Ring sutil */
+        }
+        .filter-input::placeholder { color: #9CA3AF; } /* Gray 400 */
 
-        /* Estilo para el modo de ordenamiento */
-        .sortable-ghost {
-            opacity: 0.4;
-            background-color: #c4b5fd; 
-            border: 2px dashed #6d28d9;
+        /* Botones Admin (más sutiles) */
+        .admin-button {
+            padding: 0.5rem 1rem; /* px-4 py-2 */
+            border-radius: 0.125rem; /* rounded-sm */
+            text-transform: uppercase;
+            font-size: 0.75rem; /* text-xs */
+            font-weight: 600; /* font-semibold */
+            letter-spacing: 0.05em; /* tracking-wider */
+            transition: background-color 0.3s, color 0.3s;
         }
-
-        /* Estilo para el footer con degradado */
-        .footer-gradient {
-            background: linear-gradient(to right, #F5E5EC, #FFFFFF); 
-        }
-
-        /* Estilo de alerta flotante */
-        #alert {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 1001; 
-            padding: 1rem; border-radius: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            font-weight: 500;
-        }
+        .admin-button-primary { background-color: #4B5563; color: white; } /* Gray-600 */
+        .admin-button-primary:hover { background-color: #374151; } /* Gray-700 */
+        .admin-button-secondary { background-color: #E5E7EB; color: #4B5563; } /* Gray-200 / Gray-600 */
+        .admin-button-secondary:hover { background-color: #D1D5DB; } /* Gray-300 */
+        .admin-button-success { background-color: #10B981; color: white; } /* Emerald-500 */
+        .admin-button-success:hover { background-color: #059669; } /* Emerald-600 */
     </style>
 </head>
-<body class="bg-bg-principal text-text-dark font-sans min-h-screen">
+<body class="bg-bg-main text-text-main font-sans min-h-screen"> 
     
-    <div id="loading-overlay" class="loading-overlay">
+    <div id="loading-overlay" class="loading-overlay fixed inset-0 z-50">
         <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
     </div>
 
-    <div id="alert" class="hidden" role="alert"></div>
+    <div id="alert" class="hidden"></div>
 
     <a id="whatsapp-btn" href="https://wa.me/5492805032663?text=Hola,%20quisiera%20consultar%20sobre%20una%20obra%20de%20la%20galería." 
         target="_blank" 
         class="whatsapp-float-btn bg-whatsapp text-white">
-        <svg fill="#FFF" viewBox="0 0 24 24" width="28" height="28" class="whatsapp-icon"><path d="M12 2C6.48 2 2 6.48 2 12c0 3.25 1.5 6.2 3.88 8.1l-1.38 5.02L7.6 21.62C9.5 22.18 11.08 22 12 22c5.52 0 10-4.48 10-10C22 6.48 17.52 2 12 2zM17.43 15.4c-.09-.15-.36-.24-.77-.42-.42-.18-2.52-1.24-2.91-1.38-.39-.14-.67-.21-.95.21-.28.42-1.09 1.38-1.34 1.66-.25.28-.5.31-.92.21-.42-.1-.71-.34-1.27-.64-.47-.25-1.07-.65-2.03-1.89-.75-.98-1.25-1.95-1.38-2.2-.14-.25-.02-.38.11-.5.1-.11.23-.26.35-.4.12-.14.16-.25.25-.42.09-.17.04-.32-.02-.45-.06-.13-.57-1.36-.78-1.87-.2-.5-.41-.42-.56-.42-.15 0-.33-.02-.51-.02-.18 0-.47.07-.72.35-.25.28-.95.93-.95 2.27 0 1.34.97 2.64 1.1 2.82.13.18 1.92 3.03 4.6 4.24 2.68 1.21 2.68.85 2.97.8.29-.05.95-.39 1.08-.77.13-.38.13-.7.09-.77z"/></svg>
+        <svg fill="#FFF" viewBox="0 0 24 24" width="28" height="28"><path d="M12 2C6.48 2 2 6.48 2 12c0 3.25 1.5 6.2 3.88 8.1l-1.38 5.02L7.6 21.62C9.5 22.18 11.08 22 12 22c5.52 0 10-4.48 10-10C22 6.48 17.52 2 12 2zM17.43 15.4c-.09-.15-.36-.24-.77-.42-.42-.18-2.52-1.24-2.91-1.38-.39-.14-.67-.21-.95.21-.28.42-1.09 1.38-1.34 1.66-.25.28-.5.31-.92.21-.42-.1-.71-.34-1.27-.64-.47-.25-1.07-.65-2.03-1.89-.75-.98-1.25-1.95-1.38-2.2-.14-.25-.02-.38.11-.5.1-.11.23-.26.35-.4.12-.14.16-.25.25-.42.09-.17.04-.32-.02-.45-.06-.13-.57-1.36-.78-1.87-.2-.5-.41-.42-.56-.42-.15 0-.33-.02-.51-.02-.18 0-.47.07-.72.35-.25.28-.95.93-.95 2.27 0 1.34.97 2.64 1.1 2.82.13.18 1.92 3.03 4.6 4.24 2.68 1.21 2.68.85 2.97.8.29-.05.95-.39 1.08-.77.13-.38.13-.7.09-.77z"/></svg>
     </a>
 
-    <section id="carousel-header" class="min-h-screen flex items-center justify-center bg-bg-principal">
-        
-        <div id="carousel-container" class="absolute inset-0">
-            </div>
-
+    <section id="carousel-header" class="min-h-screen flex items-center justify-center">
+        <div id="carousel-container" class="absolute inset-0"></div>
         <div class="carousel-overlay"></div>
-
         <div class="text-center max-w-4xl mx-auto px-6 z-10">
-            
-            <h1 class="text-6xl md:text-8xl text-text-dark mb-8 tracking-wide font-display">
+            <h1 class="text-6xl md:text-8xl text-text-main mb-8 tracking-wide font-display"> 
                 Francisco<br>
-                <span class="text-pantone-magenta">Fernández</span>
+                <span class="text-accent-blue">Fernández</span> 
             </h1>
-            
-            <p class="text-xl md:text-2xl text-text-muted font-light mb-12 max-w-2xl mx-auto">
+            <p class="text-xl md:text-2xl text-text-secondary font-light mb-12 max-w-2xl mx-auto"> 
                 Galería Personal
             </p>
-            <div class="w-24 h-px bg-pantone-magenta mx-auto mb-12"></div>
+            <div class="divider-line bg-accent-blue mx-auto mb-12"></div> 
             <button onclick="document.getElementById('bio-section').scrollIntoView({behavior: 'smooth'})" 
-                    class="text-text-muted hover:text-pantone-magenta transition-colors duration-300 text-sm uppercase tracking-wider">
+                    class="text-text-secondary hover:text-accent-blue transition-colors duration-300 text-sm uppercase tracking-wider font-medium"> 
                 Explorar Galería
             </button>
         </div>
     </section>
-    <section id="bio-section" class="py-20 bg-bg-card">
+    
+    <section id="bio-section" class="py-24 bg-bg-surface">
         <div class="max-w-6xl mx-auto px-6">
-            
             <div class="grid md:grid-cols-3 gap-16 items-start">
-                
                 <div class="md:col-span-2 flex flex-col justify-start">
-                    
-                    <div class="w-16 h-px bg-pantone-magenta mb-8"></div>
-                    
-                    <h3 class="text-2xl font-medium text-text-dark mb-6">Francisco Fernández</h3>
-                    
+                    <div class="divider-line bg-accent-blue mb-8 ml-0 mr-auto"></div>
+                    <h3 class="text-2xl font-medium text-text-main mb-6">Francisco Fernández</h3> 
                     <div id="bio-text-content">
-                        <p class="text-lg text-text-dark leading-relaxed mb-4">
-                            Nacido en Trelew, Chubut (1991). Es un artista con más de 10 muestras individuales y más de 25 exposiciones colectivas en museos, galerías y otros espacios culturales.
+                        <p class="text-lg text-text-main leading-relaxed mb-4"> 
+                            Nacido en Trelew, Chubut (1991). Artista con más de 10 muestras individuales y 25 colectivas en museos y galerías.
                         </p>
-                        
-                        <p class="text-base text-text-muted leading-relaxed mb-6">
-                            Cada pieza es un puente hacia lo inhóspito y lo íntimo. Su técnica no solo captura la dualidad de un paisaje vasto, sino que también ofrece una mirada profunda y reflexiva sobre el alma de ese territorio.
+                        <p class="text-base text-text-secondary leading-relaxed mb-6"> 
+                            Cada pieza es un puente entre lo inhóspito y lo íntimo, ofreciendo una mirada reflexiva sobre el alma del territorio patagónico.
                         </p>
                     </div>
-                    
                     <a href="biografia-completa.html" 
-                        class="mt-4 text-pantone-magenta font-semibold hover:text-text-dark transition-colors duration-300 text-sm self-start inline-flex items-center space-x-2">
-                        <span>LEER BIOGRAFÍA COMPLETA</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
+                        class="mt-4 text-accent-blue font-semibold hover:text-text-main transition-colors duration-300 text-sm self-start inline-flex items-center space-x-2 uppercase tracking-wider"> 
+                        <span>Leer Biografía</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     </a>
                 </div>
-
                 <div class="md:col-span-1 md:order-last flex justify-center bio-image-container">
-                    <div class="w-64 h-64 md:w-80 md:h-80 rounded-sm overflow-hidden border-2 border-pantone-magenta/50 shadow-2xl">
-                        <img src="./img/img_perfil.jpg" 
-                            alt="Retrato de Francisco Fernández, artista plástico de la Patagonia."
-                            class="bio-image-focus"/>
+                    <div class="w-64 h-64 md:w-80 md:h-80 rounded-sm overflow-hidden border border-border-default shadow-lg"> <img src="./img/img_perfil.jpg" alt="Retrato de Francisco Fernández" class="bio-image-focus"/>
                     </div>
                 </div>
-
             </div>
         </div>
     </section>
-    <section id="gallery-section" class="py-20 bg-bg-principal">
+    
+    <section id="gallery-section" class="py-24 bg-bg-main">
         <div class="max-w-7xl mx-auto px-6">
             <div class="text-center mb-16">
-                <h2 class="text-4xl md:text-5xl font-light text-text-dark mb-8">
+                <h2 class="text-4xl md:text-5xl font-display tracking-wide text-text-main mb-8"> 
                     Catálogo de Obras
                 </h2>
-                <div class="w-16 h-px bg-pantone-magenta mx-auto"></div>
+                <div class="divider-line bg-accent-blue mx-auto"></div> 
             </div>
 
-            <div class="mb-8 flex flex-wrap gap-4 items-center justify-between bg-bg-card p-4 rounded-sm shadow-inner max-w-5xl mx-auto border border-border-light">
+            <div class="mb-12 flex flex-wrap gap-4 items-center justify-between bg-bg-surface p-4 rounded-sm max-w-5xl mx-auto border border-border-default"> 
+                <input id="search" type="search" placeholder="Buscar..." 
+                    class="filter-input flex-1 min-w-0 md:min-w-[200px]" /> 
                 
-                <input id="search" type="search" placeholder="Buscar por título, técnica o descripción..."
-                    class="flex-1 min-w-0 md:min-w-[200px] p-3 rounded-sm border border-border-light shadow-sm focus:outline-none focus:ring-1 focus:ring-pantone-magenta bg-white text-text-dark transition-colors" />
-                
-                <div class="flex flex-wrap gap-4 justify-end">
-                    
-                    <select id="filter-category" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
-                        <option value="">Categoría</option>
-                    </select>
-
-                    <select id="filter-series" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
-                        <option value="">Serie</option>
-                    </select>
-
-                    <select id="filter-year" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
-                        <option value="">Año</option>
-                    </select>
-
-                    <select id="filter-availability" class="p-3 rounded-sm border border-border-light bg-white text-text-dark shadow-sm focus:ring-1 focus:ring-pantone-magenta w-full sm:w-auto">
+                <div class="flex flex-wrap gap-3 justify-end"> 
+                    <select id="filter-category" class="filter-select w-full sm:w-auto"><option value="">Categoría</option></select>
+                    <select id="filter-series" class="filter-select w-full sm:w-auto"><option value="">Serie</option></select>
+                    <select id="filter-year" class="filter-select w-full sm:w-auto"><option value="">Año</option></select>
+                    <select id="filter-availability" class="filter-select w-full sm:w-auto"> 
                         <option value="">Todas</option>
-                        <option value="true">Obras disponibles</option>
-                        <option value="false">Obras no disponibles</option>
-                    </select>
-
+                        <option value="true">Disponibles</option> <option value="false">No disponibles</option> </select>
                 </div>
                 
-                <div id="admin-controls" class="hidden w-full flex flex-wrap items-center justify-between gap-2 border-t border-border-light pt-4 mt-4">
+                <div id="admin-controls" class="hidden w-full flex flex-wrap items-center justify-between gap-2 border-t border-border-default pt-4 mt-4">
                     <div class="flex flex-wrap gap-2">
-                        <a href="./admin.html" class="p-3 rounded-sm bg-indigo-500 hover:bg-indigo-600 transition duration-300 text-white text-sm font-semibold">Panel Admin</a>
-                        <button id="edit-toggle" class="p-3 rounded-sm bg-gray-200 hover:bg-gray-300 transition duration-300 text-text-dark text-sm font-semibold">Activar Edición</button>
-                        <button id="toggle-prices" class="p-3 rounded-sm bg-blue-500 hover:bg-blue-600 transition duration-300 text-white text-sm font-semibold">Ocultar Precios</button>
+                        <a href="./admin.html" class="admin-button admin-button-primary">Panel Admin</a> 
+                        <button id="edit-toggle" class="admin-button admin-button-secondary">Activar Edición</button> 
+                        <button id="toggle-prices" class="admin-button admin-button-secondary">Ocultar Precios</button> 
                     </div>
                     <div>
-                        <button id="save-order-button" class="hidden p-3 rounded-sm bg-green-600 hover:bg-green-700 text-white transition duration-300 text-sm font-semibold" disabled>Guardar Orden</button>
+                        <button id="save-order-button" class="hidden admin-button admin-button-success" disabled>Guardar Orden</button> 
                     </div>
                 </div>
-
             </div>
             
-            <div id="gallery-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div id="gallery-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"> 
                 </div>
             
             <div id="load-more-trigger" class="py-10 flex justify-center items-center">
@@ -312,25 +227,21 @@
         </div>
     </section>
 
-    <footer id="main-footer" class="fixed bottom-0 left-0 right-0 footer-gradient bg-opacity-95 backdrop-blur-sm border-t border-border-light p-3 z-40 translate-y-full transition-transform duration-500">
-        <div class="max-w-7xl mx-auto flex justify-between items-center text-sm text-text-muted">
-            <div class="font-light">
-                © 2025 Francisco Fernández. Todos los derechos reservados.
-            </div>
+    <footer id="main-footer" class="fixed bottom-0 left-0 right-0 footer-gradient p-3 z-40 translate-y-full transition-transform duration-500"> 
+        <div class="max-w-7xl mx-auto flex justify-between items-center text-sm text-text-secondary"> 
+            <div class="font-light">© 2025 Francisco Fernández</div>
             <nav class="space-x-4">
-                <a href="#bio-section" class="hover:text-pantone-magenta transition-colors">Bio</a>
-                <a href="mailto:ffran.arte@gmail.com" class="hover:text-pantone-magenta transition-colors">Contacto</a>
-                <a href="https://www.instagram.com/fran.faf/?hl=es" target="_blank" class="hover:text-pantone-magenta transition-colors">Instagram</a>
+                <a href="#bio-section" class="hover:text-accent-blue transition-colors">Bio</a> 
+                <a href="mailto:ffran.arte@gmail.com" class="hover:text-accent-blue transition-colors">Contacto</a> 
+                <a href="https://www.instagram.com/fran.faf/?hl=es" target="_blank" class="hover:text-accent-blue transition-colors">Instagram</a> 
             </nav>
         </div>
     </footer>
 
-    <div id="modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center p-4" onclick="closeModal(event)">
-        <div id="modal-container" class="bg-bg-card rounded-sm shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
-               <div class="flex justify-end p-4">
-                <button onclick="closeModal()" class="text-text-muted hover:text-pantone-magenta text-2xl">&times;</button>
-            </div>
-            <div id="modal-content" class="p-6 pt-0">
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-70 z-[100] hidden flex items-center justify-center p-4" onclick="closeModal(event)">
+        <div id="modal-container" class="bg-bg-surface rounded-sm shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative" onclick="event.stopPropagation()"> 
+            <button onclick="closeModal()" class="absolute top-3 right-3 text-text-secondary hover:text-accent-blue text-3xl leading-none">&times;</button> 
+            <div id="modal-content" class="p-6 md:p-8"> 
                 </div>
         </div>
     </div>

@@ -3,34 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso a Administración</title>
+    <title>Acceso Admin | Galería F. Fernández</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+         tailwind.config = {
+            theme: {
+                extend: {
+                     fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                        'display': ['Bebas Neue', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
     <style>
-        /* Estilos de Utilidad */
-        #alert {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 1001; 
-            padding: 1rem; border-radius: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            font-weight: 500;
+        body { background-color: #F9FAFB; color: #5A6349; } /* bg-main, text-main */
+        ::selection { background-color: #7BA4C0; color: #FFFFFF; }
+        #alert { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1001; padding: 1rem; border-radius: 0.25rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-weight: 500; width: 90%; max-width: 400px;}
+        /* Inputs & Labels */
+        /* --- CORREGIDO LÍNEA 29 --- */
+        .admin-label { display: block; font-size: 0.75rem; font-medium; color: #4B5563; /* Gray-600 */ margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em;}
+        .admin-input { display: block; width: 100%; border-radius: 0.25rem; border: 1px solid #D1D5DB; /* Gray-300 */ box-shadow: none; padding: 0.75rem; font-size: 0.875rem; color: #5A6349; background-color: #FFFFFF; }
+        .admin-input::placeholder { color: #9CA3AF; /* Gray-400 */ }
+        .admin-input:focus {
+            border-color: #7BA4C0;
+            outline: none;
+            box-shadow: 0 0 0 1px #7BA4C0; /* Simula el ring */
         }
+        /* Botón */
+        /* --- CORREGIDO LÍNEA 39 --- */
+        .admin-button { padding: 0.75rem 1.5rem; border-radius: 0.25rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-size: 0.875rem; font-semibold; transition: background-color 0.3s; text-transform: uppercase; letter-spacing: 0.05em; }
+        .admin-button-primary { background-color: #5A6349; color: white; } /* Kale */
+        .admin-button-primary:hover { background-color: #4B533D; }
+        .admin-button:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
-    
+<body class="bg-bg-main min-h-screen flex items-center justify-center font-sans text-text-main p-4">
+
     <div id="alert" class="hidden" role="alert"></div>
 
-    <div id="login-section" class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-xl w-full">
-        <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Panel de Acceso</h2>
-        <form id="login-form" class="space-y-4">
-            <input id="login-email" type="email" placeholder="Correo Electrónico" class="w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500" required />
-            <input id="login-password" type="password" placeholder="Contraseña" class="w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500" required />
-            <button type="submit" id="login-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 w-full">
+    <div id="login-section" class="max-w-sm mx-auto bg-bg-surface p-8 rounded-lg shadow-xl w-full border border-border-default">
+        <h2 class="text-3xl font-display tracking-wide text-text-main mb-8 text-center">Panel de Acceso</h2>
+        <form id="login-form" class="space-y-5">
+             <div>
+                <label for="login-email" class="admin-label">Email</label>
+                <input id="login-email" type="email" class="admin-input" required />
+             </div>
+             <div>
+                 <label for="login-password" class="admin-label">Contraseña</label>
+                 <input id="login-password" type="password" class="admin-input" required />
+             </div>
+            <button type="submit" id="login-button" class="admin-button admin-button-primary w-full !mt-6">
                 Acceder
             </button>
             <div class="text-center pt-4">
-                <a href="./index.html" class="text-indigo-600 hover:text-indigo-800 text-sm">← Volver a la Galería</a>
+                <a href="./index.html" class="text-accent-blue hover:underline text-sm font-medium">← Volver a la Galería</a>
             </div>
         </form>
     </div>

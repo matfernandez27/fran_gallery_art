@@ -46,7 +46,6 @@
         }
         .section-heading:first-of-type {
              margin-top: 0; /* Sin margen superior para el primer título */
-             /* Mantenemos el borde inferior para separar del texto */
         }
 
          /* Estilo botones */
@@ -76,7 +75,7 @@
              font-size: 1.125rem; /* text-lg */
              line-height: 1.75rem; /* leading-relaxed */
              padding-top: 1.5rem; /* pt-6 */
-             border-top: 1px solid #E5E7EB; /* border-default */
+             /* border-top: 1px solid #E5E7EB; <<< LÍNEA ELIMINADA */
              margin-top: 1.5rem; /* mt-6 */
         }
 
@@ -84,7 +83,11 @@
 </head>
 <body class="bg-bg-main text-text-main font-sans min-h-screen"> 
 
-    <main class="py-24"> <div class="max-w-3xl mx-auto px-6 bg-bg-surface p-10 md:p-16 rounded-lg shadow-lg border border-border-default"> <header class="mb-10"> <a href="./index.html" class="text-xs uppercase tracking-wider font-semibold text-text-secondary hover:text-accent-blue transition-colors duration-300 inline-block mb-6"> 
+    <main class="py-24"> 
+        <div class="max-w-3xl mx-auto px-6 bg-bg-surface p-10 md:p-16 rounded-lg shadow-lg border border-border-default"> 
+            
+            <header class="mb-10"> 
+                <a href="./index.html" class="text-xs uppercase tracking-wider font-semibold text-text-secondary hover:text-accent-blue transition-colors duration-300 inline-block mb-6"> 
                     ← Volver a la Galería
                 </a>
                 <h1 class="text-4xl md:text-5xl font-display tracking-wider text-text-main"> 
@@ -94,7 +97,9 @@
                 <p class="text-lg text-text-secondary font-light">Artista Visual Patagónico</p>
             </header>
 
-            <article class="space-y-8 text-base leading-relaxed"> <section>
+            <article class="space-y-8 text-base leading-relaxed"> 
+                
+                <section>
                     <h2 class="section-heading">Orígenes y Trayectoria</h2>
                     <p>
                         Nacido en Trelew, Chubut, en octubre del año 1991. Francisco Fernández es un artista con una sólida presencia en la escena artística, acumulando más de 10 muestras individuales y participando en más de 25 exposiciones grupales y colectivas. Su trabajo ha sido exhibido tanto en espacios formales como Museos y galerías, así como en diversos centros culturales a lo largo del país.
@@ -113,7 +118,7 @@
                
                 <section>
                      <h2 class="section-heading">Enfoque Artístico</h2>
-                     <p class="highlighted-quote"> 
+                    <p class="highlighted-quote"> 
                         Cada pieza es un puente hacia lo inhóspito y lo íntimo. Su técnica busca no solo capturar la dualidad de un paisaje vasto, sino también ofrecer una mirada profunda y reflexiva sobre el alma de ese territorio, invitando al espectador a una introspección.
                     </p>
                 </section>

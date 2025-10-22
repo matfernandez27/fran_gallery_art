@@ -59,7 +59,13 @@
         #carousel-header { background-color: #F0F3F5; position: relative; overflow: hidden; }
         .carousel-item { position: absolute; inset: 0; background-size: contain; background-position: center; background-repeat: no-repeat; opacity: 0; transition: opacity 1.5s ease-in-out; transform: scale(1.05); }
         .carousel-item.active { opacity: 1; transform: scale(1); }
-        .carousel-overlay { position: absolute; inset: 0; background: rgba(249, 250, 251, 0.3); z-index: 1; }
+        .carousel-overlay {
+            position: absolute;
+            inset: 0; /* Cubre todo el área */
+            /* Capa oscura semitransparente - Ajusta la opacidad (0.5 = 50%) si es necesario */
+            background: rgba(40, 40, 40, 0.5); /* Un gris oscuro, puedes experimentar */
+            z-index: 1; /* Asegura que esté sobre la imagen y bajo el texto */
+        }
 
         /* Bio Section */
         #bio-section .grid { align-items: start; }
@@ -121,16 +127,16 @@
         <div id="carousel-container" class="absolute inset-0"></div>
         <div class="carousel-overlay"></div>
         <div class="text-center max-w-4xl mx-auto px-6 z-10">
-            <h1 class="text-6xl md:text-8xl text-text-main mb-8 tracking-wide font-display">
+            <h1 class="text-6xl md:text-8xl text-white mb-8 tracking-wide font-display">
                 Francisco<br>
                 <span class="text-accent-blue">Fernández</span>
-            </h1>
-            <p class="text-xl md:text-2xl text-text-secondary font-light mb-12 max-w-2xl mx-auto">
+                 </h1>
+            <p class="text-xl md:text-2xl text-white opacity-80 font-light mb-12 max-w-2xl mx-auto">
                 Galería Personal
             </p>
-            <div class="divider-line bg-accent-blue mx-auto mb-12"></div>
+            <div class="divider-line bg-white opacity-70 mx-auto mb-12"></div>
             <button onclick="document.getElementById('bio-section').scrollIntoView({behavior: 'smooth'})"
-                    class="text-text-secondary hover:text-accent-blue transition-colors duration-300 text-sm uppercase tracking-wider font-medium">
+                    class="text-white opacity-80 hover:opacity-100 hover:text-accent-blue transition-colors duration-300 text-sm uppercase tracking-wider font-medium">
                 Explorar Galería
             </button>
         </div>

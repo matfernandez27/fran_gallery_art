@@ -24,17 +24,25 @@ const loadMoreTrigger = document.getElementById("load-more-trigger");
 
 // --- Función Principal: Cargar Obras ---
 async function fetchWorks(reset = false) {
+    // 1. Validación de Seguridad: Si db no existe, abortamos para evitar el error de CollectionReference
+    if (!db) {
+        console.error("Error: La instancia de la base de datos (db) no está definida. Revisa tu firebaseConfig.js");
+        if (loadingOverlay) loadingOverlay.classList.add("hidden");
+        return;
+    }
+
     if (isLoading || (isExhausted && !reset)) return;
     isLoading = true;
 
     if (reset) {
         lastVisible = null;
         isExhausted = false;
-        galleryContainer.innerHTML = "";
+        if (galleryContainer) galleryContainer.innerHTML = "";
     }
 
     try {
-        const productsRef = collection(db, "productos"); // Usamos 'productos' como en admin.js
+        // Usamos 'productos' para coincidir con el admin.js
+        const productsRef = collection(db, "productos"); 
         let q = query(productsRef, orderBy("orden", "asc"), limit(PAGE_SIZE));
 
         if (lastVisible && !reset) {
@@ -45,6 +53,10 @@ async function fetchWorks(reset = false) {
         
         if (querySnapshot.empty) {
             isExhausted = true;
+            // Si está vacío al resetear, mostramos mensaje
+            if (reset && galleryContainer) {
+                galleryContainer.innerHTML = '<p class="text-center col-span-full py-10 text-text-secondary">No se encontraron obras disponibles.</p>';
+            }
             return;
         }
 
@@ -58,21 +70,24 @@ async function fetchWorks(reset = false) {
         renderGallery(newWorks);
 
     } catch (error) {
-        console.error("Error al cargar obras:", error);
+        console.error("Error al cargar obras de Firestore:", error);
     } finally {
         isLoading = false;
-        if (loadingOverlay) loadingOverlay.style.opacity = "0";
-        setTimeout(() => loadingOverlay?.classList.add("hidden"), 300);
+        // Ocultar spinner con suavidad
+        if (loadingOverlay) {
+            loadingOverlay.style.opacity = "0";
+            setTimeout(() => loadingOverlay.classList.add("hidden"), 300);
+        }
     }
 }
 
 // --- Renderizado de la Galería ---
 function renderGallery(works) {
+    if (!galleryContainer) return;
     const fragment = document.createDocumentFragment();
 
     works.forEach(obra => {
-        // En Firebase usamos el objeto imagenes[0].url que definimos en admin.js
-        const mainImg = obra.imagenes && obra.imagenes.length > 0 
+        const mainImg = (obra.imagenes && obra.imagenes.length > 0) 
                         ? obra.imagenes[0].url 
                         : './img/placeholder.jpg';
 
@@ -100,24 +115,19 @@ function renderGallery(works) {
     galleryContainer.appendChild(fragment);
 }
 
-// --- Lógica del Modal (Detalle de Obra) ---
+// --- Lógica del Modal ---
 window.openModal = function(obra) {
     const modal = document.getElementById("modal");
     const modalContent = document.getElementById("modal-content");
-    
-    const imagenesHTML = obra.imagenes?.map(img => `
-        <div class="thumbnail-item">
-            <img src="${img.url}" class="w-full rounded border border-border-default">
-        </div>
-    `).join('') || '';
+    if (!modal || !modalContent) return;
 
     modalContent.innerHTML = `
         <div class="grid md:grid-cols-2 gap-8">
             <div class="image-zoom-container bg-gray-50 rounded-sm">
-                <img src="${obra.imagenes?.[0]?.url || ''}" class="zoom-image">
+                <img src="${(obra.imagenes && obra.imagenes[0]) ? obra.imagenes[0].url : ''}" class="zoom-image w-full">
             </div>
             <div>
-                <h2 class="text-3xl font-display mb-2">${obra.titulo}</h2>
+                <h2 class="text-3xl font-display mb-2 text-text-main">${obra.titulo || 'Sin título'}</h2>
                 <p class="text-accent-blue font-medium mb-6">${obra.serie || 'Serie General'} — ${obra.anio || 's/f'}</p>
                 <div class="space-y-4 text-sm text-text-secondary">
                     <p><strong>Técnica:</strong> ${obra.tecnica || 'No especificada'}</p>
@@ -138,8 +148,10 @@ window.openModal = function(obra) {
 };
 
 window.closeModal = function(e) {
+    const modal = document.getElementById("modal");
+    if (!modal) return;
     if (!e || e.target.id === "modal" || e.target.tagName === "BUTTON") {
-        document.getElementById("modal").classList.add("hidden");
+        modal.classList.add("hidden");
     }
 };
 

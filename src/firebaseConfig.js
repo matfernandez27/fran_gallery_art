@@ -1,10 +1,8 @@
-// firebaseConfig.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-// Reemplaza los valores de abajo con los datos reales de tu consola de Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyB5jPmfbrY0U6bEX_Wp5JUVO7Cgn1udWpA",
   authDomain: "franfafgallery.firebaseapp.com",
@@ -15,10 +13,8 @@ const firebaseConfig = {
   measurementId: "G-7EJY7X2T16"
 };
 
-// Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 
-// Exportar instancias para usar en main.js y admin.js
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);

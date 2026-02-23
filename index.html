@@ -39,74 +39,44 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
     <style>
         /* Estilos Generales Refinados */
-        body { background-color: #F9FAFB; color: #5A6349; } /* bg-main, text-main */
+        body { background-color: #F9FAFB; color: #5A6349; }
         ::selection { background-color: #7BA4C0; color: #FFFFFF; }
 
-        /* Spinner con nuevos colores */
+        /* Spinner */
         .loading-overlay { background: rgba(249, 250, 251, 0.95); position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; transition: opacity 0.3s;}
         .lds-ring { display: inline-block; position: relative; width: 80px; height: 80px; }
         .lds-ring div { box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; border: 8px solid #7BA4C0; border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: #7BA4C0 transparent transparent transparent; }
         @keyframes lds-ring { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .lds-ring div:nth-child(1) { animation-delay: -0.45s; } .lds-ring div:nth-child(2) { animation-delay: -0.3s; } .lds-ring div:nth-child(3) { animation-delay: -0.15s; }
+        .lds-ring div:nth-child(1) { animation-delay: -0.45s; } 
+        .lds-ring div:nth-child(2) { animation-delay: -0.3s; } 
+        .lds-ring div:nth-child(3) { animation-delay: -0.15s; }
 
         /* Header Carrusel */
         #carousel-header { background-color: #F0F3F5; position: relative; overflow: hidden; }
         .carousel-item { position: absolute; inset: 0; background-size: contain; background-position: center; background-repeat: no-repeat; opacity: 0; transition: opacity 1.5s ease-in-out; transform: scale(1.05); }
         .carousel-item.active { opacity: 1; transform: scale(1); }
-        .carousel-overlay {
-            position: absolute;
-            inset: 0; /* Cubre todo el área */
-            /* Capa oscura semitransparente - Ajusta la opacidad (0.5 = 50%) si es necesario */
-            background: rgba(40, 40, 40, 0.5); /* Un gris oscuro, puedes experimentar */
-            z-index: 1; /* Asegura que esté sobre la imagen y bajo el texto */
-        }
+        .carousel-overlay { position: absolute; inset: 0; background: rgba(40, 40, 40, 0.5); z-index: 1; }
 
-        /* Bio Section */
-        #bio-section .grid { align-items: start; }
-        .bio-image-container { display: flex; justify-content: center; }
-        .bio-image-focus { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
-
-        /* Botón WhatsApp */
+        /* WhatsApp Button */
         .whatsapp-float-btn { position: fixed; bottom: 60px; right: 20px; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 50; transition: transform 0.3s, opacity 0.5s; opacity: 0; pointer-events: none; }
         .whatsapp-float-btn.show { opacity: 1; pointer-events: auto; }
         .whatsapp-float-btn:hover { transform: scale(1.1); }
 
-        /* Zoom Imagen */
-        .image-zoom-container { position: relative; overflow: hidden; cursor: zoom-in;} /* Added cursor */
+        /* Zoom & Gallery UI */
+        .image-zoom-container { position: relative; overflow: hidden; cursor: zoom-in;}
         .zoom-image { width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s ease-out; transform-origin: center center; }
-
-        /* Miniaturas Modal */
-        .thumbnail-item { aspect-ratio: 1 / 1; }
-        .thumbnail-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 0.125rem; }
-
-        /* Sortable Ghost */
-        .sortable-ghost { opacity: 0.4; background-color: #BFDBFE; border: 2px dashed #3B82F6; }
-
-        /* Footer */
-        .footer-gradient { background: #FFFFFF; border-top: 1px solid #E5E7EB;} /* bg-surface, border-default */
-
-        /* Alerta */
-        #alert { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1001; padding: 1rem; border-radius: 0.375rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); font-weight: 500; }
-
-        /* Línea decorativa */
         .divider-line { width: 4rem; height: 1px; }
-
-        /* Inputs y Selects */
-        .filter-select, .filter-input { padding: 0.75rem; border-radius: 0.125rem; border: 1px solid #E5E7EB; background-color: #FFFFFF; color: #6B7280; box-shadow: none; font-size: 0.875rem; transition: border-color 0.3s, box-shadow 0.3s; }
+        .filter-select, .filter-input { padding: 0.75rem; border-radius: 0.125rem; border: 1px solid #E5E7EB; background-color: #FFFFFF; color: #6B7280; font-size: 0.875rem; transition: border-color 0.3s, box-shadow 0.3s; }
         .filter-select:focus, .filter-input:focus { outline: none; border-color: #7BA4C0; box-shadow: 0 0 0 1px #7BA4C0; }
-        .filter-input::placeholder { color: #9CA3AF; }
 
-        /* Botones Admin */
-        .admin-button { padding: 0.5rem 1rem; border-radius: 0.125rem; text-transform: uppercase; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; transition: background-color 0.3s, color 0.3s; }
-        .admin-button-primary { background-color: #4B5563; color: white; } .admin-button-primary:hover { background-color: #374151; }
-        .admin-button-secondary { background-color: #E5E7EB; color: #4B5563; } .admin-button-secondary:hover { background-color: #D1D5DB; }
-        .admin-button-success { background-color: #10B981; color: white; } .admin-button-success:hover { background-color: #059669; }
+        /* Admin Styles */
+        .admin-button { padding: 0.5rem 1rem; border-radius: 0.125rem; text-transform: uppercase; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; transition: all 0.3s; }
+        .admin-button-primary { background-color: #4B5563; color: white; }
+        .admin-button-success { background-color: #10B981; color: white; }
     </style>
 </head>
 <body class="bg-bg-main text-text-main font-sans min-h-screen">
@@ -130,7 +100,7 @@
             <h1 class="text-6xl md:text-8xl text-white mb-8 tracking-wide font-display">
                 Francisco<br>
                 <span class="text-accent-blue">Fernández</span>
-                 </h1>
+            </h1>
             <p class="text-xl md:text-2xl text-white opacity-80 font-light mb-12 max-w-2xl mx-auto">
                 Galería Personal
             </p>
@@ -142,12 +112,12 @@
         </div>
     </section>
 
-    <section id="bio-section" class="py-24 bg-bg-surface"> <div class="max-w-6xl mx-auto px-6">
+    <section id="bio-section" class="py-24 bg-bg-surface">
+        <div class="max-w-6xl mx-auto px-6">
             <div class="grid md:grid-cols-3 gap-16 items-start">
                 <div class="md:col-span-2 flex flex-col justify-start">
                     <div class="divider-line bg-accent-blue mb-8 ml-0 mr-auto"></div>
                     <h3 class="text-2xl font-medium text-text-main mb-6">Francisco Fernández</h3>
-
                     <div id="bio-text-content">
                         <p class="text-lg text-text-main leading-relaxed mb-4">
                             Artista visual nacido en Trelew. Con +10 muestras individuales y +25 colectivas en museos y galerías.
@@ -156,7 +126,6 @@
                             Su obra tiende puentes entre lo inhóspito y lo íntimo, ofreciendo una mirada reflexiva sobre el territorio.
                         </p>
                     </div>
-
                     <a href="biografia-completa.html"
                         class="mt-4 text-accent-blue font-semibold hover:text-text-main transition-colors duration-300 text-sm self-start inline-flex items-center space-x-2 uppercase tracking-wider">
                         <span>Leer Biografía</span>
@@ -182,8 +151,7 @@
             </div>
 
             <div class="mb-12 flex flex-wrap gap-4 items-center justify-between bg-bg-surface p-4 rounded-sm max-w-5xl mx-auto border border-border-default">
-                <input id="search" type="search" placeholder="Buscar..."
-                    class="filter-input flex-1 min-w-0 md:min-w-[200px]" />
+                <input id="search" type="search" placeholder="Buscar..." class="filter-input flex-1 min-w-0 md:min-w-[200px]" />
 
                 <div class="flex flex-wrap gap-3 justify-end">
                     <select id="filter-category" class="filter-select w-full sm:w-auto"><option value="">Categoría</option></select>
@@ -191,15 +159,15 @@
                     <select id="filter-year" class="filter-select w-full sm:w-auto"><option value="">Año</option></select>
                     <select id="filter-availability" class="filter-select w-full sm:w-auto">
                         <option value="">Todas</option>
-                        <option value="true">Disponibles</option> <option value="false">No disponibles</option> </select>
+                        <option value="true">Disponibles</option> 
+                        <option value="false">No disponibles</option> 
+                    </select>
                 </div>
 
                 <div id="admin-controls" class="hidden w-full flex flex-wrap items-center justify-between gap-2 border-t border-border-default pt-4 mt-4">
                     <div class="flex flex-wrap gap-2">
                         <a href="./admin.html" class="admin-button admin-button-primary">Panel Admin</a>
-                        <button id="edit-toggle" class="admin-button admin-button-secondary">Activar Edición</button>
-                        {/* --- BOTÓN OCULTO --- */}
-                        <button id="toggle-prices" class="admin-button admin-button-secondary hidden">Ocultar Precios</button>
+                        <button id="edit-toggle" class="admin-button border border-gray-300 text-gray-700">Activar Edición</button>
                     </div>
                     <div>
                         <button id="save-order-button" class="hidden admin-button admin-button-success" disabled>Guardar Orden</button>
@@ -213,13 +181,12 @@
             <div id="load-more-trigger" class="py-10 flex justify-center items-center">
                  <div class="lds-ring hidden"><div></div><div></div><div></div><div></div></div>
             </div>
-
         </div>
     </section>
 
     <footer id="main-footer" class="fixed bottom-0 left-0 right-0 footer-gradient p-3 z-40 translate-y-full transition-transform duration-500">
         <div class="max-w-7xl mx-auto flex justify-between items-center text-sm text-text-secondary">
-            <div class="font-light">© 2025 Francisco Fernández</div>
+            <div class="font-light">© 2026 Francisco Fernández</div>
             <nav class="space-x-4">
                 <a href="#bio-section" class="hover:text-accent-blue transition-colors">Bio</a>
                 <a href="mailto:ffran.arte@gmail.com" class="hover:text-accent-blue transition-colors">Contacto</a>

@@ -18,50 +18,30 @@
         }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-    <script src="config.js"></script>
 
     <style>
-        body { background-color: #F9FAFB; color: #5A6349; } /* bg-main, text-main */
+        body { background-color: #F9FAFB; color: #5A6349; }
         ::selection { background-color: #7BA4C0; color: #FFFFFF; }
         #alert { position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); padding: 1rem; border-radius: 0.375rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1001; width: 90%; max-width: 400px; }
         .drag-handle { cursor: grab; } .drag-handle:hover { color: #7BA4C0; }
         .obra-image { width: 64px; height: 64px; object-fit: cover; border-radius: 0.25rem; flex-shrink: 0; }
         .text-truncate-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
-        /* Inputs & Labels */
-        /* --- CORREGIDO LÍNEA 35 --- */
-        .admin-label { display: block; font-size: 0.75rem; font-medium; color: #4B5563; /* Gray-600 */ margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em;}
-        .admin-input, .admin-textarea, .admin-select {
-            display: block; width: 100%; border-radius: 0.25rem; /* rounded */
-            border: 1px solid #D1D5DB; /* Gray-300 */
-            box-shadow: none; padding: 0.625rem 0.75rem; /* Ajustado */ font-size: 0.875rem;
-            color: #5A6349; /* text-main */ background-color: #FFFFFF;
-        }
-        .admin-input::placeholder, .admin-textarea::placeholder { color: #9CA3AF; /* Gray-400 */ }
-        .admin-input:focus, .admin-textarea:focus, .admin-select:focus {
-            border-color: #7BA4C0;
-            outline: none;
-            box-shadow: 0 0 0 1px #7BA4C0; /* Simula el ring */
-        }
+        .admin-label { display: block; font-size: 0.75rem; font-weight: 500; color: #4B5563; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em;}
+        .admin-input, .admin-textarea, .admin-select { display: block; width: 100%; border-radius: 0.25rem; border: 1px solid #D1D5DB; box-shadow: none; padding: 0.625rem 0.75rem; font-size: 0.875rem; color: #5A6349; background-color: #FFFFFF; }
+        .admin-input::placeholder, .admin-textarea::placeholder { color: #9CA3AF; }
+        .admin-input:focus, .admin-textarea:focus, .admin-select:focus { border-color: #7BA4C0; outline: none; box-shadow: 0 0 0 1px #7BA4C0; }
         .admin-checkbox { height: 1rem; width: 1rem; color: #7BA4C0; border-color: #D1D5DB; border-radius: 0.25rem; }
-        .admin-checkbox:focus {
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(191, 219, 254, 0.5); /* Simula focus:ring-2 focus:ring-blue-200/50 */
-            border-color: #7BA4C0;
-        }
-
-        /* Botones */
-        /* --- CORREGIDO LÍNEA 58 --- */
-        .admin-button { padding: 0.5rem 1rem; border-radius: 0.25rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-size: 0.75rem; font-semibold; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid transparent; }
-        .admin-button-primary { background-color: #5A6349; border-color: #5A6349; color: white; } /* Kale */
+        .admin-checkbox:focus { outline: none; box-shadow: 0 0 0 2px rgba(191, 219, 254, 0.5); border-color: #7BA4C0; }
+        .admin-button { padding: 0.5rem 1rem; border-radius: 0.25rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-size: 0.75rem; font-weight: 600; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid transparent; }
+        .admin-button-primary { background-color: #5A6349; border-color: #5A6349; color: white; }
         .admin-button-primary:hover { background-color: #4B533D; border-color: #4B533D;}
-        .admin-button-secondary { background-color: #F9FAFB; border-color: #E5E7EB; color: #4B5563; } /* bg-main / border / text-secondary */
+        .admin-button-secondary { background-color: #F9FAFB; border-color: #E5E7EB; color: #4B5563; }
         .admin-button-secondary:hover { background-color: #F3F4F6; border-color: #D1D5DB; }
-        .admin-button-danger { background-color: #EF4444; border-color: #EF4444; color: white; } /* Red-500 */
+        .admin-button-danger { background-color: #EF4444; border-color: #EF4444; color: white; }
         .admin-button-danger:hover { background-color: #DC2626; border-color: #DC2626;}
-        .admin-button-link { background-color: #7BA4C0; border-color: #7BA4C0; color: white; } /* Granada Sky */
+        .admin-button-link { background-color: #7BA4C0; border-color: #7BA4C0; color: white; }
         .admin-button-link:hover { background-color: #6A93AD; border-color: #6A93AD; }
         .admin-button:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
@@ -73,18 +53,13 @@
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <h1 class="text-xl font-display tracking-wide text-text-main">ADMINISTRACIÓN</h1>
             <div class="flex items-center space-x-3">
-                <button id="show-add-form-button" class="admin-button admin-button-primary">
-                    + Nueva Obra
-                </button>
-                <button id="logout-button" class="admin-button admin-button-secondary">
-                    Cerrar Sesión
-                </button>
+                <button id="show-add-form-button" class="admin-button admin-button-primary">+ Nueva Obra</button>
+                <button id="logout-button" class="admin-button admin-button-secondary">Cerrar Sesión</button>
             </div>
         </div>
     </header>
 
     <main class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-
         <section id="obra-form-container" class="bg-bg-surface p-6 rounded-lg shadow-lg mb-8 hidden border border-border-default">
             <h2 id="form-title" class="text-2xl font-display tracking-wide text-text-main mb-6 border-b border-border-default pb-3">Agregar Nueva Obra</h2>
             <form id="obra-form" class="space-y-5">
@@ -94,7 +69,8 @@
                 </div>
                 <div>
                     <label for="descripcion" class="admin-label">Descripción</label>
-                    <textarea id="descripcion" name="descripcion" rows="4" class="admin-input"></textarea> </div>
+                    <textarea id="descripcion" name="descripcion" rows="4" class="admin-input"></textarea> 
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label for="anio" class="admin-label">Año</label>
@@ -129,55 +105,42 @@
                     <div class="flex items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-6 flex-col sm:flex-row">
                         <div class="flex items-center">
                             <input type="checkbox" id="show_price" name="show_price" class="admin-checkbox">
-                            <label for="show_price" class="ml-2 text-sm text-text-secondary">
-                                Mostrar precio al público
-                            </label>
+                            <label for="show_price" class="ml-2 text-sm text-text-secondary">Mostrar precio al público</label>
                         </div>
                         <div class="flex items-center">
                             <input type="checkbox" id="is_available" name="is_available" class="admin-checkbox" checked>
-                            <label for="is_available" class="ml-2 text-sm text-text-secondary">
-                                Obra disponible
-                            </label>
+                            <label for="is_available" class="ml-2 text-sm text-text-secondary">Obra disponible</label>
                         </div>
                     </div>
                 </fieldset>
 
                 <fieldset id="current-images-container" class="space-y-3 hidden border-t border-border-default pt-4">
                     <legend class="text-base font-medium text-text-main">Imágenes Actuales</legend>
-                    <div id="current-images-list" class="flex flex-wrap gap-4 p-3 border border-border-default rounded-md bg-gray-50/50 min-h-[80px]">
-                        </div>
-                     <p class="text-xs text-text-secondary">Arrastrar para reordenar la imagen principal (primera). Click en la (X) para marcarla para eliminación.</p>
+                    <div id="current-images-list" class="flex flex-wrap gap-4 p-3 border border-border-default rounded-md bg-gray-50/50 min-h-[80px]"></div>
+                     <p class="text-xs text-text-secondary">Arrastrar para reordenar la imagen principal. Click en la (X) para eliminarla.</p>
                 </fieldset>
 
                 <fieldset class="border-t border-border-default pt-4">
                      <legend class="text-base font-medium text-text-main mb-3">Subir Nuevas Imágenes</legend>
                     <input type="file" id="imagenes" name="imagenes" multiple accept="image/*" class="block w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer">
-                    <p class="mt-2 text-xs text-text-secondary">En modo edición, estas imágenes se agregarán a las existentes.</p>
                 </fieldset>
 
                 <div class="flex space-x-4 pt-5 border-t border-border-default">
-                    <button type="submit" id="submit-button" class="admin-button admin-button-primary flex-1">
-                        Guardar Obra
-                    </button>
-                    <button type="button" id="cancel-edit-button" class="admin-button admin-button-secondary flex-1">
-                        Cancelar
-                    </button>
+                    <button type="submit" id="submit-button" class="admin-button admin-button-primary flex-1">Guardar Obra</button>
+                    <button type="button" id="cancel-edit-button" class="admin-button admin-button-secondary flex-1">Cancelar</button>
                 </div>
             </form>
         </section>
 
         <section id="works-container" class="bg-bg-surface p-6 rounded-lg shadow-lg hidden border border-border-default">
             <h2 class="text-2xl font-display tracking-wide text-text-main mb-6 border-b border-border-default pb-3">Listado de Obras</h2>
-
             <div id="search-container" class="mb-5 relative">
                 <input type="text" id="search-input" placeholder="Buscar por título, categoría, serie..." class="admin-input pl-10 w-full sm:w-1/2">
                 <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                  <button id="save-order-button" class="hidden admin-button admin-button-success absolute right-0 top-1/2 transform -translate-y-1/2" disabled>Guardar Orden</button>
             </div>
-
-            <div id="works-list" class="space-y-3">
-                </div>
-            </section>
+            <div id="works-list" class="space-y-3"></div>
+        </section>
 
         <section id="login-container" class="max-w-md mx-auto bg-bg-surface p-8 rounded-lg shadow-xl hidden border border-border-default">
             <h2 class="text-3xl font-display tracking-wide text-text-main mb-6 text-center">Acceso Admin</h2>
@@ -190,9 +153,7 @@
                     <label for="password" class="admin-label">Contraseña</label>
                     <input type="password" id="password" required class="admin-input">
                 </div>
-                <button type="submit" class="admin-button admin-button-primary w-full mt-4">
-                    Ingresar
-                </button>
+                <button type="submit" class="admin-button admin-button-primary w-full mt-4">Ingresar</button>
             </form>
         </section>
     </main>

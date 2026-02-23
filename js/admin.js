@@ -1,5 +1,5 @@
 // js/admin.js
-import { db, auth, storage } from './firebase-config.js'; // Ajusta la ruta según tu proyecto
+import { db, auth, storage } from '../src/firebaseConfig.js'; 
 import { 
     collection, addDoc, updateDoc, deleteDoc, doc, 
     query, orderBy, limit, startAfter, getDocs, getDoc, 
@@ -16,14 +16,14 @@ import {
 let currentWorks = [];
 let isEditMode = false;
 let workToEdit = null;
-let lastVisibleDoc = null; // Para paginación en Firebase
+let lastVisibleDoc = null; 
 const PAGE_SIZE = 20;
 let isLoading = false;
 let allDataLoaded = false;
 let currentSearchQuery = '';
 let searchDebounceTimer;
 
-// --- Selectores DOM (Se mantienen igual) ---
+// --- Selectores DOM ---
 const worksList = document.getElementById('works-list');
 const loginContainer = document.getElementById('login-container');
 const adminHeader = document.getElementById('admin-header');
@@ -38,7 +38,6 @@ const searchInput = document.getElementById('search-input');
 const worksContainer = document.getElementById('works-container');
 const saveOrderButton = document.getElementById('save-order-button');
 
-// --- Helpers de UI ---
 function showAlert(message, type = 'success') {
     if (!alertDiv) return;
     alertDiv.textContent = message;
@@ -50,7 +49,20 @@ function showAlert(message, type = 'success') {
     setTimeout(() => alertDiv.classList.add('hidden'), 5000);
 }
 
-// --- Lógica de Negocio: Carga de Datos ---
+function showAdminView() {
+    loginContainer?.classList.add('hidden');
+    adminHeader?.classList.remove('hidden');
+    worksContainer?.classList.remove('hidden');
+    document.getElementById('show-add-form-button')?.classList.remove('hidden');
+}
+
+function showLoginView() {
+    loginContainer?.classList.remove('hidden');
+    adminHeader?.classList.add('hidden');
+    worksContainer?.classList.add('hidden');
+    obraFormContainer?.classList.add('hidden');
+}
+
 async function loadWorksPage(reset = false) {
     if (isLoading || (allDataLoaded && !reset)) return;
     isLoading = true;
@@ -60,7 +72,6 @@ async function loadWorksPage(reset = false) {
         const productsRef = collection(db, "productos");
 
         if (currentSearchQuery) {
-            // Firebase no tiene 'ilike'. Se suele usar un filtro de rango para búsquedas simples por prefijo
             q = query(
                 productsRef,
                 where("titulo", ">=", currentSearchQuery),
@@ -95,7 +106,38 @@ async function loadWorksPage(reset = false) {
     }
 }
 
-// --- Lógica de Imágenes (Firebase Storage) ---
+function renderWorksList(works, isReplacing = false) {
+    if (!worksList) return;
+    if (isReplacing) worksList.innerHTML = '';
+
+    if (works.length === 0 && isReplacing) {
+        worksList.innerHTML = `<p class="p-4 text-center text-gray-500">No se encontraron obras.</p>`;
+        return;
+    }
+
+    works.forEach(obra => {
+        const item = document.createElement('div');
+        item.id = `obra-item-${obra.id}`;
+        item.dataset.id = obra.id;
+        item.className = 'bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex items-start space-x-4 mb-4';
+        
+        const imageUrl = obra.imagenes?.length > 0 ? obra.imagenes[0].url : 'https://via.placeholder.com/64';
+
+        item.innerHTML = `
+            <div class="drag-handle p-2 self-center text-gray-400 cursor-move"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg></div>
+            <img src="${imageUrl}" class="w-16 h-16 object-cover rounded">
+            <div class="flex-grow min-w-0">
+                <h3 class="font-semibold truncate">${obra.titulo || 'Sin título'}</h3>
+                <p class="text-xs text-gray-500">${obra.categoria || 'N/A'} | ${obra.anio || 'N/A'}</p>
+            </div>
+            <div class="flex flex-col space-y-2">
+                <button onclick="editWork('${obra.id}')" class="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded">Editar</button>
+                <button onclick="deleteWork('${obra.id}', this)" class="text-xs bg-red-50 text-red-600 px-3 py-1 rounded">Eliminar</button>
+            </div>`;
+        worksList.appendChild(item);
+    });
+}
+
 async function uploadImage(file, workId) {
     const fileName = `${workId}_${Date.now()}_${file.name}`;
     const storageRef = ref(storage, `obras/${fileName}`);
@@ -104,10 +146,10 @@ async function uploadImage(file, workId) {
     return { path: snapshot.ref.fullPath, url: url, name: file.name };
 }
 
-// --- Guardar / Editar ---
 async function handleSubmit(event) {
     event.preventDefault();
     submitButton.disabled = true;
+    submitButton.textContent = "Procesando...";
     
     try {
         const formData = new FormData(obraForm);
@@ -142,9 +184,8 @@ async function handleSubmit(event) {
             
             await updateDoc(doc(db, "productos", workId), { ...obraData, imagenes: finalImages });
         } else {
-            // Crear primero para obtener ID si es necesario, o usar addDoc
             obraData.createdAt = new Date();
-            obraData.orden = currentWorks.length; // Orden básico al final
+            obraData.orden = currentWorks.length; 
             const docRef = await addDoc(collection(db, "productos"), obraData);
             workId = docRef.id;
 
@@ -162,22 +203,20 @@ async function handleSubmit(event) {
         showAlert("Error al guardar: " + error.message, 'error');
     } finally {
         submitButton.disabled = false;
+        submitButton.textContent = "Guardar Obra";
     }
 }
 
-// --- Eliminar ---
 window.deleteWork = async (id, button) => {
-    if (!confirm("¿Eliminar obra?")) return;
+    if (!confirm("¿Eliminar obra permanentemente?")) return;
     
     try {
         const obra = currentWorks.find(w => w.id === id);
-        // 1. Borrar imágenes de Storage
         if (obra?.imagenes) {
             for (const img of obra.imagenes) {
                 try { await deleteObject(ref(storage, img.path)); } catch(e) { console.warn("Imagen no encontrada en Storage"); }
             }
         }
-        // 2. Borrar documento
         await deleteDoc(doc(db, "productos", id));
         showAlert("Obra eliminada.");
         document.getElementById(`obra-item-${id}`).remove();
@@ -186,7 +225,6 @@ window.deleteWork = async (id, button) => {
     }
 };
 
-// --- Reordenamiento (Batch Update) ---
 async function saveOrder() {
     saveOrderButton.disabled = true;
     const batch = writeBatch(db);
@@ -207,7 +245,6 @@ async function saveOrder() {
     }
 }
 
-// --- Auth State ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
         showAdminView();
@@ -224,7 +261,7 @@ async function handleLogin(e) {
     try {
         await signInWithEmailAndPassword(auth, email, pass);
     } catch (error) {
-        showAlert("Login fallido", "error");
+        showAlert("Credenciales inválidas", "error");
     }
 }
 
@@ -232,10 +269,70 @@ async function handleLogout() {
     await signOut(auth);
 }
 
-// --- Inicialización ---
+function resetForm() {
+    obraForm?.reset();
+    isEditMode = false;
+    workToEdit = null;
+    document.getElementById('form-title').textContent = "Agregar Nueva Obra";
+    currentImagesContainer?.classList.add('hidden');
+    if(currentImagesList) currentImagesList.innerHTML = '';
+}
+
+function showWorksList(forceReload = false) {
+    obraFormContainer?.classList.add('hidden');
+    worksContainer?.classList.remove('hidden');
+    document.getElementById('show-add-form-button')?.classList.remove('hidden');
+    if (forceReload) {
+        lastVisibleDoc = null;
+        allDataLoaded = false;
+        loadWorksPage(true);
+    }
+}
+
+window.editWork = async (id) => {
+    const obra = currentWorks.find(w => w.id === id);
+    if (!obra) return;
+    
+    workToEdit = obra;
+    isEditMode = true;
+    document.getElementById('form-title').textContent = "Editar Obra";
+    
+    const fields = ['titulo', 'descripcion', 'anio', 'tecnica', 'medidas', 'categoria', 'serie', 'price'];
+    fields.forEach(f => {
+        const el = document.getElementById(f);
+        if (el) el.value = obra[f] || '';
+    });
+
+    if (document.getElementById('is_available')) document.getElementById('is_available').checked = obra.is_available;
+    if (document.getElementById('show_price')) document.getElementById('show_price').checked = obra.show_price;
+
+    if (obra.imagenes?.length > 0) {
+        currentImagesContainer.classList.remove('hidden');
+        currentImagesList.dataset.currentImages = JSON.stringify(obra.imagenes);
+        currentImagesList.innerHTML = obra.imagenes.map(img => `
+            <div class="relative w-20 h-20 border rounded overflow-hidden">
+                <img src="${img.url}" class="w-full h-full object-cover">
+            </div>
+        `).join('');
+    }
+
+    obraFormContainer.classList.remove('hidden');
+    worksContainer.classList.add('hidden');
+};
+
 document.addEventListener('DOMContentLoaded', () => {
-    obraForm.addEventListener('submit', handleSubmit);
+    document.getElementById('login-form')?.addEventListener('submit', handleLogin);
+    obraForm?.addEventListener('submit', handleSubmit);
     if (logoutButton) logoutButton.addEventListener('click', handleLogout);
+    
+    document.getElementById('show-add-form-button')?.addEventListener('click', () => {
+        resetForm();
+        obraFormContainer.classList.remove('hidden');
+        worksContainer.classList.add('hidden');
+    });
+    
+    document.getElementById('cancel-edit-button')?.addEventListener('click', () => showWorksList(false));
+    
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             clearTimeout(searchDebounceTimer);
@@ -246,5 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 500);
         });
     }
-    // ... resto de event listeners de UI (showAddForm, etc)
+    
+    saveOrderButton?.addEventListener('click', saveOrder);
 });

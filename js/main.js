@@ -3,6 +3,7 @@ import { db } from "../src/firebaseConfig.js";
 import { 
     collection, 
     query, 
+    orderBy,
     limit, 
     startAfter, 
     getDocs 
@@ -23,8 +24,8 @@ const loadMoreTrigger = document.getElementById("load-more-trigger");
 // --- Función Principal: Cargar Obras ---
 async function fetchWorks(reset = false) {
     if (!db) {
-        console.error("🔥 Error crítico: La base de datos (db) no está inicializada.");
-        if (loadingOverlay) loadingOverlay.classList.add("hidden");
+        console.error("🔥 Error: La base de datos (db) no está inicializada.");
+        forceHideSpinner();
         return;
     }
 
@@ -38,41 +39,31 @@ async function fetchWorks(reset = false) {
     }
 
     try {
+        console.log("🔥 Solicitando obras a Firebase...");
         const productsRef = collection(db, "productos"); 
-        
-        // 🔥 DEBUGGING 1: Búsqueda cruda, SIN orderBy("orden")
-        let q = query(productsRef, limit(PAGE_SIZE));
+        let q = query(productsRef, orderBy("orden", "asc"), limit(PAGE_SIZE));
 
         if (lastVisible && !reset) {
-            q = query(productsRef, startAfter(lastVisible), limit(PAGE_SIZE));
+            q = query(productsRef, orderBy("orden", "asc"), startAfter(lastVisible), limit(PAGE_SIZE));
         }
 
-        console.log("🔥 Haciendo petición a Firebase...");
         const querySnapshot = await getDocs(q);
-        
-        // 🔥 DEBUGGING 2: Vemos cuántos documentos trajo
-        console.log(`🔥 Firebase respondió. Documentos encontrados: ${querySnapshot.docs.length}`);
+        console.log(`🔥 Firebase respondió con ${querySnapshot.docs.length} documentos.`);
         
         if (querySnapshot.empty) {
             isExhausted = true;
             if (reset && galleryContainer) {
-                galleryContainer.innerHTML = '<p class="text-center col-span-full py-10 text-text-secondary">No se encontraron obras en la base de datos.</p>';
+                galleryContainer.innerHTML = '<p class="text-center col-span-full py-10 text-text-secondary">No se encontraron obras disponibles.</p>';
             }
             return;
         }
 
         lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
         
-        const newWorks = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            // 🔥 DEBUGGING 3: Inspeccionamos el contenido exacto de la primera obra
-            console.log(`🔥 Datos de la obra "${data.titulo || 'Sin título'}":`, data);
-            
-            return {
-                id: doc.id,
-                ...data
-            };
-        });
+        const newWorks = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
 
         renderGallery(newWorks);
 
@@ -80,10 +71,18 @@ async function fetchWorks(reset = false) {
         console.error("🔥 Error al cargar obras de Firestore:", error);
     } finally {
         isLoading = false;
-        if (loadingOverlay) {
-            loadingOverlay.style.opacity = "0";
-            setTimeout(() => loadingOverlay.classList.add("hidden"), 300);
-        }
+        forceHideSpinner();
+    }
+}
+
+// --- Helper: Ocultar Spinner a la fuerza (Evita conflictos CSS) ---
+function forceHideSpinner() {
+    if (loadingOverlay) {
+        loadingOverlay.style.opacity = "0";
+        setTimeout(() => {
+            loadingOverlay.style.display = "none"; // Obligamos al CSS a ocultarlo
+            loadingOverlay.classList.add("hidden");
+        }, 300);
     }
 }
 
@@ -93,7 +92,6 @@ function renderGallery(works) {
     const fragment = document.createDocumentFragment();
 
     works.forEach(obra => {
-        // 🔥 DEBUGGING 4: Verificamos cómo se están leyendo las imágenes
         const mainImg = (obra.imagenes && obra.imagenes.length > 0) 
                         ? obra.imagenes[0].url 
                         : './img/placeholder.jpg';
@@ -128,12 +126,10 @@ window.openModal = function(obra) {
     const modalContent = document.getElementById("modal-content");
     if (!modal || !modalContent) return;
 
-    const imgUrl = (obra.imagenes && obra.imagenes.length > 0) ? obra.imagenes[0].url : '';
-
     modalContent.innerHTML = `
         <div class="grid md:grid-cols-2 gap-8">
             <div class="image-zoom-container bg-gray-50 rounded-sm">
-                <img src="${imgUrl}" class="zoom-image w-full">
+                <img src="${(obra.imagenes && obra.imagenes[0]) ? obra.imagenes[0].url : ''}" class="zoom-image w-full">
             </div>
             <div>
                 <h2 class="text-3xl font-display mb-2 text-text-main">${obra.titulo || 'Sin título'}</h2>
@@ -142,13 +138,6 @@ window.openModal = function(obra) {
                     <p><strong>Técnica:</strong> ${obra.tecnica || 'No especificada'}</p>
                     <p><strong>Medidas:</strong> ${obra.medidas || 'No especificadas'}</p>
                     <p class="text-text-main leading-relaxed mt-4">${obra.descripcion || ''}</p>
-                </div>
-                <div class="mt-8 pt-8 border-t border-border-default">
-                    <a href="https://wa.me/5492805032663?text=Hola! Me interesa la obra: ${obra.titulo}" 
-                       target="_blank" 
-                       class="block text-center bg-whatsapp text-white py-3 rounded-sm font-bold hover:bg-opacity-90 transition-all">
-                       Consultar por esta obra
-                    </a>
                 </div>
             </div>
         </div>
@@ -171,8 +160,23 @@ const observer = new IntersectionObserver((entries) => {
     }
 }, { rootMargin: '200px' });
 
-// --- Inicialización ---
-document.addEventListener("DOMContentLoaded", () => {
+// --- Inicialización Infalible ---
+function init() {
+    // Kill-Switch: Si Firebase no responde en 8 segundos, apagamos el spinner a la fuerza.
+    setTimeout(() => {
+        if (isLoading) {
+            console.warn("⏳ Timeout: Forzando cierre del spinner.");
+            forceHideSpinner();
+        }
+    }, 8000);
+
     fetchWorks(true);
     if (loadMoreTrigger) observer.observe(loadMoreTrigger);
-});
+}
+
+// Verifica si el documento ya cargó antes de esperar al evento
+if (document.readyState === 'loading') {
+    document.addEventListener("DOMContentLoaded", init);
+} else {
+    init(); // Si el evento ya pasó, arranca directamente
+}

@@ -1,16 +1,17 @@
-// js/admin.js
 import { db, auth, storage } from '../src/firebaseConfig.js'; 
 import { 
     collection, addDoc, updateDoc, deleteDoc, doc, 
     query, orderBy, limit, startAfter, getDocs, getDoc, 
     where, writeBatch 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { 
     ref, uploadBytes, getDownloadURL, deleteObject 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 import { 
     signInWithEmailAndPassword, signOut, onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+// ... el resto del código queda igual
 
 // --- Variables de Estado ---
 let currentWorks = [];

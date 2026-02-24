@@ -1,7 +1,6 @@
 
 
 // js/main.js
-alert("¡El código nuevo por fin cargó!");
 import { db } from "../src/firebaseConfig.js";
 import { 
     collection, 

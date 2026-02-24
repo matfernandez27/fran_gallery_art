@@ -3,7 +3,6 @@ import { db } from "../src/firebaseConfig.js";
 import { 
     collection, 
     query, 
-    orderBy, // Lo dejamos importado para cuando lo volvamos a activar
     limit, 
     startAfter, 
     getDocs 
@@ -24,7 +23,7 @@ const loadMoreTrigger = document.getElementById("load-more-trigger");
 // --- Función Principal: Cargar Obras ---
 async function fetchWorks(reset = false) {
     if (!db) {
-        console.error("Error: La instancia de la base de datos (db) no está definida.");
+        console.error("🔥 Error crítico: La base de datos (db) no está inicializada.");
         if (loadingOverlay) loadingOverlay.classList.add("hidden");
         return;
     }
@@ -41,18 +40,18 @@ async function fetchWorks(reset = false) {
     try {
         const productsRef = collection(db, "productos"); 
         
-        // 🔥 PRUEBA DE DEBUGGING: Quitamos el orderBy("orden", "asc")
+        // 🔥 DEBUGGING 1: Búsqueda cruda, SIN orderBy("orden")
         let q = query(productsRef, limit(PAGE_SIZE));
 
         if (lastVisible && !reset) {
-            // 🔥 PRUEBA DE DEBUGGING: Quitamos el orderBy aquí también
             q = query(productsRef, startAfter(lastVisible), limit(PAGE_SIZE));
         }
 
+        console.log("🔥 Haciendo petición a Firebase...");
         const querySnapshot = await getDocs(q);
         
-        // 🔥 PRUEBA DE DEBUGGING: Vemos qué responde Firebase
-        console.log("Firebase respondió. Documentos encontrados:", querySnapshot.docs.length);
+        // 🔥 DEBUGGING 2: Vemos cuántos documentos trajo
+        console.log(`🔥 Firebase respondió. Documentos encontrados: ${querySnapshot.docs.length}`);
         
         if (querySnapshot.empty) {
             isExhausted = true;
@@ -65,18 +64,20 @@ async function fetchWorks(reset = false) {
         lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
         
         const newWorks = querySnapshot.docs.map(doc => {
-            // 🔥 PRUEBA DE DEBUGGING: Vemos el contenido exacto de cada obra
-            console.log("Datos de la obra:", doc.data());
+            const data = doc.data();
+            // 🔥 DEBUGGING 3: Inspeccionamos el contenido exacto de la primera obra
+            console.log(`🔥 Datos de la obra "${data.titulo || 'Sin título'}":`, data);
+            
             return {
                 id: doc.id,
-                ...doc.data()
+                ...data
             };
         });
 
         renderGallery(newWorks);
 
     } catch (error) {
-        console.error("Error crítico al cargar obras de Firestore:", error);
+        console.error("🔥 Error al cargar obras de Firestore:", error);
     } finally {
         isLoading = false;
         if (loadingOverlay) {
@@ -92,6 +93,7 @@ function renderGallery(works) {
     const fragment = document.createDocumentFragment();
 
     works.forEach(obra => {
+        // 🔥 DEBUGGING 4: Verificamos cómo se están leyendo las imágenes
         const mainImg = (obra.imagenes && obra.imagenes.length > 0) 
                         ? obra.imagenes[0].url 
                         : './img/placeholder.jpg';
@@ -126,10 +128,12 @@ window.openModal = function(obra) {
     const modalContent = document.getElementById("modal-content");
     if (!modal || !modalContent) return;
 
+    const imgUrl = (obra.imagenes && obra.imagenes.length > 0) ? obra.imagenes[0].url : '';
+
     modalContent.innerHTML = `
         <div class="grid md:grid-cols-2 gap-8">
             <div class="image-zoom-container bg-gray-50 rounded-sm">
-                <img src="${(obra.imagenes && obra.imagenes[0]) ? obra.imagenes[0].url : ''}" class="zoom-image w-full">
+                <img src="${imgUrl}" class="zoom-image w-full">
             </div>
             <div>
                 <h2 class="text-3xl font-display mb-2 text-text-main">${obra.titulo || 'Sin título'}</h2>

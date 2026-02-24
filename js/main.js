@@ -3,11 +3,10 @@ import { db } from "../src/firebaseConfig.js";
 import { 
     collection, 
     query, 
-    orderBy, 
+    orderBy, // Lo dejamos importado para cuando lo volvamos a activar
     limit, 
     startAfter, 
-    getDocs, 
-    where 
+    getDocs 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // --- Variables de Estado ---
@@ -24,9 +23,8 @@ const loadMoreTrigger = document.getElementById("load-more-trigger");
 
 // --- Función Principal: Cargar Obras ---
 async function fetchWorks(reset = false) {
-    // 1. Validación de Seguridad: Si db no existe, abortamos para evitar el error de CollectionReference
     if (!db) {
-        console.error("Error: La instancia de la base de datos (db) no está definida. Revisa tu firebaseConfig.js");
+        console.error("Error: La instancia de la base de datos (db) no está definida.");
         if (loadingOverlay) loadingOverlay.classList.add("hidden");
         return;
     }
@@ -41,39 +39,46 @@ async function fetchWorks(reset = false) {
     }
 
     try {
-        // Usamos 'productos' para coincidir con el admin.js
         const productsRef = collection(db, "productos"); 
-        let q = query(productsRef, orderBy("orden", "asc"), limit(PAGE_SIZE));
+        
+        // 🔥 PRUEBA DE DEBUGGING: Quitamos el orderBy("orden", "asc")
+        let q = query(productsRef, limit(PAGE_SIZE));
 
         if (lastVisible && !reset) {
-            q = query(productsRef, orderBy("orden", "asc"), startAfter(lastVisible), limit(PAGE_SIZE));
+            // 🔥 PRUEBA DE DEBUGGING: Quitamos el orderBy aquí también
+            q = query(productsRef, startAfter(lastVisible), limit(PAGE_SIZE));
         }
 
         const querySnapshot = await getDocs(q);
         
+        // 🔥 PRUEBA DE DEBUGGING: Vemos qué responde Firebase
+        console.log("Firebase respondió. Documentos encontrados:", querySnapshot.docs.length);
+        
         if (querySnapshot.empty) {
             isExhausted = true;
-            // Si está vacío al resetear, mostramos mensaje
             if (reset && galleryContainer) {
-                galleryContainer.innerHTML = '<p class="text-center col-span-full py-10 text-text-secondary">No se encontraron obras disponibles.</p>';
+                galleryContainer.innerHTML = '<p class="text-center col-span-full py-10 text-text-secondary">No se encontraron obras en la base de datos.</p>';
             }
             return;
         }
 
         lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
         
-        const newWorks = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        const newWorks = querySnapshot.docs.map(doc => {
+            // 🔥 PRUEBA DE DEBUGGING: Vemos el contenido exacto de cada obra
+            console.log("Datos de la obra:", doc.data());
+            return {
+                id: doc.id,
+                ...doc.data()
+            };
+        });
 
         renderGallery(newWorks);
 
     } catch (error) {
-        console.error("Error al cargar obras de Firestore:", error);
+        console.error("Error crítico al cargar obras de Firestore:", error);
     } finally {
         isLoading = false;
-        // Ocultar spinner con suavidad
         if (loadingOverlay) {
             loadingOverlay.style.opacity = "0";
             setTimeout(() => loadingOverlay.classList.add("hidden"), 300);

@@ -308,14 +308,22 @@ window.editWork = async (id) => {
     if (document.getElementById('show_price')) document.getElementById('show_price').checked = obra.show_price;
 
     if (obra.imagenes?.length > 0) {
-        currentImagesContainer.classList.remove('hidden');
-        currentImagesList.dataset.currentImages = JSON.stringify(obra.imagenes);
-        currentImagesList.innerHTML = obra.imagenes.map(img => `
-            <div class="relative w-20 h-20 border rounded overflow-hidden">
-                <img src="${img.url}" class="w-full h-full object-cover">
-            </div>
-        `).join('');
-    }
+            currentImagesContainer.classList.remove('hidden');
+            currentImagesList.dataset.currentImages = JSON.stringify(obra.imagenes);
+            
+            // Agregamos un botón de rotar superpuesto a cada imagen
+            currentImagesList.innerHTML = obra.imagenes.map((img, idx) => `
+                <div class="relative w-24 h-24 border border-border-default rounded-sm overflow-hidden group">
+                    <img src="${img.url}" class="w-full h-full object-cover">
+                    
+                    <button type="button" onclick="rotateImage('${obra.id}', ${idx})" 
+                            class="absolute inset-0 m-auto w-8 h-8 bg-black bg-opacity-70 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent-blue cursor-pointer shadow-md" 
+                            title="Rotar 90°">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    </button>
+                </div>
+            `).join('');
+        }
 
     obraFormContainer.classList.remove('hidden');
     worksContainer.classList.add('hidden');
@@ -347,3 +355,67 @@ document.addEventListener('DOMContentLoaded', () => {
     
     saveOrderButton?.addEventListener('click', saveOrder);
 });
+
+// --- Lógica para Rotar Imágenes ---
+window.rotateImage = async (workId, imageIndex) => {
+    const obra = currentWorks.find(w => w.id === workId);
+    if (!obra || !obra.imagenes || !obra.imagenes[imageIndex]) return;
+
+    const imgData = obra.imagenes[imageIndex];
+    showAlert("Rotando imagen, por favor no cierres la ventana...", "info");
+
+    try {
+        // 1. Descargar la imagen como Blob para evitar bloqueos del Canvas
+        const response = await fetch(imgData.url);
+        const blob = await response.blob();
+
+        // 2. Cargar la imagen en memoria
+        const img = new Image();
+        const imgLoadPromise = new Promise(resolve => {
+            img.onload = resolve;
+            img.src = URL.createObjectURL(blob);
+        });
+        await imgLoadPromise;
+
+        // 3. Crear el lienzo (Canvas) e invertir sus dimensiones
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.height;
+        canvas.height = img.width;
+
+        // 4. Rotar 90 grados (en radianes)
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(90 * Math.PI / 180);
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+        // 5. Convertir a un nuevo archivo WebP optimizado
+        const newBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.85));
+
+        // 6. Subir la nueva imagen a Firebase Storage
+        const newFileName = `rotada_${Date.now()}_${imgData.name}`;
+        const storageRef = ref(storage, `obras/${newFileName}`);
+        const snapshot = await uploadBytes(storageRef, newBlob);
+        const newUrl = await getDownloadURL(snapshot.ref);
+
+        // 7. Borrar la imagen vieja para no ocupar espacio "basura"
+        try {
+            await deleteObject(ref(storage, imgData.path));
+        } catch(e) { console.warn("La imagen anterior no se pudo borrar."); }
+
+        // 8. Actualizar la base de datos y la interfaz
+        obra.imagenes[imageIndex] = {
+            path: snapshot.ref.fullPath,
+            url: newUrl,
+            name: newFileName
+        };
+
+        await updateDoc(doc(db, "productos", workId), { imagenes: obra.imagenes });
+        
+        showAlert("¡Imagen rotada con éxito!");
+        editWork(workId); // Recargar la vista actual
+
+    } catch (error) {
+        console.error("Error al rotar:", error);
+        showAlert("Error al rotar. Verifica los permisos CORS en la consola.", "error");
+    }
+};

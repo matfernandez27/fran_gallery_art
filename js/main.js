@@ -1,11 +1,9 @@
-
-
 // js/main.js
 import { db } from "../src/firebaseConfig.js";
 import { 
     collection, 
     query, 
-    orderBy,
+    orderBy, 
     limit, 
     startAfter, 
     getDocs 
@@ -26,8 +24,8 @@ const loadMoreTrigger = document.getElementById("load-more-trigger");
 // --- Función Principal: Cargar Obras ---
 async function fetchWorks(reset = false) {
     if (!db) {
-        console.error("🔥 Error: La base de datos (db) no está inicializada.");
-        forceHideSpinner();
+        console.error("Error: La base de datos no está inicializada. Revisa firebaseConfig.js");
+        hideSpinner();
         return;
     }
 
@@ -41,8 +39,8 @@ async function fetchWorks(reset = false) {
     }
 
     try {
-        console.log("🔥 Solicitando obras a Firebase...");
         const productsRef = collection(db, "productos"); 
+        // Restauramos el ordenamiento por el campo "orden" de forma ascendente
         let q = query(productsRef, orderBy("orden", "asc"), limit(PAGE_SIZE));
 
         if (lastVisible && !reset) {
@@ -50,7 +48,6 @@ async function fetchWorks(reset = false) {
         }
 
         const querySnapshot = await getDocs(q);
-        console.log(`🔥 Firebase respondió con ${querySnapshot.docs.length} documentos.`);
         
         if (querySnapshot.empty) {
             isExhausted = true;
@@ -70,19 +67,19 @@ async function fetchWorks(reset = false) {
         renderGallery(newWorks);
 
     } catch (error) {
-        console.error("🔥 Error al cargar obras de Firestore:", error);
+        console.error("Error al cargar obras de Firestore:", error);
     } finally {
         isLoading = false;
-        forceHideSpinner();
+        hideSpinner();
     }
 }
 
-// --- Helper: Ocultar Spinner a la fuerza (Evita conflictos CSS) ---
-function forceHideSpinner() {
+// --- Helper: Ocultar Spinner ---
+function hideSpinner() {
     if (loadingOverlay) {
         loadingOverlay.style.opacity = "0";
         setTimeout(() => {
-            loadingOverlay.style.display = "none"; // Obligamos al CSS a ocultarlo
+            loadingOverlay.style.display = "none";
             loadingOverlay.classList.add("hidden");
         }, 300);
     }
@@ -128,10 +125,12 @@ window.openModal = function(obra) {
     const modalContent = document.getElementById("modal-content");
     if (!modal || !modalContent) return;
 
+    const imgUrl = (obra.imagenes && obra.imagenes.length > 0) ? obra.imagenes[0].url : '';
+
     modalContent.innerHTML = `
         <div class="grid md:grid-cols-2 gap-8">
             <div class="image-zoom-container bg-gray-50 rounded-sm">
-                <img src="${(obra.imagenes && obra.imagenes[0]) ? obra.imagenes[0].url : ''}" class="zoom-image w-full">
+                <img src="${imgUrl}" class="zoom-image w-full">
             </div>
             <div>
                 <h2 class="text-3xl font-display mb-2 text-text-main">${obra.titulo || 'Sin título'}</h2>
@@ -140,6 +139,13 @@ window.openModal = function(obra) {
                     <p><strong>Técnica:</strong> ${obra.tecnica || 'No especificada'}</p>
                     <p><strong>Medidas:</strong> ${obra.medidas || 'No especificadas'}</p>
                     <p class="text-text-main leading-relaxed mt-4">${obra.descripcion || ''}</p>
+                </div>
+                <div class="mt-8 pt-8 border-t border-border-default">
+                    <a href="https://wa.me/5492805032663?text=Hola! Me interesa la obra: ${obra.titulo}" 
+                       target="_blank" 
+                       class="block text-center bg-whatsapp text-white py-3 rounded-sm font-bold hover:bg-opacity-90 transition-all">
+                       Consultar por esta obra
+                    </a>
                 </div>
             </div>
         </div>
@@ -162,23 +168,8 @@ const observer = new IntersectionObserver((entries) => {
     }
 }, { rootMargin: '200px' });
 
-// --- Inicialización Infalible ---
-function init() {
-    // Kill-Switch: Si Firebase no responde en 8 segundos, apagamos el spinner a la fuerza.
-    setTimeout(() => {
-        if (isLoading) {
-            console.warn("⏳ Timeout: Forzando cierre del spinner.");
-            forceHideSpinner();
-        }
-    }, 8000);
-
+// --- Inicialización ---
+document.addEventListener("DOMContentLoaded", () => {
     fetchWorks(true);
     if (loadMoreTrigger) observer.observe(loadMoreTrigger);
-}
-
-// Verifica si el documento ya cargó antes de esperar al evento
-if (document.readyState === 'loading') {
-    document.addEventListener("DOMContentLoaded", init);
-} else {
-    init(); // Si el evento ya pasó, arranca directamente
-}
+});

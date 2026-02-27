@@ -178,8 +178,16 @@
             <div id="gallery-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 </div>
 
-            <div id="load-more-trigger" class="py-10 flex justify-center items-center">
-                 <div class="lds-ring hidden"><div></div><div></div><div></div><div></div></div>
+            <div id="pagination-controls" class="hidden flex justify-center items-center space-x-4 py-10 mt-8 border-t border-border-default">
+                <button id="prev-page" class="admin-button border border-border-default text-text-main hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                    ← Anterior
+                </button>
+                <span id="page-info" class="text-text-main font-medium text-sm tracking-wide">
+                    Página 1 de 1
+                </span>
+                <button id="next-page" class="admin-button border border-border-default text-text-main hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                    Siguiente →
+                </button>
             </div>
         </div>
     </section>

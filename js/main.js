@@ -6,75 +6,136 @@ import {
     orderBy, 
     limit, 
     startAfter, 
-    getDocs 
+    getDocs,
+    getCountFromServer 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// --- Variables de Estado ---
-let allWorks = [];
-let lastVisible = null;
+// --- Variables de Paginación ---
 const PAGE_SIZE = 12;
+let currentPage = 1;
+let totalPages = 1;
+let pageCursors = [null]; // Guarda el último documento de cada página (Índice 0 = null para la pág 1)
 let isLoading = false;
-let isExhausted = false;
 
 // --- Selectores DOM ---
 const galleryContainer = document.getElementById("gallery-container");
 const loadingOverlay = document.getElementById("loading-overlay");
-const loadMoreTrigger = document.getElementById("load-more-trigger");
+const paginationControls = document.getElementById("pagination-controls");
+const prevButton = document.getElementById("prev-page");
+const nextButton = document.getElementById("next-page");
+const pageInfo = document.getElementById("page-info");
 
-// --- Función Principal: Cargar Obras ---
-async function fetchWorks(reset = false) {
+// --- Inicialización de la Galería ---
+async function initGallery() {
     if (!db) {
         console.error("Error: La base de datos no está inicializada. Revisa firebaseConfig.js");
         hideSpinner();
         return;
     }
+    
+    await calculateTotalPages();
+    await loadPage(1);
+}
 
-    if (isLoading || (isExhausted && !reset)) return;
+// --- Calcular el total de páginas ---
+async function calculateTotalPages() {
+    try {
+        const coll = collection(db, "productos");
+        const snapshot = await getCountFromServer(coll);
+        const totalDocs = snapshot.data().count;
+        totalPages = Math.ceil(totalDocs / PAGE_SIZE) || 1;
+    } catch (error) {
+        console.error("Error al contar documentos:", error);
+        totalPages = 1;
+    }
+}
+
+// --- Cargar una página específica ---
+async function loadPage(pageNumber) {
+    if (isLoading) return;
     isLoading = true;
 
-    if (reset) {
-        lastVisible = null;
-        isExhausted = false;
-        if (galleryContainer) galleryContainer.innerHTML = "";
+    // Mostrar un pequeño spinner en la grilla mientras carga la nueva página
+    if (galleryContainer) {
+        galleryContainer.innerHTML = '<div class="col-span-full flex justify-center py-12"><div class="lds-ring"><div></div><div></div><div></div><div></div></div></div>';
     }
 
     try {
         const productsRef = collection(db, "productos"); 
-        // Restauramos el ordenamiento por el campo "orden" de forma ascendente
-        let q = query(productsRef, orderBy("orden", "asc"), limit(PAGE_SIZE));
+        let q;
 
-        if (lastVisible && !reset) {
-            q = query(productsRef, orderBy("orden", "asc"), startAfter(lastVisible), limit(PAGE_SIZE));
+        // Si es la página 1, consultamos desde el principio
+        if (pageNumber === 1) {
+            q = query(productsRef, orderBy("orden", "asc"), limit(PAGE_SIZE));
+        } else {
+            // Buscamos el cursor de la página anterior
+            const cursor = pageCursors[pageNumber - 1];
+            q = query(productsRef, orderBy("orden", "asc"), startAfter(cursor), limit(PAGE_SIZE));
         }
 
         const querySnapshot = await getDocs(q);
         
         if (querySnapshot.empty) {
-            isExhausted = true;
-            if (reset && galleryContainer) {
+            if (galleryContainer) {
                 galleryContainer.innerHTML = '<p class="text-center col-span-full py-10 text-text-secondary">No se encontraron obras disponibles.</p>';
             }
+            paginationControls?.classList.add("hidden");
             return;
         }
 
-        lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
+        // Guardamos el último documento de esta consulta para poder avanzar a la siguiente página
+        pageCursors[pageNumber] = querySnapshot.docs[querySnapshot.docs.length - 1];
+        currentPage = pageNumber;
         
         const newWorks = querySnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
         }));
 
+        if (galleryContainer) galleryContainer.innerHTML = ""; // Limpiamos el spinner
         renderGallery(newWorks);
+        updatePaginationUI();
 
     } catch (error) {
-        console.error("Error al cargar obras de Firestore:", error);
+        console.error("Error al cargar la página:", error);
+        if (galleryContainer) {
+            galleryContainer.innerHTML = '<p class="text-center col-span-full py-10 text-red-500">Ocurrió un error al cargar la galería.</p>';
+        }
     } finally {
         isLoading = false;
         hideSpinner();
     }
 }
 
-// --- Helper: Ocultar Spinner ---
+// --- Actualizar Interfaz de Botones ---
+function updatePaginationUI() {
+    if (!paginationControls) return;
+    
+    paginationControls.classList.remove("hidden");
+    pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+    
+    // Habilitar/Deshabilitar botones en los extremos
+    prevButton.disabled = currentPage === 1;
+    nextButton.disabled = currentPage === totalPages;
+}
+
+// --- Listeners de Paginación ---
+prevButton?.addEventListener("click", () => {
+    if (currentPage > 1) {
+        loadPage(currentPage - 1);
+        // Scrollear suavemente hacia el inicio de la galería
+        document.getElementById("gallery-section").scrollIntoView({ behavior: 'smooth' });
+    }
+});
+
+nextButton?.addEventListener("click", () => {
+    if (currentPage < totalPages) {
+        loadPage(currentPage + 1);
+        document.getElementById("gallery-section").scrollIntoView({ behavior: 'smooth' });
+    }
+});
+
+// --- Helper: Ocultar Spinner Inicial ---
 function hideSpinner() {
     if (loadingOverlay) {
         loadingOverlay.style.opacity = "0";
@@ -161,15 +222,7 @@ window.closeModal = function(e) {
     }
 };
 
-// --- Infinite Scroll ---
-const observer = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting && !isLoading && !isExhausted) {
-        fetchWorks();
-    }
-}, { rootMargin: '200px' });
-
-// --- Inicialización ---
+// --- Arranque ---
 document.addEventListener("DOMContentLoaded", () => {
-    fetchWorks(true);
-    if (loadMoreTrigger) observer.observe(loadMoreTrigger);
+    initGallery();
 });

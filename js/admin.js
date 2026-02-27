@@ -2,7 +2,7 @@ import { db, auth, storage } from '../src/firebaseConfig.js';
 import { 
     collection, addDoc, updateDoc, deleteDoc, doc, 
     query, orderBy, limit, startAfter, getDocs, getDoc, 
-    where, writeBatch 
+    where, writeBatch, getCountFromServer
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { 
     ref, uploadBytes, getDownloadURL, deleteObject 
@@ -17,12 +17,15 @@ import {
 let currentWorks = [];
 let isEditMode = false;
 let workToEdit = null;
-let lastVisibleDoc = null; 
-const PAGE_SIZE = 20;
-let isLoading = false;
-let allDataLoaded = false;
 let currentSearchQuery = '';
 let searchDebounceTimer;
+
+// NUEVAS variables de paginación
+const PAGE_SIZE = 20;
+let currentPage = 1;
+let totalPages = 1;
+let pageCursors = [null];
+let isLoading = false;
 
 // --- Selectores DOM ---
 const worksList = document.getElementById('works-list');
@@ -38,6 +41,11 @@ const submitButton = document.getElementById('submit-button');
 const searchInput = document.getElementById('search-input');
 const worksContainer = document.getElementById('works-container');
 const saveOrderButton = document.getElementById('save-order-button');
+
+const paginationControlsAdmin = document.getElementById("admin-pagination-controls");
+const prevButtonAdmin = document.getElementById("admin-prev-page");
+const nextButtonAdmin = document.getElementById("admin-next-page");
+const pageInfoAdmin = document.getElementById("admin-page-info");
 
 function showAlert(message, type = 'success') {
     if (!alertDiv) return;
@@ -64,40 +72,76 @@ function showLoginView() {
     obraFormContainer?.classList.add('hidden');
 }
 
-async function loadWorksPage(reset = false) {
-    if (isLoading || (allDataLoaded && !reset)) return;
+// --- Lógica de Negocio: Carga de Datos y Paginación ---
+async function calculateTotalPages(baseQuery) {
+    try {
+        const snapshot = await getCountFromServer(baseQuery);
+        totalPages = Math.ceil(snapshot.data().count / PAGE_SIZE) || 1;
+    } catch (e) {
+        console.error("Error contando documentos:", e);
+        totalPages = 1;
+    }
+}
+
+// --- Lógica de Negocio: Carga de Datos y Paginación ---
+async function calculateTotalPages(baseQuery) {
+    try {
+        const snapshot = await getCountFromServer(baseQuery);
+        totalPages = Math.ceil(snapshot.data().count / PAGE_SIZE) || 1;
+    } catch (e) {
+        console.error("Error contando documentos:", e);
+        totalPages = 1;
+    }
+}
+
+async function loadWorksPage(pageNumber = 1) {
+    if (isLoading) return;
     isLoading = true;
     
     try {
-        let q;
         const productsRef = collection(db, "productos");
+        let baseQuery;
 
         if (currentSearchQuery) {
-            q = query(
-                productsRef,
+            baseQuery = query(productsRef,
                 where("titulo", ">=", currentSearchQuery),
-                where("titulo", "<=", currentSearchQuery + "\uf8ff"),
-                limit(PAGE_SIZE)
+                where("titulo", "<=", currentSearchQuery + "\uf8ff")
             );
         } else {
-            if (reset) {
-                q = query(productsRef, orderBy("orden", "asc"), limit(PAGE_SIZE));
-            } else {
-                q = query(productsRef, orderBy("orden", "asc"), startAfter(lastVisibleDoc), limit(PAGE_SIZE));
-            }
+            baseQuery = query(productsRef, orderBy("orden", "asc"));
+        }
+
+        // Si estamos en la primera página, recalculamos el total (útil tras agregar/eliminar obras)
+        if (pageNumber === 1) {
+            await calculateTotalPages(baseQuery);
+            pageCursors = [null]; 
+        }
+
+        let q;
+        if (pageNumber === 1) {
+            q = query(baseQuery, limit(PAGE_SIZE));
+        } else {
+            const cursor = pageCursors[pageNumber - 1];
+            q = query(baseQuery, startAfter(cursor), limit(PAGE_SIZE));
         }
 
         const querySnapshot = await getDocs(q);
-        lastVisibleDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
+        
+        if (querySnapshot.empty) {
+            worksList.innerHTML = '<p class="p-4 text-center text-gray-500">No se encontraron obras.</p>';
+            if (paginationControlsAdmin) paginationControlsAdmin.classList.add("hidden");
+            isLoading = false;
+            return;
+        }
+
+        pageCursors[pageNumber] = querySnapshot.docs[querySnapshot.docs.length - 1];
+        currentPage = pageNumber;
         
         const newWorks = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        currentWorks = newWorks; // Actualizamos las obras en memoria para edición/eliminación
         
-        if (reset) currentWorks = [];
-        currentWorks.push(...newWorks);
-        
-        renderWorksList(newWorks, reset);
-        
-        if (querySnapshot.docs.length < PAGE_SIZE) allDataLoaded = true;
+        renderWorksList(newWorks, true); // 'true' para reemplazar el HTML
+        updatePaginationUI();
 
     } catch (error) {
         console.error("Error loading works:", error);
@@ -105,6 +149,14 @@ async function loadWorksPage(reset = false) {
     } finally {
         isLoading = false;
     }
+}
+
+function updatePaginationUI() {
+    if (!paginationControlsAdmin) return;
+    paginationControlsAdmin.classList.remove("hidden");
+    pageInfoAdmin.textContent = `Página ${currentPage} de ${totalPages}`;
+    prevButtonAdmin.disabled = currentPage === 1;
+    nextButtonAdmin.disabled = currentPage === totalPages;
 }
 
 function renderWorksList(works, isReplacing = false) {
@@ -249,7 +301,7 @@ async function saveOrder() {
 onAuthStateChanged(auth, (user) => {
     if (user) {
         showAdminView();
-        loadWorksPage(true);
+        loadWorksPage(1);
     } else {
         showLoginView();
     }
@@ -286,7 +338,7 @@ function showWorksList(forceReload = false) {
     if (forceReload) {
         lastVisibleDoc = null;
         allDataLoaded = false;
-        loadWorksPage(true);
+        loadWorksPage(1);
     }
 }
 
@@ -347,13 +399,20 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(searchDebounceTimer);
             searchDebounceTimer = setTimeout(() => {
                 currentSearchQuery = searchInput.value;
-                allDataLoaded = false;
-                loadWorksPage(true);
+                loadWorksPage(1);
             }, 500);
         });
     }
     
     saveOrderButton?.addEventListener('click', saveOrder);
+
+    prevButtonAdmin?.addEventListener("click", () => {
+        if (currentPage > 1) loadWorksPage(currentPage - 1);
+    });
+    
+    nextButtonAdmin?.addEventListener("click", () => {
+        if (currentPage < totalPages) loadWorksPage(currentPage + 1);
+    });
 });
 
 // --- Lógica para Rotar Imágenes ---

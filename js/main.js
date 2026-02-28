@@ -7,7 +7,8 @@ import {
     limit, 
     startAfter, 
     getDocs,
-    getCountFromServer 
+    getCountFromServer,
+    where
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // --- Variables de Paginación ---
@@ -16,6 +17,8 @@ let currentPage = 1;
 let totalPages = 1;
 let pageCursors = [null]; // Guarda el último documento de cada página (Índice 0 = null para la pág 1)
 let isLoading = false;
+let currentSearchQuery = ""; 
+let searchDebounceTimer;
 
 // --- Selectores DOM ---
 const galleryContainer = document.getElementById("gallery-container");
@@ -24,6 +27,7 @@ const paginationControls = document.getElementById("pagination-controls");
 const prevButton = document.getElementById("prev-page");
 const nextButton = document.getElementById("next-page");
 const pageInfo = document.getElementById("page-info");
+const searchInput = document.getElementById("search");
 
 // --- Inicialización de la Galería ---
 async function initGallery() {
@@ -38,10 +42,10 @@ async function initGallery() {
 }
 
 // --- Calcular el total de páginas ---
-async function calculateTotalPages() {
+// Ahora recibe 'baseQuery' para saber si cuenta todas las obras o solo las buscadas
+async function calculateTotalPages(baseQuery) {
     try {
-        const coll = collection(db, "productos");
-        const snapshot = await getCountFromServer(coll);
+        const snapshot = await getCountFromServer(baseQuery);
         const totalDocs = snapshot.data().count;
         totalPages = Math.ceil(totalDocs / PAGE_SIZE) || 1;
     } catch (error) {
@@ -55,35 +59,50 @@ async function loadPage(pageNumber) {
     if (isLoading) return;
     isLoading = true;
 
-    // Mostrar un pequeño spinner en la grilla mientras carga la nueva página
     if (galleryContainer) {
         galleryContainer.innerHTML = '<div class="col-span-full flex justify-center py-12"><div class="lds-ring"><div></div><div></div><div></div><div></div></div></div>';
     }
 
     try {
         const productsRef = collection(db, "productos"); 
-        let q;
+        let baseQuery;
 
-        // Si es la página 1, consultamos desde el principio
-        if (pageNumber === 1) {
-            q = query(productsRef, orderBy("orden", "asc"), limit(PAGE_SIZE));
+        // --- LÓGICA DE BÚSQUEDA ---
+        if (currentSearchQuery) {
+            baseQuery = query(productsRef, 
+                where("titulo", ">=", currentSearchQuery),
+                where("titulo", "<=", currentSearchQuery + "\uf8ff")
+            );
         } else {
-            // Buscamos el cursor de la página anterior
+            baseQuery = query(productsRef, orderBy("orden", "asc"));
+        }
+
+        // Si es la página 1 (inicio o nueva búsqueda), recalculamos totales
+        if (pageNumber === 1) {
+            await calculateTotalPages(baseQuery);
+            pageCursors = [null];
+        }
+
+        let q;
+        if (pageNumber === 1) {
+            q = query(baseQuery, limit(PAGE_SIZE));
+        } else {
             const cursor = pageCursors[pageNumber - 1];
-            q = query(productsRef, orderBy("orden", "asc"), startAfter(cursor), limit(PAGE_SIZE));
+            q = query(baseQuery, startAfter(cursor), limit(PAGE_SIZE));
         }
 
         const querySnapshot = await getDocs(q);
         
         if (querySnapshot.empty) {
             if (galleryContainer) {
-                galleryContainer.innerHTML = '<p class="text-center col-span-full py-10 text-text-secondary">No se encontraron obras disponibles.</p>';
+                galleryContainer.innerHTML = '<p class="text-center col-span-full py-10 text-text-secondary">No se encontraron obras con esa búsqueda.</p>';
             }
             paginationControls?.classList.add("hidden");
+            isLoading = false;
+            hideSpinner();
             return;
         }
 
-        // Guardamos el último documento de esta consulta para poder avanzar a la siguiente página
         pageCursors[pageNumber] = querySnapshot.docs[querySnapshot.docs.length - 1];
         currentPage = pageNumber;
         
@@ -92,15 +111,12 @@ async function loadPage(pageNumber) {
             ...doc.data()
         }));
 
-        if (galleryContainer) galleryContainer.innerHTML = ""; // Limpiamos el spinner
+        if (galleryContainer) galleryContainer.innerHTML = ""; 
         renderGallery(newWorks);
         updatePaginationUI();
 
     } catch (error) {
         console.error("Error al cargar la página:", error);
-        if (galleryContainer) {
-            galleryContainer.innerHTML = '<p class="text-center col-span-full py-10 text-red-500">Ocurrió un error al cargar la galería.</p>';
-        }
     } finally {
         isLoading = false;
         hideSpinner();
@@ -226,3 +242,15 @@ window.closeModal = function(e) {
 document.addEventListener("DOMContentLoaded", () => {
     initGallery();
 });
+
+// --- Escuchador del Buscador ---
+if (searchInput) {
+    searchInput.addEventListener('input', () => {
+        clearTimeout(searchDebounceTimer);
+        // Esperamos 500ms después de que el usuario deje de teclear para no saturar la base de datos
+        searchDebounceTimer = setTimeout(() => {
+            currentSearchQuery = searchInput.value;
+            loadPage(1); // Forzamos la recarga desde la página 1 con el filtro
+        }, 500);
+    });
+}

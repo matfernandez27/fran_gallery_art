@@ -26,6 +26,7 @@ let currentPage = 1;
 let totalPages = 1;
 let pageCursors = [null];
 let isLoading = false;
+let searchResultsMemoryAdmin = [];
 
 // --- Selectores DOM ---
 const worksList = document.getElementById('works-list');
@@ -94,54 +95,86 @@ async function calculateTotalPages(baseQuery) {
     }
 }
 
+// --- Lógica de Negocio: Carga de Datos y Paginación ---
 async function loadWorksPage(pageNumber = 1) {
     if (isLoading) return;
     isLoading = true;
     
     try {
         const productsRef = collection(db, "productos");
-        let baseQuery;
 
+        // ==========================================
+        // CAMINO A: LÓGICA DE BÚSQUEDA (EN MEMORIA)
+        // ==========================================
         if (currentSearchQuery) {
-            baseQuery = query(productsRef,
-                where("titulo", ">=", currentSearchQuery),
-                where("titulo", "<=", currentSearchQuery + "\uf8ff")
-            );
-        } else {
-            baseQuery = query(productsRef, orderBy("orden", "asc"));
-        }
+            
+            if (pageNumber === 1) {
+                const qAll = query(productsRef, orderBy("orden", "asc"));
+                const querySnapshot = await getDocs(qAll);
+                const queryLower = currentSearchQuery.toLowerCase();
 
-        // Si estamos en la primera página, recalculamos el total (útil tras agregar/eliminar obras)
-        if (pageNumber === 1) {
-            await calculateTotalPages(baseQuery);
-            pageCursors = [null]; 
-        }
+                searchResultsMemoryAdmin = querySnapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .filter(obra => {
+                        const tituloMatch = obra.titulo?.toLowerCase().includes(queryLower);
+                        const categoriaMatch = obra.categoria?.toLowerCase().includes(queryLower);
+                        const serieMatch = obra.serie?.toLowerCase().includes(queryLower);
+                        return tituloMatch || categoriaMatch || serieMatch;
+                    });
 
-        let q;
-        if (pageNumber === 1) {
-            q = query(baseQuery, limit(PAGE_SIZE));
-        } else {
-            const cursor = pageCursors[pageNumber - 1];
-            q = query(baseQuery, startAfter(cursor), limit(PAGE_SIZE));
-        }
+                totalPages = Math.ceil(searchResultsMemoryAdmin.length / PAGE_SIZE) || 1;
+            }
 
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-            worksList.innerHTML = '<p class="p-4 text-center text-gray-500">No se encontraron obras.</p>';
-            if (paginationControlsAdmin) paginationControlsAdmin.classList.add("hidden");
-            isLoading = false;
-            return;
-        }
+            const startIndex = (pageNumber - 1) * PAGE_SIZE;
+            const newWorks = searchResultsMemoryAdmin.slice(startIndex, startIndex + PAGE_SIZE);
 
-        pageCursors[pageNumber] = querySnapshot.docs[querySnapshot.docs.length - 1];
-        currentPage = pageNumber;
-        
-        const newWorks = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        currentWorks = newWorks; // Actualizamos las obras en memoria para edición/eliminación
-        
-        renderWorksList(newWorks, true); // 'true' para reemplazar el HTML
-        updatePaginationUI();
+            currentPage = pageNumber;
+            currentWorks = newWorks; // CLAVE: Actualizamos las obras en pantalla para poder editarlas
+
+            if (newWorks.length === 0) {
+                worksList.innerHTML = '<p class="p-4 text-center text-gray-500">No se encontraron obras con esa búsqueda.</p>';
+                if (paginationControlsAdmin) paginationControlsAdmin.classList.add("hidden");
+            } else {
+                renderWorksList(newWorks, true); 
+                updatePaginationUI();
+            }
+
+        } 
+        // ==========================================
+        // CAMINO B: LÓGICA NORMAL (FIRESTORE)
+        // ==========================================
+        else {
+            const baseQuery = query(productsRef, orderBy("orden", "asc"));
+
+            if (pageNumber === 1) {
+                await calculateTotalPages(baseQuery);
+                pageCursors = [null]; 
+            }
+
+            let q;
+            if (pageNumber === 1) {
+                q = query(baseQuery, limit(PAGE_SIZE));
+            } else {
+                const cursor = pageCursors[pageNumber - 1];
+                q = query(baseQuery, startAfter(cursor), limit(PAGE_SIZE));
+            }
+
+            const querySnapshot = await getDocs(q);
+            
+            if (querySnapshot.empty) {
+                worksList.innerHTML = '<p class="p-4 text-center text-gray-500">No se encontraron obras.</p>';
+                if (paginationControlsAdmin) paginationControlsAdmin.classList.add("hidden");
+            } else {
+                pageCursors[pageNumber] = querySnapshot.docs[querySnapshot.docs.length - 1];
+                currentPage = pageNumber;
+                
+                const newWorks = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                currentWorks = newWorks; // CLAVE: Guardamos en memoria para edición/eliminación
+                
+                renderWorksList(newWorks, true); 
+                updatePaginationUI();
+            }
+        }
 
     } catch (error) {
         console.error("Error loading works:", error);

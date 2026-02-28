@@ -19,6 +19,7 @@ let pageCursors = [null]; // Guarda el último documento de cada página (Índic
 let isLoading = false;
 let currentSearchQuery = ""; 
 let searchDebounceTimer;
+let searchResultsMemory = [];
 
 // --- Selectores DOM ---
 const galleryContainer = document.getElementById("gallery-container");
@@ -55,6 +56,7 @@ async function calculateTotalPages(baseQuery) {
 }
 
 // --- Cargar una página específica ---
+// --- Cargar una página específica ---
 async function loadPage(pageNumber) {
     if (isLoading) return;
     isLoading = true;
@@ -65,55 +67,86 @@ async function loadPage(pageNumber) {
 
     try {
         const productsRef = collection(db, "productos"); 
-        let baseQuery;
 
-        // --- LÓGICA DE BÚSQUEDA ---
+        // ==========================================
+        // CAMINO A: LÓGICA DE BÚSQUEDA (EN MEMORIA)
+        // ==========================================
         if (currentSearchQuery) {
-            baseQuery = query(productsRef, 
-                where("titulo", ">=", currentSearchQuery),
-                where("titulo", "<=", currentSearchQuery + "\uf8ff")
-            );
-        } else {
-            baseQuery = query(productsRef, orderBy("orden", "asc"));
-        }
+            
+            // Solo consultamos a Firebase en la página 1 de la búsqueda
+            if (pageNumber === 1) {
+                // Traemos todas las obras (solo texto, es muy rápido)
+                const qAll = query(productsRef, orderBy("orden", "asc"));
+                const querySnapshot = await getDocs(qAll);
+                
+                const queryLower = currentSearchQuery.toLowerCase();
 
-        // Si es la página 1 (inicio o nueva búsqueda), recalculamos totales
-        if (pageNumber === 1) {
-            await calculateTotalPages(baseQuery);
-            pageCursors = [null];
-        }
+                // Usamos JavaScript para un filtrado perfecto
+                searchResultsMemory = querySnapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .filter(obra => {
+                        // Ignora mayúsculas y busca en cualquier parte del texto
+                        const tituloMatch = obra.titulo?.toLowerCase().includes(queryLower);
+                        const categoriaMatch = obra.categoria?.toLowerCase().includes(queryLower);
+                        const serieMatch = obra.serie?.toLowerCase().includes(queryLower);
+                        
+                        return tituloMatch || categoriaMatch || serieMatch; 
+                    });
 
-        let q;
-        if (pageNumber === 1) {
-            q = query(baseQuery, limit(PAGE_SIZE));
-        } else {
-            const cursor = pageCursors[pageNumber - 1];
-            q = query(baseQuery, startAfter(cursor), limit(PAGE_SIZE));
-        }
-
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-            if (galleryContainer) {
-                galleryContainer.innerHTML = '<p class="text-center col-span-full py-10 text-text-secondary">No se encontraron obras con esa búsqueda.</p>';
+                // Calculamos las páginas basándonos en los resultados encontrados
+                totalPages = Math.ceil(searchResultsMemory.length / PAGE_SIZE) || 1;
             }
-            paginationControls?.classList.add("hidden");
-            isLoading = false;
-            hideSpinner();
-            return;
+
+            // Extraemos solo los 12 resultados que corresponden a la página actual
+            const startIndex = (pageNumber - 1) * PAGE_SIZE;
+            const newWorks = searchResultsMemory.slice(startIndex, startIndex + PAGE_SIZE);
+            
+            currentPage = pageNumber;
+
+            if (newWorks.length === 0) {
+                if (galleryContainer) galleryContainer.innerHTML = '<p class="text-center col-span-full py-10 text-text-secondary">No se encontraron obras con esa búsqueda.</p>';
+                if (paginationControls) paginationControls.classList.add("hidden");
+            } else {
+                if (galleryContainer) galleryContainer.innerHTML = ""; 
+                renderGallery(newWorks);
+                updatePaginationUI();
+            }
+
+        } 
+        // ==========================================
+        // CAMINO B: LÓGICA NORMAL (FIRESTORE)
+        // ==========================================
+        else {
+            if (pageNumber === 1) {
+                const baseQuery = query(productsRef, orderBy("orden", "asc"));
+                await calculateTotalPages(baseQuery);
+                pageCursors = [null];
+            }
+
+            let q;
+            if (pageNumber === 1) {
+                q = query(productsRef, orderBy("orden", "asc"), limit(PAGE_SIZE));
+            } else {
+                const cursor = pageCursors[pageNumber - 1];
+                q = query(productsRef, orderBy("orden", "asc"), startAfter(cursor), limit(PAGE_SIZE));
+            }
+
+            const querySnapshot = await getDocs(q);
+            
+            if (querySnapshot.empty) {
+                if (galleryContainer) galleryContainer.innerHTML = '<p class="text-center col-span-full py-10 text-text-secondary">No se encontraron obras disponibles.</p>';
+                if (paginationControls) paginationControls.classList.add("hidden");
+            } else {
+                pageCursors[pageNumber] = querySnapshot.docs[querySnapshot.docs.length - 1];
+                currentPage = pageNumber;
+                
+                const newWorks = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                if (galleryContainer) galleryContainer.innerHTML = ""; 
+                renderGallery(newWorks);
+                updatePaginationUI();
+            }
         }
-
-        pageCursors[pageNumber] = querySnapshot.docs[querySnapshot.docs.length - 1];
-        currentPage = pageNumber;
-        
-        const newWorks = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
-
-        if (galleryContainer) galleryContainer.innerHTML = ""; 
-        renderGallery(newWorks);
-        updatePaginationUI();
 
     } catch (error) {
         console.error("Error al cargar la página:", error);

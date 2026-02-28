@@ -1,8 +1,9 @@
+// js/admin.js
 import { db, auth, storage } from '../src/firebaseConfig.js'; 
 import { 
     collection, addDoc, updateDoc, deleteDoc, doc, 
-    query, orderBy, limit, startAfter, getDocs, getDoc, 
-    where, writeBatch, getCountFromServer
+    query, orderBy, limit, startAfter, getDocs, getCountFromServer,
+    where, writeBatch 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { 
     ref, uploadBytes, getDownloadURL, deleteObject 
@@ -11,8 +12,6 @@ import {
     signInWithEmailAndPassword, signOut, onAuthStateChanged 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// ... el resto del código queda igual
-
 // --- Variables de Estado ---
 let currentWorks = [];
 let isEditMode = false;
@@ -20,7 +19,7 @@ let workToEdit = null;
 let currentSearchQuery = '';
 let searchDebounceTimer;
 
-// NUEVAS variables de paginación
+// --- Variables de Paginación ---
 const PAGE_SIZE = 20;
 let currentPage = 1;
 let totalPages = 1;
@@ -42,12 +41,12 @@ const submitButton = document.getElementById('submit-button');
 const searchInput = document.getElementById('search-input');
 const worksContainer = document.getElementById('works-container');
 const saveOrderButton = document.getElementById('save-order-button');
-
 const paginationControlsAdmin = document.getElementById("admin-pagination-controls");
 const prevButtonAdmin = document.getElementById("admin-prev-page");
 const nextButtonAdmin = document.getElementById("admin-next-page");
 const pageInfoAdmin = document.getElementById("admin-page-info");
 
+// --- Helpers de UI ---
 function showAlert(message, type = 'success') {
     if (!alertDiv) return;
     alertDiv.textContent = message;
@@ -73,14 +72,21 @@ function showLoginView() {
     obraFormContainer?.classList.add('hidden');
 }
 
-// --- Lógica de Negocio: Carga de Datos y Paginación ---
-async function calculateTotalPages(baseQuery) {
-    try {
-        const snapshot = await getCountFromServer(baseQuery);
-        totalPages = Math.ceil(snapshot.data().count / PAGE_SIZE) || 1;
-    } catch (e) {
-        console.error("Error contando documentos:", e);
-        totalPages = 1;
+function resetForm() {
+    obraForm?.reset();
+    isEditMode = false;
+    workToEdit = null;
+    document.getElementById('form-title').textContent = "Agregar Nueva Obra";
+    currentImagesContainer?.classList.add('hidden');
+    if(currentImagesList) currentImagesList.innerHTML = '';
+}
+
+function showWorksList(forceReload = false) {
+    obraFormContainer?.classList.add('hidden');
+    worksContainer?.classList.remove('hidden');
+    document.getElementById('show-add-form-button')?.classList.remove('hidden');
+    if (forceReload) {
+        loadWorksPage(1);
     }
 }
 
@@ -95,7 +101,6 @@ async function calculateTotalPages(baseQuery) {
     }
 }
 
-// --- Lógica de Negocio: Carga de Datos y Paginación ---
 async function loadWorksPage(pageNumber = 1) {
     if (isLoading) return;
     isLoading = true;
@@ -107,7 +112,6 @@ async function loadWorksPage(pageNumber = 1) {
         // CAMINO A: LÓGICA DE BÚSQUEDA (EN MEMORIA)
         // ==========================================
         if (currentSearchQuery) {
-            
             if (pageNumber === 1) {
                 const qAll = query(productsRef, orderBy("orden", "asc"));
                 const querySnapshot = await getDocs(qAll);
@@ -129,16 +133,15 @@ async function loadWorksPage(pageNumber = 1) {
             const newWorks = searchResultsMemoryAdmin.slice(startIndex, startIndex + PAGE_SIZE);
 
             currentPage = pageNumber;
-            currentWorks = newWorks; // CLAVE: Actualizamos las obras en pantalla para poder editarlas
+            currentWorks = newWorks;
 
             if (newWorks.length === 0) {
-                worksList.innerHTML = '<p class="p-4 text-center text-gray-500">No se encontraron obras con esa búsqueda.</p>';
+                if (worksList) worksList.innerHTML = '<p class="p-4 text-center text-gray-500">No se encontraron obras con esa búsqueda.</p>';
                 if (paginationControlsAdmin) paginationControlsAdmin.classList.add("hidden");
             } else {
                 renderWorksList(newWorks, true); 
                 updatePaginationUI();
             }
-
         } 
         // ==========================================
         // CAMINO B: LÓGICA NORMAL (FIRESTORE)
@@ -162,20 +165,19 @@ async function loadWorksPage(pageNumber = 1) {
             const querySnapshot = await getDocs(q);
             
             if (querySnapshot.empty) {
-                worksList.innerHTML = '<p class="p-4 text-center text-gray-500">No se encontraron obras.</p>';
+                if (worksList) worksList.innerHTML = '<p class="p-4 text-center text-gray-500">No se encontraron obras.</p>';
                 if (paginationControlsAdmin) paginationControlsAdmin.classList.add("hidden");
             } else {
                 pageCursors[pageNumber] = querySnapshot.docs[querySnapshot.docs.length - 1];
                 currentPage = pageNumber;
                 
                 const newWorks = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                currentWorks = newWorks; // CLAVE: Guardamos en memoria para edición/eliminación
+                currentWorks = newWorks; 
                 
                 renderWorksList(newWorks, true); 
                 updatePaginationUI();
             }
         }
-
     } catch (error) {
         console.error("Error loading works:", error);
         showAlert("Error al cargar obras", 'error');
@@ -187,19 +189,14 @@ async function loadWorksPage(pageNumber = 1) {
 function updatePaginationUI() {
     if (!paginationControlsAdmin) return;
     paginationControlsAdmin.classList.remove("hidden");
-    pageInfoAdmin.textContent = `Página ${currentPage} de ${totalPages}`;
-    prevButtonAdmin.disabled = currentPage === 1;
-    nextButtonAdmin.disabled = currentPage === totalPages;
+    if (pageInfoAdmin) pageInfoAdmin.textContent = `Página ${currentPage} de ${totalPages}`;
+    if (prevButtonAdmin) prevButtonAdmin.disabled = currentPage === 1;
+    if (nextButtonAdmin) nextButtonAdmin.disabled = currentPage === totalPages;
 }
 
 function renderWorksList(works, isReplacing = false) {
     if (!worksList) return;
     if (isReplacing) worksList.innerHTML = '';
-
-    if (works.length === 0 && isReplacing) {
-        worksList.innerHTML = `<p class="p-4 text-center text-gray-500">No se encontraron obras.</p>`;
-        return;
-    }
 
     works.forEach(obra => {
         const item = document.createElement('div');
@@ -224,6 +221,7 @@ function renderWorksList(works, isReplacing = false) {
     });
 }
 
+// --- Subir y Manejar Imágenes ---
 async function uploadImage(file, workId) {
     const fileName = `${workId}_${Date.now()}_${file.name}`;
     const storageRef = ref(storage, `obras/${fileName}`);
@@ -293,6 +291,96 @@ async function handleSubmit(event) {
     }
 }
 
+// --- Edición y Rotación ---
+window.editWork = async (id) => {
+    const obra = currentWorks.find(w => w.id === id);
+    if (!obra) return;
+    
+    workToEdit = obra;
+    isEditMode = true;
+    document.getElementById('form-title').textContent = "Editar Obra";
+    
+    const fields = ['titulo', 'descripcion', 'anio', 'tecnica', 'medidas', 'categoria', 'serie', 'price'];
+    fields.forEach(f => {
+        const el = document.getElementById(f);
+        if (el) el.value = obra[f] || '';
+    });
+
+    if (document.getElementById('is_available')) document.getElementById('is_available').checked = obra.is_available;
+    if (document.getElementById('show_price')) document.getElementById('show_price').checked = obra.show_price;
+
+    if (obra.imagenes?.length > 0) {
+        currentImagesContainer.classList.remove('hidden');
+        currentImagesList.dataset.currentImages = JSON.stringify(obra.imagenes);
+        
+        currentImagesList.innerHTML = obra.imagenes.map((img, idx) => `
+            <div class="relative w-24 h-24 border border-border-default rounded-sm overflow-hidden group">
+                <img src="${img.url}" class="w-full h-full object-cover">
+                <button type="button" onclick="rotateImage('${obra.id}', ${idx})" 
+                        class="absolute inset-0 m-auto w-8 h-8 bg-black bg-opacity-70 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent-blue cursor-pointer shadow-md" 
+                        title="Rotar 90°">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                </button>
+            </div>
+        `).join('');
+    } else {
+        currentImagesContainer.classList.add('hidden');
+    }
+
+    obraFormContainer.classList.remove('hidden');
+    worksContainer.classList.add('hidden');
+};
+
+window.rotateImage = async (workId, imageIndex) => {
+    const obra = currentWorks.find(w => w.id === workId);
+    if (!obra || !obra.imagenes || !obra.imagenes[imageIndex]) return;
+
+    const imgData = obra.imagenes[imageIndex];
+    showAlert("Rotando imagen, por favor espera...", "info");
+
+    try {
+        const response = await fetch(imgData.url);
+        const blob = await response.blob();
+        const img = new Image();
+        const imgLoadPromise = new Promise(resolve => {
+            img.onload = resolve;
+            img.src = URL.createObjectURL(blob);
+        });
+        await imgLoadPromise;
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.height;
+        canvas.height = img.width;
+
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(90 * Math.PI / 180);
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+        const newBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.85));
+        const newFileName = `rotada_${Date.now()}_${imgData.name}`;
+        const storageRef = ref(storage, `obras/${newFileName}`);
+        const snapshot = await uploadBytes(storageRef, newBlob);
+        const newUrl = await getDownloadURL(snapshot.ref);
+
+        try { await deleteObject(ref(storage, imgData.path)); } catch(e) {}
+
+        obra.imagenes[imageIndex] = {
+            path: snapshot.ref.fullPath,
+            url: newUrl,
+            name: newFileName
+        };
+
+        await updateDoc(doc(db, "productos", workId), { imagenes: obra.imagenes });
+        showAlert("¡Imagen rotada con éxito!");
+        editWork(workId);
+
+    } catch (error) {
+        console.error("Error al rotar:", error);
+        showAlert("Error al rotar imagen.", "error");
+    }
+};
+
 window.deleteWork = async (id, button) => {
     if (!confirm("¿Eliminar obra permanentemente?")) return;
     
@@ -300,7 +388,7 @@ window.deleteWork = async (id, button) => {
         const obra = currentWorks.find(w => w.id === id);
         if (obra?.imagenes) {
             for (const img of obra.imagenes) {
-                try { await deleteObject(ref(storage, img.path)); } catch(e) { console.warn("Imagen no encontrada en Storage"); }
+                try { await deleteObject(ref(storage, img.path)); } catch(e) {}
             }
         }
         await deleteDoc(doc(db, "productos", id));
@@ -312,7 +400,7 @@ window.deleteWork = async (id, button) => {
 };
 
 async function saveOrder() {
-    saveOrderButton.disabled = true;
+    if (saveOrderButton) saveOrderButton.disabled = true;
     const batch = writeBatch(db);
     const orderedItems = Array.from(worksList.children);
     
@@ -326,11 +414,10 @@ async function saveOrder() {
         showAlert("Orden actualizado.");
     } catch (error) {
         showAlert("Error al guardar orden", "error");
-    } finally {
-        saveOrderButton.disabled = true;
     }
 }
 
+// --- Autenticación ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
         showAdminView();
@@ -355,65 +442,7 @@ async function handleLogout() {
     await signOut(auth);
 }
 
-function resetForm() {
-    obraForm?.reset();
-    isEditMode = false;
-    workToEdit = null;
-    document.getElementById('form-title').textContent = "Agregar Nueva Obra";
-    currentImagesContainer?.classList.add('hidden');
-    if(currentImagesList) currentImagesList.innerHTML = '';
-}
-
-function showWorksList(forceReload = false) {
-    obraFormContainer?.classList.add('hidden');
-    worksContainer?.classList.remove('hidden');
-    document.getElementById('show-add-form-button')?.classList.remove('hidden');
-    if (forceReload) {
-        lastVisibleDoc = null;
-        allDataLoaded = false;
-        loadWorksPage(1);
-    }
-}
-
-window.editWork = async (id) => {
-    const obra = currentWorks.find(w => w.id === id);
-    if (!obra) return;
-    
-    workToEdit = obra;
-    isEditMode = true;
-    document.getElementById('form-title').textContent = "Editar Obra";
-    
-    const fields = ['titulo', 'descripcion', 'anio', 'tecnica', 'medidas', 'categoria', 'serie', 'price'];
-    fields.forEach(f => {
-        const el = document.getElementById(f);
-        if (el) el.value = obra[f] || '';
-    });
-
-    if (document.getElementById('is_available')) document.getElementById('is_available').checked = obra.is_available;
-    if (document.getElementById('show_price')) document.getElementById('show_price').checked = obra.show_price;
-
-    if (obra.imagenes?.length > 0) {
-            currentImagesContainer.classList.remove('hidden');
-            currentImagesList.dataset.currentImages = JSON.stringify(obra.imagenes);
-            
-            // Agregamos un botón de rotar superpuesto a cada imagen
-            currentImagesList.innerHTML = obra.imagenes.map((img, idx) => `
-                <div class="relative w-24 h-24 border border-border-default rounded-sm overflow-hidden group">
-                    <img src="${img.url}" class="w-full h-full object-cover">
-                    
-                    <button type="button" onclick="rotateImage('${obra.id}', ${idx})" 
-                            class="absolute inset-0 m-auto w-8 h-8 bg-black bg-opacity-70 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent-blue cursor-pointer shadow-md" 
-                            title="Rotar 90°">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                    </button>
-                </div>
-            `).join('');
-        }
-
-    obraFormContainer.classList.remove('hidden');
-    worksContainer.classList.add('hidden');
-};
-
+// --- Arranque / Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('login-form')?.addEventListener('submit', handleLogin);
     obraForm?.addEventListener('submit', handleSubmit);
@@ -421,8 +450,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('show-add-form-button')?.addEventListener('click', () => {
         resetForm();
-        obraFormContainer.classList.remove('hidden');
-        worksContainer.classList.add('hidden');
+        obraFormContainer?.classList.remove('hidden');
+        worksContainer?.classList.add('hidden');
     });
     
     document.getElementById('cancel-edit-button')?.addEventListener('click', () => showWorksList(false));
@@ -447,67 +476,3 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentPage < totalPages) loadWorksPage(currentPage + 1);
     });
 });
-
-// --- Lógica para Rotar Imágenes ---
-window.rotateImage = async (workId, imageIndex) => {
-    const obra = currentWorks.find(w => w.id === workId);
-    if (!obra || !obra.imagenes || !obra.imagenes[imageIndex]) return;
-
-    const imgData = obra.imagenes[imageIndex];
-    showAlert("Rotando imagen, por favor no cierres la ventana...", "info");
-
-    try {
-        // 1. Descargar la imagen como Blob para evitar bloqueos del Canvas
-        const response = await fetch(imgData.url);
-        const blob = await response.blob();
-
-        // 2. Cargar la imagen en memoria
-        const img = new Image();
-        const imgLoadPromise = new Promise(resolve => {
-            img.onload = resolve;
-            img.src = URL.createObjectURL(blob);
-        });
-        await imgLoadPromise;
-
-        // 3. Crear el lienzo (Canvas) e invertir sus dimensiones
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = img.height;
-        canvas.height = img.width;
-
-        // 4. Rotar 90 grados (en radianes)
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(90 * Math.PI / 180);
-        ctx.drawImage(img, -img.width / 2, -img.height / 2);
-
-        // 5. Convertir a un nuevo archivo WebP optimizado
-        const newBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.85));
-
-        // 6. Subir la nueva imagen a Firebase Storage
-        const newFileName = `rotada_${Date.now()}_${imgData.name}`;
-        const storageRef = ref(storage, `obras/${newFileName}`);
-        const snapshot = await uploadBytes(storageRef, newBlob);
-        const newUrl = await getDownloadURL(snapshot.ref);
-
-        // 7. Borrar la imagen vieja para no ocupar espacio "basura"
-        try {
-            await deleteObject(ref(storage, imgData.path));
-        } catch(e) { console.warn("La imagen anterior no se pudo borrar."); }
-
-        // 8. Actualizar la base de datos y la interfaz
-        obra.imagenes[imageIndex] = {
-            path: snapshot.ref.fullPath,
-            url: newUrl,
-            name: newFileName
-        };
-
-        await updateDoc(doc(db, "productos", workId), { imagenes: obra.imagenes });
-        
-        showAlert("¡Imagen rotada con éxito!");
-        editWork(workId); // Recargar la vista actual
-
-    } catch (error) {
-        console.error("Error al rotar:", error);
-        showAlert("Error al rotar. Verifica los permisos CORS en la consola.", "error");
-    }
-};

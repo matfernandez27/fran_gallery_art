@@ -248,6 +248,7 @@ async function handleSubmit(event) {
             tecnica: formData.get('tecnica'),
             medidas: formData.get('medidas'),
             price: parseFloat(formData.get('price')) || null,
+            currency: formData.get('currency') || 'ARS',
             is_available: formData.get('is_available') === 'on',
             show_price: formData.get('show_price') === 'on',
             updatedAt: new Date()
@@ -300,11 +301,14 @@ window.editWork = async (id) => {
     isEditMode = true;
     document.getElementById('form-title').textContent = "Editar Obra";
     
-    const fields = ['titulo', 'descripcion', 'anio', 'tecnica', 'medidas', 'categoria', 'serie', 'price'];
+   const fields = ['titulo', 'descripcion', 'anio', 'tecnica', 'medidas', 'categoria', 'serie', 'price'];
     fields.forEach(f => {
         const el = document.getElementById(f);
         if (el) el.value = obra[f] || '';
     });
+
+    // <--- NUEVA LÍNEA PARA CARGAR LA MONEDA AL EDITAR --->
+    if (document.getElementById('currency')) document.getElementById('currency').value = obra.currency || 'ARS';
 
     if (document.getElementById('is_available')) document.getElementById('is_available').checked = obra.is_available;
     if (document.getElementById('show_price')) document.getElementById('show_price').checked = obra.show_price;

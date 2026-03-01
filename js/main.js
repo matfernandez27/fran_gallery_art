@@ -8,17 +8,17 @@ import {
     startAfter, 
     getDocs,
     getCountFromServer,
-    where
+    where 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// --- Variables de Paginación ---
+// --- Variables de Paginación y Búsqueda ---
 const PAGE_SIZE = 12;
 let currentPage = 1;
 let totalPages = 1;
-let pageCursors = [null]; // Guarda el último documento de cada página (Índice 0 = null para la pág 1)
+let pageCursors = [null];
 let isLoading = false;
 let currentSearchQuery = ""; 
-let searchDebounceTimer;
+let searchDebounceTimer;     
 let searchResultsMemory = [];
 
 // --- Selectores DOM ---
@@ -30,20 +30,16 @@ const nextButton = document.getElementById("next-page");
 const pageInfo = document.getElementById("page-info");
 const searchInput = document.getElementById("search");
 
-// --- Inicialización de la Galería ---
-async function initGallery() {
-    if (!db) {
-        console.error("Error: La base de datos no está inicializada. Revisa firebaseConfig.js");
-        hideSpinner();
-        return;
-    }
-    
-    await calculateTotalPages();
-    await loadPage(1);
+// --- Helper: Formatear Precio ---
+function formatPrice(price, currency) {
+    if (!price) return '';
+    // toLocaleString('es-AR') pone los puntos en los miles automáticamente
+    const formattedNumber = Number(price).toLocaleString('es-AR'); 
+    const symbol = currency === 'USD' ? 'U$D' : '$';
+    return `${symbol} ${formattedNumber}`;
 }
 
 // --- Calcular el total de páginas ---
-// Ahora recibe 'baseQuery' para saber si cuenta todas las obras o solo las buscadas
 async function calculateTotalPages(baseQuery) {
     try {
         const snapshot = await getCountFromServer(baseQuery);
@@ -56,8 +52,13 @@ async function calculateTotalPages(baseQuery) {
 }
 
 // --- Cargar una página específica ---
-// --- Cargar una página específica ---
 async function loadPage(pageNumber) {
+    if (!db) {
+        console.error("Error: La base de datos no está inicializada.");
+        hideSpinner();
+        return;
+    }
+
     if (isLoading) return;
     isLoading = true;
 
@@ -73,31 +74,23 @@ async function loadPage(pageNumber) {
         // ==========================================
         if (currentSearchQuery) {
             
-            // Solo consultamos a Firebase en la página 1 de la búsqueda
             if (pageNumber === 1) {
-                // Traemos todas las obras (solo texto, es muy rápido)
                 const qAll = query(productsRef, orderBy("orden", "asc"));
                 const querySnapshot = await getDocs(qAll);
-                
                 const queryLower = currentSearchQuery.toLowerCase();
 
-                // Usamos JavaScript para un filtrado perfecto
                 searchResultsMemory = querySnapshot.docs
                     .map(doc => ({ id: doc.id, ...doc.data() }))
                     .filter(obra => {
-                        // Ignora mayúsculas y busca en cualquier parte del texto
                         const tituloMatch = obra.titulo?.toLowerCase().includes(queryLower);
                         const categoriaMatch = obra.categoria?.toLowerCase().includes(queryLower);
                         const serieMatch = obra.serie?.toLowerCase().includes(queryLower);
-                        
                         return tituloMatch || categoriaMatch || serieMatch; 
                     });
 
-                // Calculamos las páginas basándonos en los resultados encontrados
                 totalPages = Math.ceil(searchResultsMemory.length / PAGE_SIZE) || 1;
             }
 
-            // Extraemos solo los 12 resultados que corresponden a la página actual
             const startIndex = (pageNumber - 1) * PAGE_SIZE;
             const newWorks = searchResultsMemory.slice(startIndex, startIndex + PAGE_SIZE);
             
@@ -117,18 +110,19 @@ async function loadPage(pageNumber) {
         // CAMINO B: LÓGICA NORMAL (FIRESTORE)
         // ==========================================
         else {
+            const baseQuery = query(productsRef, orderBy("orden", "asc"));
+
             if (pageNumber === 1) {
-                const baseQuery = query(productsRef, orderBy("orden", "asc"));
                 await calculateTotalPages(baseQuery);
                 pageCursors = [null];
             }
 
             let q;
             if (pageNumber === 1) {
-                q = query(productsRef, orderBy("orden", "asc"), limit(PAGE_SIZE));
+                q = query(baseQuery, limit(PAGE_SIZE));
             } else {
                 const cursor = pageCursors[pageNumber - 1];
-                q = query(productsRef, orderBy("orden", "asc"), startAfter(cursor), limit(PAGE_SIZE));
+                q = query(baseQuery, startAfter(cursor), limit(PAGE_SIZE));
             }
 
             const querySnapshot = await getDocs(q);
@@ -150,6 +144,9 @@ async function loadPage(pageNumber) {
 
     } catch (error) {
         console.error("Error al cargar la página:", error);
+        if (galleryContainer) {
+            galleryContainer.innerHTML = '<p class="text-center col-span-full py-10 text-red-500">Ocurrió un error al cargar la galería.</p>';
+        }
     } finally {
         isLoading = false;
         hideSpinner();
@@ -161,28 +158,11 @@ function updatePaginationUI() {
     if (!paginationControls) return;
     
     paginationControls.classList.remove("hidden");
-    pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+    if (pageInfo) pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
     
-    // Habilitar/Deshabilitar botones en los extremos
-    prevButton.disabled = currentPage === 1;
-    nextButton.disabled = currentPage === totalPages;
+    if (prevButton) prevButton.disabled = currentPage === 1;
+    if (nextButton) nextButton.disabled = currentPage === totalPages;
 }
-
-// --- Listeners de Paginación ---
-prevButton?.addEventListener("click", () => {
-    if (currentPage > 1) {
-        loadPage(currentPage - 1);
-        // Scrollear suavemente hacia el inicio de la galería
-        document.getElementById("gallery-section").scrollIntoView({ behavior: 'smooth' });
-    }
-});
-
-nextButton?.addEventListener("click", () => {
-    if (currentPage < totalPages) {
-        loadPage(currentPage + 1);
-        document.getElementById("gallery-section").scrollIntoView({ behavior: 'smooth' });
-    }
-});
 
 // --- Helper: Ocultar Spinner Inicial ---
 function hideSpinner() {
@@ -218,7 +198,7 @@ function renderGallery(works) {
                     <span class="text-sm font-semibold ${obra.is_available ? 'text-whatsapp' : 'text-red-400'}">
                         ${obra.is_available ? 'Disponible' : 'Vendido'}
                     </span>
-                    ${obra.show_price && obra.price ? `<span class="text-text-main font-bold">$${obra.price}</span>` : ''}
+                    ${obra.show_price && obra.price ? `<span class="text-text-main font-bold tracking-wide">${formatPrice(obra.price, obra.currency)}</span>` : ''}
                 </div>
             </div>
         `;
@@ -237,23 +217,40 @@ window.openModal = function(obra) {
 
     const imgUrl = (obra.imagenes && obra.imagenes.length > 0) ? obra.imagenes[0].url : '';
 
+    const priceHTML = (obra.show_price && obra.price) 
+        ? `<div class="mt-8 inline-block bg-gray-50 px-5 py-3 rounded-sm border border-border-default">
+             <span class="text-xs text-text-secondary uppercase tracking-wider block mb-1">Valor de la obra</span>
+             <span class="text-2xl font-bold text-text-main">${formatPrice(obra.price, obra.currency)}</span>
+           </div>`
+        : '';
+
     modalContent.innerHTML = `
         <div class="grid md:grid-cols-2 gap-8">
             <div class="image-zoom-container bg-gray-50 rounded-sm">
                 <img src="${imgUrl}" class="zoom-image w-full">
             </div>
             <div>
-                <h2 class="text-3xl font-display mb-2 text-text-main">${obra.titulo || 'Sin título'}</h2>
-                <p class="text-accent-blue font-medium mb-6">${obra.serie || 'Serie General'} — ${obra.anio || 's/f'}</p>
+                <div class="flex justify-between items-start mb-2 gap-4">
+                    <h2 class="text-3xl font-display text-text-main leading-none">${obra.titulo || 'Sin título'}</h2>
+                    <span class="px-3 py-1 text-xs font-semibold rounded-sm border ${obra.is_available ? 'bg-green-50 text-whatsapp border-green-200' : 'bg-red-50 text-red-500 border-red-200'}">
+                        ${obra.is_available ? 'Disponible' : 'Vendido'}
+                    </span>
+                </div>
+                
+                <p class="text-accent-blue font-medium mb-6 mt-2">${obra.serie || 'Serie General'} — ${obra.anio || 's/f'}</p>
+                
                 <div class="space-y-4 text-sm text-text-secondary">
                     <p><strong>Técnica:</strong> ${obra.tecnica || 'No especificada'}</p>
                     <p><strong>Medidas:</strong> ${obra.medidas || 'No especificadas'}</p>
                     <p class="text-text-main leading-relaxed mt-4">${obra.descripcion || ''}</p>
                 </div>
+
+                ${priceHTML}
+
                 <div class="mt-8 pt-8 border-t border-border-default">
                     <a href="https://wa.me/5492805032663?text=Hola! Me interesa la obra: ${obra.titulo}" 
                        target="_blank" 
-                       class="block text-center bg-whatsapp text-white py-3 rounded-sm font-bold hover:bg-opacity-90 transition-all">
+                       class="block text-center bg-whatsapp text-white py-3 rounded-sm font-bold hover:bg-opacity-90 transition-all uppercase tracking-wider text-sm">
                        Consultar por esta obra
                     </a>
                 </div>
@@ -271,19 +268,32 @@ window.closeModal = function(e) {
     }
 };
 
-// --- Arranque ---
+// --- Arranque y Listeners ---
 document.addEventListener("DOMContentLoaded", () => {
-    initGallery();
-});
+    // Iniciamos la galería cargando la página 1
+    loadPage(1);
 
-// --- Escuchador del Buscador ---
-if (searchInput) {
-    searchInput.addEventListener('input', () => {
-        clearTimeout(searchDebounceTimer);
-        // Esperamos 500ms después de que el usuario deje de teclear para no saturar la base de datos
-        searchDebounceTimer = setTimeout(() => {
-            currentSearchQuery = searchInput.value;
-            loadPage(1); // Forzamos la recarga desde la página 1 con el filtro
-        }, 500);
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                currentSearchQuery = searchInput.value;
+                loadPage(1);
+            }, 500);
+        });
+    }
+
+    prevButton?.addEventListener("click", () => {
+        if (currentPage > 1) {
+            loadPage(currentPage - 1);
+            document.getElementById("gallery-section").scrollIntoView({ behavior: 'smooth' });
+        }
     });
-}
+
+    nextButton?.addEventListener("click", () => {
+        if (currentPage < totalPages) {
+            loadPage(currentPage + 1);
+            document.getElementById("gallery-section").scrollIntoView({ behavior: 'smooth' });
+        }
+    });
+});

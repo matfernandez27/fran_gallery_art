@@ -6,8 +6,7 @@ import {
     limit, 
     startAfter, 
     getDocs,
-    getCountFromServer,
-    where 
+    getCountFromServer 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // --- Variables Generales ---
@@ -48,7 +47,6 @@ async function initCarousel() {
     if (!carouselTrack) return;
     
     try {
-        // Traemos las primeras 4 obras para destacar en el carrusel
         const q = query(collection(db, "productos"), limit(4));
         const snap = await getDocs(q);
         
@@ -60,14 +58,14 @@ async function initCarousel() {
         const works = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         totalSlides = works.length;
 
-        carouselTrack.innerHTML = works.map((obra, index) => {
+        carouselTrack.innerHTML = works.map((obra) => {
             const img = (obra.imagenes && obra.imagenes.length > 0) ? obra.imagenes[0].url : './img/placeholder.jpg';
             return `
                 <div class="w-full h-full flex-shrink-0 relative">
                     <img src="${img}" alt="${obra.titulo}" class="w-full h-full object-cover opacity-80">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-8 md:p-16">
-                        <span class="text-accent-blue font-bold tracking-widest uppercase text-xs mb-2">Obra Destacada</span>
-                        <h2 class="text-4xl md:text-5xl font-display text-white mb-4 leading-tight">${obra.titulo}</h2>
+                        <span class="text-accent-blue font-bold tracking-widest uppercase text-xs mb-2 shadow-black drop-shadow-md">Obra Destacada</span>
+                        <h2 class="text-4xl md:text-5xl font-display text-white mb-4 leading-tight drop-shadow-md">${obra.titulo}</h2>
                         <button onclick="openModalById('${obra.id}')" class="w-max bg-white text-black px-6 py-3 text-sm font-medium tracking-wide hover:bg-accent-blue hover:text-white transition-colors">
                             VER DETALLES
                         </button>
@@ -76,10 +74,8 @@ async function initCarousel() {
             `;
         }).join('');
 
-        // Hacer globales las obras del carrusel para que el botón funcione
         window.carouselWorks = works;
 
-        // Controles y Auto-play
         document.getElementById('carousel-next')?.addEventListener('click', () => moveSlide(1));
         document.getElementById('carousel-prev')?.addEventListener('click', () => moveSlide(-1));
         
@@ -103,7 +99,7 @@ function updateCarouselPosition() {
 }
 
 function startCarouselAutoPlay() {
-    carouselInterval = setInterval(() => moveSlide(1), 5000); // Rota cada 5 segundos
+    carouselInterval = setInterval(() => moveSlide(1), 5000); 
 }
 
 function resetCarouselAutoPlay() {
@@ -244,15 +240,17 @@ function renderGallery(works) {
         const mainImg = (obra.imagenes && obra.imagenes.length > 0) ? obra.imagenes[0].url : './img/placeholder.jpg';
 
         const card = document.createElement("div");
-        card.className = "bg-bg-surface border border-border-default rounded-sm overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 group cursor-pointer";
+        card.className = "bg-bg-surface border border-border-default rounded-sm overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 group cursor-pointer flex flex-col h-full";
         card.innerHTML = `
             <div class="aspect-square overflow-hidden bg-gray-100 relative">
                 <img src="${mainImg}" alt="${obra.titulo}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
             </div>
-            <div class="p-4">
-                <h3 class="font-display text-xl text-text-main truncate">${obra.titulo || 'Sin título'}</h3>
-                <p class="text-xs text-text-secondary uppercase tracking-widest mt-1">${obra.categoria || 'Obra'}</p>
-                <div class="flex justify-between items-center mt-4">
+            <div class="p-4 flex flex-col flex-grow justify-between">
+                <div>
+                    <h3 class="font-display text-xl text-text-main truncate">${obra.titulo || 'Sin título'}</h3>
+                    <p class="text-xs text-text-secondary uppercase tracking-widest mt-1">${obra.categoria || 'Obra'}</p>
+                </div>
+                <div class="flex justify-between items-center mt-4 border-t border-gray-100 pt-3">
                     <span class="text-sm font-semibold ${obra.is_available ? 'text-whatsapp' : 'text-red-400'}">
                         ${obra.is_available ? 'Disponible' : 'Vendido'}
                     </span>
@@ -273,6 +271,9 @@ window.openModal = function(obra) {
     const modalContent = document.getElementById("modal-content");
     if (!modal || !modalContent) return;
 
+    // Bloquear scroll de la página trasera
+    document.body.style.overflow = 'hidden';
+
     const imgUrl = (obra.imagenes && obra.imagenes.length > 0) ? obra.imagenes[0].url : '';
 
     const priceHTML = (obra.show_price && obra.price) 
@@ -284,8 +285,9 @@ window.openModal = function(obra) {
 
     modalContent.innerHTML = `
         <div class="grid md:grid-cols-2 gap-4 md:gap-8 h-full max-h-[85vh] md:max-h-[90vh] overflow-y-auto overflow-x-hidden p-2 md:p-1">
+            
             <div id="zoom-container" class="relative bg-gray-100 rounded-sm overflow-hidden flex items-center justify-center cursor-move min-h-[300px] sm:min-h-[400px] md:min-h-[600px] border border-border-default group">
-                <img src="${imgUrl}" id="zoom-image" class="max-w-full max-h-full object-contain shadow-sm">
+                <img src="${imgUrl}" id="zoom-image" class="max-w-full max-h-full object-contain shadow-sm pointer-events-none" style="transform-origin: center center;">
                 
                 <div class="absolute top-2 right-2 md:top-4 md:right-4 flex flex-col gap-2 z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
                     <button id="zoom-in" class="bg-white/90 text-text-main p-3 md:p-2 rounded-sm shadow hover:bg-white hover:text-accent-blue transition-colors" title="Acercar">
@@ -335,7 +337,13 @@ window.openModal = function(obra) {
     const container = document.getElementById('zoom-container');
 
     if (imgElement && container && typeof Panzoom !== 'undefined') {
-        const panzoom = Panzoom(imgElement, { maxScale: 5, minScale: 1, step: 0.3, contain: 'outside' });
+        // Inicializamos sin la restricción 'contain: outside' que arruinaba el centrado
+        const panzoom = Panzoom(imgElement, { 
+            maxScale: 5, 
+            minScale: 1, 
+            step: 0.3
+        });
+        
         container.addEventListener('wheel', panzoom.zoomWithWheel);
         document.getElementById('zoom-in').addEventListener('click', panzoom.zoomIn);
         document.getElementById('zoom-out').addEventListener('click', panzoom.zoomOut);
@@ -348,13 +356,15 @@ window.closeModal = function(e) {
     if (!modal) return;
     if (!e || e.target.id === "modal" || e.target.tagName === "BUTTON") {
         modal.classList.add("hidden");
+        // Restauramos el scroll de la web al cerrar
+        document.body.style.overflow = 'auto';
     }
 };
 
 // --- Inicialización ---
 document.addEventListener("DOMContentLoaded", () => {
-    initCarousel(); // Cargamos el carrusel primero
-    loadPage(1);    // Luego la grilla paginada
+    initCarousel(); 
+    loadPage(1);    
 
     if (searchInput) {
         searchInput.addEventListener('input', () => {

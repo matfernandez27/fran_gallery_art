@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catálogo de Obras | francisco fernández</title>
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -30,9 +30,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
     
     <style>
+        /* Habilita el deslizamiento suave al hacer clic en el menú */
+        html { scroll-behavior: smooth; }
         body { font-family: 'Inter', sans-serif; }
         .font-display { font-family: 'Playfair Display', serif; }
         
+        /* Animación del Spinner */
         .lds-ring {
             display: inline-block;
             position: relative;
@@ -62,6 +65,8 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
+
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
 </head>
 <body class="bg-gray-50 text-text-main antialiased selection:bg-accent-blue selection:text-white">
 
@@ -71,9 +76,9 @@
                 francisco <span class="text-accent-blue">fernández</span>
             </a>
             <nav class="hidden md:flex space-x-8">
-                <a href="#" class="text-accent-blue font-medium border-b-2 border-accent-blue pb-1">Catálogo</a>
-                <a href="#" class="text-text-secondary hover:text-text-main text-sm font-medium transition-colors">Biografía</a>
-                <a href="#" class="text-text-secondary hover:text-text-main text-sm font-medium transition-colors">Contacto</a>
+                <a href="#gallery-section" class="text-accent-blue font-medium border-b-2 border-accent-blue pb-1">Catálogo</a>
+                <a href="#biografia" class="text-text-secondary hover:text-text-main text-sm font-medium transition-colors">Biografía</a>
+                <a href="#contacto" class="text-text-secondary hover:text-text-main text-sm font-medium transition-colors">Contacto</a>
             </nav>
         </div>
     </header>
@@ -90,12 +95,12 @@
         </button>
     </div>
 
-    <main id="gallery-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+    <main id="gallery-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
         
         <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
             <div class="w-full md:w-1/2 text-left">
                 <h1 class="text-3xl md:text-5xl font-display font-bold text-text-main mb-3 md:mb-4">Catálogo de Obras</h1>
-                <p class="text-text-secondary text-sm md:text-base mb-4">Explora la colección completa. Haz clic en cualquier obra para ver detalles y aplicar zoom.</p>
+                <p class="text-text-secondary text-sm md:text-base mb-6">Explora la colección completa. Haz clic en cualquier obra para ver detalles y aplicar zoom.</p>
                 
                 <div class="relative w-full">
                     <input type="text" id="search" placeholder="Buscar por título, categoría o serie..." 
@@ -120,15 +125,41 @@
                 </button>
             </div>
         </div>
-
     </main>
+
+    <section id="biografia" class="bg-white border-t border-border-default py-16 md:py-24">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-3xl md:text-4xl font-display font-bold text-text-main mb-6">Sobre el Artista</h2>
+            <p class="text-text-secondary text-base md:text-lg leading-relaxed mb-6">
+                Francisco Fernández es un artista visual cuya obra se sumerge en la intersección entre el paisaje urbano, la naturaleza abstracta y la identidad contemporánea. A través de técnicas que abarcan desde la pintura al acrílico hasta el grabado experimental, su catálogo invita al espectador a una profunda reflexión sobre nuestro entorno y la condición humana.
+            </p>
+        </div>
+    </section>
+
+    <footer id="contacto" class="bg-text-main text-white py-16">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
+            <h2 class="text-3xl font-display font-bold mb-6">Contacto</h2>
+            <p class="text-gray-300 mb-8 max-w-xl text-sm md:text-base">
+                ¿Interesado en adquirir una obra, coordinar una visita al taller o proponer una exhibición conjunta? Escríbenos directamente y te responderemos a la brevedad.
+            </p>
+            <a href="https://wa.me/5492805032663?text=Hola! Vengo de tu galería web y me gustaría hacerte una consulta." 
+               target="_blank" 
+               class="inline-flex items-center gap-2 bg-whatsapp text-white px-8 py-4 rounded-sm font-bold hover:bg-opacity-90 transition-all shadow-md tracking-wide">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
+                Contactar por WhatsApp
+            </a>
+            <p class="text-xs text-gray-500 mt-16 tracking-widest uppercase">
+                © 2026 Francisco Fernández. Todos los derechos reservados.
+            </p>
+        </div>
+    </footer>
 
     <div id="loading-overlay" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center transition-opacity duration-300">
         <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
         <p class="mt-4 text-text-secondary font-medium tracking-wide">Cargando galería...</p>
     </div>
 
-    <div id="modal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-0 md:p-4 backdrop-blur-sm transition-all" onclick="closeModal(event)">
+    <div id="modal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-0 md:p-4 backdrop-blur-sm transition-all" onclick="closeModal(event)">
         <button onclick="closeModal(event)" class="absolute top-4 right-4 md:top-6 md:right-6 z-[60] text-white hover:text-gray-300 bg-black/40 hover:bg-black/80 rounded-full p-2 md:p-3 transition-all">
             <svg class="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" pointer-events="none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>

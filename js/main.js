@@ -4,19 +4,16 @@ import {
     collection, 
     query, 
     limit, 
-    startAfter, 
-    getDocs,
-    getCountFromServer 
+    getDocs 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const PAGE_SIZE = 12;
 let currentPage = 1;
 let totalPages = 1;
-let pageCursors = [null];
 let isLoading = false;
 let currentSearchQuery = ""; 
 let searchDebounceTimer;     
-let searchResultsMemory = [];
+let searchResultsMemory = []; // Aquí vivirá todo el catálogo
 
 let currentSlide = 0;
 let totalSlides = 0;
@@ -100,15 +97,9 @@ window.openModalById = function(id) {
     if (obra) window.openModal(obra);
 }
 
-async function calculateTotalPages(baseQuery) {
-    try {
-        const snapshot = await getCountFromServer(baseQuery);
-        totalPages = Math.ceil(snapshot.data().count / PAGE_SIZE) || 1;
-    } catch (error) {
-        totalPages = 1;
-    }
-}
-
+// ========================================================
+// CARGA MAESTRA: 100% MEMORIA Y CERO OBRAS PERDIDAS
+// ========================================================
 async function loadPage(pageNumber) {
     if (!db) { hideSpinner(); return; }
     if (isLoading) return;
@@ -117,69 +108,51 @@ async function loadPage(pageNumber) {
     if (galleryContainer) galleryContainer.innerHTML = '<div class="col-span-full flex justify-center py-12"><div class="lds-ring"><div></div><div></div><div></div><div></div></div></div>';
 
     try {
-        const productsRef = collection(db, "productos"); 
-
-        if (currentSearchQuery) {
-            if (pageNumber === 1) {
-                const qAll = query(productsRef);
-                const querySnapshot = await getDocs(qAll);
-                const queryLower = currentSearchQuery.toLowerCase();
-
-                searchResultsMemory = querySnapshot.docs
-                    .map(doc => ({ id: doc.id, ...doc.data() }))
-                    .filter(obra => {
-                        return obra.titulo?.toLowerCase().includes(queryLower) || 
-                               obra.categoria?.toLowerCase().includes(queryLower) || 
-                               obra.serie?.toLowerCase().includes(queryLower);
-                    });
-
-                totalPages = Math.ceil(searchResultsMemory.length / PAGE_SIZE) || 1;
-            }
-
-            const startIndex = (pageNumber - 1) * PAGE_SIZE;
-            const newWorks = searchResultsMemory.slice(startIndex, startIndex + PAGE_SIZE);
-            currentPage = pageNumber;
-
-            if (newWorks.length === 0) {
-                galleryContainer.innerHTML = '<p class="text-center col-span-full py-12 text-text-secondary font-light">No se encontraron obras con esa búsqueda.</p>';
-                if (paginationControls) paginationControls.classList.add("hidden");
-            } else {
-                galleryContainer.innerHTML = ""; 
-                renderGallery(newWorks);
-                updatePaginationUI();
-            }
-        } else {
-            const baseQuery = query(productsRef);
-            if (pageNumber === 1) {
-                await calculateTotalPages(baseQuery);
-                pageCursors = [null];
-            }
-
-            let q;
-            if (pageNumber === 1) {
-                q = query(baseQuery, limit(PAGE_SIZE));
-            } else {
-                const cursor = pageCursors[pageNumber - 1];
-                q = query(baseQuery, startAfter(cursor), limit(PAGE_SIZE));
-            }
-
-            const querySnapshot = await getDocs(q);
+        // Solo vamos a la base de datos en la página 1 o si la memoria está vacía
+        if (pageNumber === 1 || searchResultsMemory.length === 0) {
+            const productsRef = collection(db, "productos"); 
+            // Traemos TODO el catálogo sin filtros para que no quede ni una obra afuera
+            const querySnapshot = await getDocs(productsRef);
             
-            if (querySnapshot.empty) {
-                galleryContainer.innerHTML = '<p class="text-center col-span-full py-12 text-text-secondary font-light">No hay obras disponibles en el archivo.</p>';
-                if (paginationControls) paginationControls.classList.add("hidden");
-            } else {
-                pageCursors[pageNumber] = querySnapshot.docs[querySnapshot.docs.length - 1];
-                currentPage = pageNumber;
-                
-                const newWorks = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                galleryContainer.innerHTML = ""; 
-                renderGallery(newWorks);
-                updatePaginationUI();
+            let allWorks = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Ordenamos con JavaScript de forma segura
+            allWorks.sort((a, b) => {
+                const oA = typeof a.orden === 'number' ? a.orden : 99999;
+                const oB = typeof b.orden === 'number' ? b.orden : 99999;
+                return oA - oB;
+            });
+
+            // Si el usuario usó el buscador, filtramos aquí mismo
+            if (currentSearchQuery) {
+                const queryLower = currentSearchQuery.toLowerCase();
+                allWorks = allWorks.filter(obra => {
+                    return obra.titulo?.toLowerCase().includes(queryLower) || 
+                           obra.categoria?.toLowerCase().includes(queryLower) || 
+                           obra.serie?.toLowerCase().includes(queryLower);
+                });
             }
+
+            searchResultsMemory = allWorks;
+            totalPages = Math.ceil(searchResultsMemory.length / PAGE_SIZE) || 1;
         }
+
+        // Cortamos el pedacito exacto que corresponde a la página actual
+        const startIndex = (pageNumber - 1) * PAGE_SIZE;
+        const newWorks = searchResultsMemory.slice(startIndex, startIndex + PAGE_SIZE);
+        currentPage = pageNumber;
+
+        if (newWorks.length === 0) {
+            galleryContainer.innerHTML = '<p class="text-center col-span-full py-12 text-text-secondary font-light">No se encontraron obras en el archivo.</p>';
+            if (paginationControls) paginationControls.classList.add("hidden");
+        } else {
+            galleryContainer.innerHTML = ""; 
+            renderGallery(newWorks);
+            updatePaginationUI();
+        }
+
     } catch (error) {
-        console.error(error);
+        console.error("Error al cargar la galería:", error);
     } finally {
         isLoading = false;
         hideSpinner();
@@ -230,13 +203,10 @@ function renderGallery(works) {
     galleryContainer.appendChild(fragment);
 }
 
-// ========================================================
-// MANEJO DEL HISTORIAL (Para que el botón "Atrás" funcione)
-// ========================================================
+// Historial para celular
 window.addEventListener('popstate', (e) => {
     const modal = document.getElementById("modal");
     if (modal && !modal.classList.contains("hidden")) {
-        // Cierra el modal de forma segura sin volver hacia atrás en el navegador (ya estamos yendo atrás)
         closeModalLogic();
     }
 });
@@ -253,32 +223,24 @@ window.closeModal = function(e, fromBackButton = false) {
     const modal = document.getElementById("modal");
     if (!modal) return;
     
-    // Si cliquea fuera del modal o en el botón cerrar
     if (!e || e.target.id === "modal" || e.target.closest('.close-btn')) {
         closeModalLogic();
-        // Si lo cerró a mano, retrocedemos el historial para no ensuciar la navegación
         if (!fromBackButton && window.location.hash === '#obra') {
             history.back();
         }
     }
 };
 
-// ========================================================
-// REFINAMIENTO DEL MODAL (UX Móvil, Bug de Rotación)
-// ========================================================
 window.openModal = function(obra) {
     const modal = document.getElementById("modal");
     const modalContent = document.getElementById("modal-content");
     if (!modal || !modalContent) return;
 
-    // Empujamos un estado falso al historial para atrapar el botón "Atrás" del celular
     history.pushState({ modalOpen: true }, "", "#obra");
-
     document.body.style.overflow = 'hidden';
 
     const imagenes = obra.imagenes || [];
     if (imagenes.length === 0) imagenes.push({url: './img/placeholder.jpg'});
-
     const defaultImg = imagenes[0].url;
 
     const priceSection = (obra.show_price && obra.price) 
@@ -296,13 +258,11 @@ window.openModal = function(obra) {
         </div>
 
         <div class="flex flex-col md:flex-row h-full overflow-hidden relative">
-            
             <button class="hidden md:block close-btn absolute top-4 right-4 z-[60] text-gray-400 hover:text-text-main transition-colors p-2 bg-white rounded-full shadow-sm" onclick="closeModal(event)">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" pointer-events="none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
 
             <div id="zoom-container" class="w-full md:w-[65%] relative bg-[#f8fafc] flex items-center justify-center cursor-move border-b md:border-b-0 md:border-r border-border-default h-[45vh] md:h-auto group overflow-hidden">
-                
                 <div id="panzoom-wrapper" class="w-full h-full flex items-center justify-center">
                     <img src="${defaultImg}" id="zoom-image" class="max-w-full max-h-full object-contain pointer-events-none p-4 md:p-8 transition-transform duration-300 ease-out" style="transform-origin: center center;">
                 </div>
@@ -338,7 +298,7 @@ window.openModal = function(obra) {
 
                 ${imagenes.length > 1 ? `
                 <div class="mt-8 pt-6 border-t border-gray-100">
-                    <p class="text-xs text-text-secondary uppercase tracking-widest mb-3 font-medium">Otras vistas de la obra</p>
+                    <p class="text-xs text-text-secondary uppercase tracking-widest mb-3 font-medium">Otras vistas</p>
                     <div id="modal-gallery-thumbnails" class="flex flex-wrap gap-2">
                         ${imagenes.map((img, index) => `
                             <div class="thumbnail-item w-14 h-14 border-2 ${index === 0 ? 'border-accent-blue' : 'border-gray-200'} rounded-sm overflow-hidden cursor-pointer hover:border-gray-300 transition-colors" data-img-url="${img.url}">
@@ -369,21 +329,17 @@ window.openModal = function(obra) {
     
     modal.classList.remove("hidden");
 
-    // Inicialización del Motor de Visualización
     const wrapperElement = document.getElementById('panzoom-wrapper');
     const imgElement = document.getElementById('zoom-image');
     const container = document.getElementById('zoom-container');
 
     if (wrapperElement && imgElement && container && typeof Panzoom !== 'undefined') {
-        
-        // El Panzoom se aplica al envoltorio, no a la imagen directo
         const panzoom = Panzoom(wrapperElement, { maxScale: 5, minScale: 1, step: 0.3 });
         container.addEventListener('wheel', panzoom.zoomWithWheel);
         
         document.getElementById('zoom-in').addEventListener('click', panzoom.zoomIn);
         document.getElementById('zoom-out').addEventListener('click', panzoom.zoomOut);
         
-        // Reset restaura tanto el zoom como la rotación CSS
         let currentRotation = 0;
         document.getElementById('zoom-reset').addEventListener('click', () => {
             panzoom.reset();
@@ -391,7 +347,6 @@ window.openModal = function(obra) {
             imgElement.style.transform = `rotate(0deg)`;
         });
 
-        // La rotación usa CSS transform en la imagen interna, solucionando el error
         document.getElementById('zoom-rotate').addEventListener('click', () => {
             currentRotation = (currentRotation + 90) % 360;
             imgElement.style.transform = `rotate(${currentRotation}deg)`;

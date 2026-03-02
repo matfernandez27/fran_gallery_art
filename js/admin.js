@@ -2,7 +2,7 @@
 import { db, auth, storage } from '../src/firebaseConfig.js'; 
 import { 
     collection, addDoc, updateDoc, deleteDoc, doc, 
-    query, orderBy, limit, startAfter, getDocs, getCountFromServer,
+    query, limit, startAfter, getDocs, getCountFromServer, // Quitamos orderBy de los imports
     where, writeBatch 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { 
@@ -113,7 +113,8 @@ async function loadWorksPage(pageNumber = 1) {
         // ==========================================
         if (currentSearchQuery) {
             if (pageNumber === 1) {
-                const qAll = query(productsRef, orderBy("orden", "asc"));
+                // Quitamos el orderBy para que traiga todo en la búsqueda
+                const qAll = query(productsRef);
                 const querySnapshot = await getDocs(qAll);
                 const queryLower = currentSearchQuery.toLowerCase();
 
@@ -147,7 +148,8 @@ async function loadWorksPage(pageNumber = 1) {
         // CAMINO B: LÓGICA NORMAL (FIRESTORE)
         // ==========================================
         else {
-            const baseQuery = query(productsRef, orderBy("orden", "asc"));
+            // Quitamos el orderBy para rescatar las obras ocultas
+            const baseQuery = query(productsRef);
 
             if (pageNumber === 1) {
                 await calculateTotalPages(baseQuery);
@@ -248,7 +250,7 @@ async function handleSubmit(event) {
             tecnica: formData.get('tecnica'),
             medidas: formData.get('medidas'),
             price: parseFloat(formData.get('price')) || null,
-            currency: formData.get('currency') || 'ARS',
+            currency: formData.get('currency') || 'ARS', 
             is_available: formData.get('is_available') === 'on',
             show_price: formData.get('show_price') === 'on',
             updatedAt: new Date()
@@ -301,15 +303,13 @@ window.editWork = async (id) => {
     isEditMode = true;
     document.getElementById('form-title').textContent = "Editar Obra";
     
-   const fields = ['titulo', 'descripcion', 'anio', 'tecnica', 'medidas', 'categoria', 'serie', 'price'];
+    const fields = ['titulo', 'descripcion', 'anio', 'tecnica', 'medidas', 'categoria', 'serie', 'price'];
     fields.forEach(f => {
         const el = document.getElementById(f);
         if (el) el.value = obra[f] || '';
     });
 
-    // <--- NUEVA LÍNEA PARA CARGAR LA MONEDA AL EDITAR --->
     if (document.getElementById('currency')) document.getElementById('currency').value = obra.currency || 'ARS';
-
     if (document.getElementById('is_available')) document.getElementById('is_available').checked = obra.is_available;
     if (document.getElementById('show_price')) document.getElementById('show_price').checked = obra.show_price;
 

@@ -3,7 +3,6 @@ import { db } from "../src/firebaseConfig.js";
 import { 
     collection, 
     query, 
-    orderBy, 
     limit, 
     startAfter, 
     getDocs,
@@ -33,7 +32,6 @@ const searchInput = document.getElementById("search");
 // --- Helper: Formatear Precio ---
 function formatPrice(price, currency) {
     if (!price) return '';
-    // toLocaleString('es-AR') pone los puntos en los miles automáticamente
     const formattedNumber = Number(price).toLocaleString('es-AR'); 
     const symbol = currency === 'USD' ? 'U$D' : '$';
     return `${symbol} ${formattedNumber}`;
@@ -75,7 +73,8 @@ async function loadPage(pageNumber) {
         if (currentSearchQuery) {
             
             if (pageNumber === 1) {
-                const qAll = query(productsRef, orderBy("orden", "asc"));
+                // Quitamos el orderBy para que traiga todo
+                const qAll = query(productsRef);
                 const querySnapshot = await getDocs(qAll);
                 const queryLower = currentSearchQuery.toLowerCase();
 
@@ -110,7 +109,8 @@ async function loadPage(pageNumber) {
         // CAMINO B: LÓGICA NORMAL (FIRESTORE)
         // ==========================================
         else {
-            const baseQuery = query(productsRef, orderBy("orden", "asc"));
+            // Quitamos el orderBy para rescatar las obras ocultas
+            const baseQuery = query(productsRef);
 
             if (pageNumber === 1) {
                 await calculateTotalPages(baseQuery);
@@ -209,9 +209,7 @@ function renderGallery(works) {
     galleryContainer.appendChild(fragment);
 }
 
-// --- Lógica del Modal ---
 // --- Lógica del Modal con Panzoom ---
-// --- Lógica del Modal con Panzoom y Controles ---
 window.openModal = function(obra) {
     const modal = document.getElementById("modal");
     const modalContent = document.getElementById("modal-content");
@@ -220,46 +218,46 @@ window.openModal = function(obra) {
     const imgUrl = (obra.imagenes && obra.imagenes.length > 0) ? obra.imagenes[0].url : '';
 
     const priceHTML = (obra.show_price && obra.price) 
-        ? `<div class="mt-8 inline-block bg-gray-50 px-5 py-3 rounded-sm border border-border-default">
+        ? `<div class="mt-6 md:mt-8 inline-block bg-gray-50 px-4 py-3 md:px-5 md:py-3 rounded-sm border border-border-default w-full md:w-auto text-center md:text-left">
              <span class="text-xs text-text-secondary uppercase tracking-wider block mb-1">Valor de la obra</span>
              <span class="text-2xl font-bold text-text-main">${formatPrice(obra.price, obra.currency)}</span>
            </div>`
         : '';
 
     modalContent.innerHTML = `
-        <div class="grid md:grid-cols-2 gap-8 h-full max-h-[85vh] overflow-y-auto overflow-x-hidden p-1">
+        <div class="grid md:grid-cols-2 gap-4 md:gap-8 h-full max-h-[85vh] md:max-h-[90vh] overflow-y-auto overflow-x-hidden p-2 md:p-1">
             
-            <div id="zoom-container" class="relative bg-gray-100 rounded-sm overflow-hidden flex items-center justify-center cursor-move min-h-[400px] md:min-h-[600px] border border-border-default group">
+            <div id="zoom-container" class="relative bg-gray-100 rounded-sm overflow-hidden flex items-center justify-center cursor-move min-h-[300px] sm:min-h-[400px] md:min-h-[600px] border border-border-default group">
                 <img src="${imgUrl}" id="zoom-image" class="max-w-full max-h-full object-contain shadow-sm">
                 
-                <div class="absolute top-4 right-4 flex flex-col gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <button id="zoom-in" class="bg-white/90 text-text-main p-2 rounded-sm shadow hover:bg-white hover:text-accent-blue transition-colors" title="Acercar">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                <div class="absolute top-2 right-2 md:top-4 md:right-4 flex flex-col gap-2 z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
+                    <button id="zoom-in" class="bg-white/90 text-text-main p-3 md:p-2 rounded-sm shadow hover:bg-white hover:text-accent-blue transition-colors" title="Acercar">
+                        <svg class="w-6 h-6 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     </button>
-                    <button id="zoom-out" class="bg-white/90 text-text-main p-2 rounded-sm shadow hover:bg-white hover:text-accent-blue transition-colors" title="Alejar">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                    <button id="zoom-out" class="bg-white/90 text-text-main p-3 md:p-2 rounded-sm shadow hover:bg-white hover:text-accent-blue transition-colors" title="Alejar">
+                        <svg class="w-6 h-6 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
                     </button>
-                    <button id="zoom-reset" class="bg-white/90 text-text-main p-2 rounded-sm shadow hover:bg-white hover:text-accent-blue transition-colors mt-2" title="Restaurar vista">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    <button id="zoom-reset" class="bg-white/90 text-text-main p-3 md:p-2 rounded-sm shadow hover:bg-white hover:text-accent-blue transition-colors mt-2" title="Restaurar vista">
+                        <svg class="w-6 h-6 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                     </button>
                 </div>
 
-                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-4 py-2 rounded-full backdrop-blur-sm pointer-events-none opacity-100 group-hover:opacity-30 transition-opacity duration-500">
+                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-4 py-2 rounded-full backdrop-blur-sm pointer-events-none opacity-100 group-hover:opacity-30 transition-opacity duration-500 text-center w-[85%] md:w-auto">
                     🔍 Scrollea, pellizca o usa los botones
                 </div>
             </div>
 
-            <div class="flex flex-col h-full py-4">
+            <div class="flex flex-col h-full py-2 md:py-4">
                 <div class="flex justify-between items-start mb-2 gap-4">
-                    <h2 class="text-3xl font-display text-text-main leading-none">${obra.titulo || 'Sin título'}</h2>
+                    <h2 class="text-2xl md:text-3xl font-display text-text-main leading-tight md:leading-none">${obra.titulo || 'Sin título'}</h2>
                     <span class="px-3 py-1 text-xs font-semibold rounded-sm border whitespace-nowrap ${obra.is_available ? 'bg-green-50 text-whatsapp border-green-200' : 'bg-red-50 text-red-500 border-red-200'}">
                         ${obra.is_available ? 'Disponible' : 'Vendido'}
                     </span>
                 </div>
                 
-                <p class="text-accent-blue font-medium mb-6 mt-2">${obra.serie || 'Serie General'} — ${obra.anio || 's/f'}</p>
+                <p class="text-accent-blue font-medium mb-4 md:mb-6 mt-1 md:mt-2 text-sm md:text-base">${obra.serie || 'Serie General'} — ${obra.anio || 's/f'}</p>
                 
-                <div class="space-y-4 text-sm text-text-secondary flex-grow">
+                <div class="space-y-3 md:space-y-4 text-sm text-text-secondary flex-grow">
                     <p><strong>Técnica:</strong> ${obra.tecnica || 'No especificada'}</p>
                     <p><strong>Medidas:</strong> ${obra.medidas || 'No especificadas'}</p>
                     <p class="text-text-main leading-relaxed mt-4 whitespace-pre-line">${obra.descripcion || ''}</p>
@@ -267,10 +265,10 @@ window.openModal = function(obra) {
 
                 ${priceHTML}
 
-                <div class="mt-8 pt-8 border-t border-border-default">
+                <div class="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-border-default pb-4 md:pb-0">
                     <a href="https://wa.me/5492805032663?text=Hola! Me interesa la obra: ${obra.titulo}" 
                        target="_blank" 
-                       class="block text-center bg-whatsapp text-white py-3 rounded-sm font-bold hover:bg-opacity-90 transition-all uppercase tracking-wider text-sm">
+                       class="block text-center bg-whatsapp text-white py-3 md:py-4 rounded-sm font-bold hover:bg-opacity-90 transition-all uppercase tracking-wider text-sm shadow-md">
                        Consultar por esta obra
                     </a>
                 </div>
@@ -280,7 +278,6 @@ window.openModal = function(obra) {
     
     modal.classList.remove("hidden");
 
-    // Inicializamos la magia de Panzoom
     const imgElement = document.getElementById('zoom-image');
     const container = document.getElementById('zoom-container');
 
@@ -292,10 +289,8 @@ window.openModal = function(obra) {
             contain: 'outside' 
         });
 
-        // Habilitamos el scroll del mouse
         container.addEventListener('wheel', panzoom.zoomWithWheel);
 
-        // Conectamos los nuevos botones con las funciones nativas de Panzoom
         document.getElementById('zoom-in').addEventListener('click', panzoom.zoomIn);
         document.getElementById('zoom-out').addEventListener('click', panzoom.zoomOut);
         document.getElementById('zoom-reset').addEventListener('click', panzoom.reset);
@@ -312,7 +307,6 @@ window.closeModal = function(e) {
 
 // --- Arranque y Listeners ---
 document.addEventListener("DOMContentLoaded", () => {
-    // Iniciamos la galería cargando la página 1
     loadPage(1);
 
     if (searchInput) {

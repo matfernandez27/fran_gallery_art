@@ -3,214 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Francisco Fernández | Galería de Arte Patagónico</title>
-    <meta name="description" content="Galería oficial de Francisco Fernández. Explora arte patagónico contemporáneo: grabado, dibujo y pintura.">
-
-    <meta property="og:title" content="Francisco Fernández - Arte Patagónico Contemporáneo">
-    <meta property="og:description" content="Descubre la galería personal de Francisco Fernández: un diálogo visual entre la Patagonia y la experiencia urbana.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://fran-faf.vercel.app/">
-    <meta property="og:image" content="./img/og-image-placeholder.jpg">
-    <meta property="og:locale" content="es_AR">
-
+    <title>Catálogo de Obras | Fran Art Gallery</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'accent-blue': '#7BA4C0',    // Granada Sky
-                        'text-main': '#5A6349',      // Kale
-                        'text-secondary': '#6B7280', // Gray 500
-                        'bg-main': '#F9FAFB',        // Gray 50
-                        'bg-surface': '#FFFFFF',     // White
-                        'border-default': '#E5E7EB', // Gray 200
-                        'whatsapp': '#25D366',
+                        'bg-surface': '#ffffff',
+                        'border-default': '#e5e7eb',
+                        'text-main': '#111827',
+                        'text-secondary': '#6b7280',
+                        'accent-blue': '#2563eb',
+                        'whatsapp': '#25D366'
                     },
                     fontFamily: {
-                        'sans': ['Inter', 'system-ui', 'sans-serif'],
-                        'display': ['Bebas Neue', 'sans-serif']
+                        'display': ['"Playfair Display"', 'serif'],
+                        'sans': ['Inter', 'sans-serif']
                     }
                 }
             }
         }
     </script>
-
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        /* Estilos Generales Refinados */
-        body { background-color: #F9FAFB; color: #5A6349; }
-        ::selection { background-color: #7BA4C0; color: #FFFFFF; }
-
-        /* Spinner */
-        .loading-overlay { background: rgba(249, 250, 251, 0.95); position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; transition: opacity 0.3s;}
-        .lds-ring { display: inline-block; position: relative; width: 80px; height: 80px; }
-        .lds-ring div { box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; border: 8px solid #7BA4C0; border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: #7BA4C0 transparent transparent transparent; }
-        @keyframes lds-ring { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .lds-ring div:nth-child(1) { animation-delay: -0.45s; } 
-        .lds-ring div:nth-child(2) { animation-delay: -0.3s; } 
+        body { font-family: 'Inter', sans-serif; }
+        .font-display { font-family: 'Playfair Display', serif; }
+        
+        /* Spinner de carga inicial */
+        .lds-ring {
+            display: inline-block;
+            position: relative;
+            width: 80px;
+            height: 80px;
+        }
+        .lds-ring div {
+            box-sizing: border-box;
+            display: block;
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            margin: 8px;
+            border: 8px solid #2563eb;
+            border-radius: 50%;
+            animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+            border-color: #2563eb transparent transparent transparent;
+        }
+        .lds-ring div:nth-child(1) { animation-delay: -0.45s; }
+        .lds-ring div:nth-child(2) { animation-delay: -0.3s; }
         .lds-ring div:nth-child(3) { animation-delay: -0.15s; }
+        @keyframes lds-ring {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
 
-        /* Header Carrusel */
-        #carousel-header { background-color: #F0F3F5; position: relative; overflow: hidden; }
-        .carousel-item { position: absolute; inset: 0; background-size: contain; background-position: center; background-repeat: no-repeat; opacity: 0; transition: opacity 1.5s ease-in-out; transform: scale(1.05); }
-        .carousel-item.active { opacity: 1; transform: scale(1); }
-        .carousel-overlay { position: absolute; inset: 0; background: rgba(40, 40, 40, 0.5); z-index: 1; }
-
-        /* WhatsApp Button */
-        .whatsapp-float-btn { position: fixed; bottom: 60px; right: 20px; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 50; transition: transform 0.3s, opacity 0.5s; opacity: 0; pointer-events: none; }
-        .whatsapp-float-btn.show { opacity: 1; pointer-events: auto; }
-        .whatsapp-float-btn:hover { transform: scale(1.1); }
-
-        /* Zoom & Gallery UI */
-        .image-zoom-container { position: relative; overflow: hidden; cursor: zoom-in;}
-        .zoom-image { width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s ease-out; transform-origin: center center; }
-        .divider-line { width: 4rem; height: 1px; }
-        .filter-select, .filter-input { padding: 0.75rem; border-radius: 0.125rem; border: 1px solid #E5E7EB; background-color: #FFFFFF; color: #6B7280; font-size: 0.875rem; transition: border-color 0.3s, box-shadow 0.3s; }
-        .filter-select:focus, .filter-input:focus { outline: none; border-color: #7BA4C0; box-shadow: 0 0 0 1px #7BA4C0; }
-
-        /* Admin Styles */
-        .admin-button { padding: 0.5rem 1rem; border-radius: 0.125rem; text-transform: uppercase; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; transition: all 0.3s; }
-        .admin-button-primary { background-color: #4B5563; color: white; }
-        .admin-button-success { background-color: #10B981; color: white; }
+        /* Ocultar barra de scroll en contenedores horizontales */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-bg-main text-text-main font-sans min-h-screen">
+<body class="bg-gray-50 text-text-main antialiased selection:bg-accent-blue selection:text-white">
 
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
-    </div>
-
-    <div id="alert" class="hidden"></div>
-
-    <a id="whatsapp-btn" href="https://wa.me/5492805032663?text=Hola,%20quisiera%20consultar%20sobre%20una%20obra%20de%20la%20galería."
-        target="_blank"
-        class="whatsapp-float-btn bg-whatsapp text-white">
-        <svg fill="#FFF" viewBox="0 0 24 24" width="28" height="28"><path d="M12 2C6.48 2 2 6.48 2 12c0 3.25 1.5 6.2 3.88 8.1l-1.38 5.02L7.6 21.62C9.5 22.18 11.08 22 12 22c5.52 0 10-4.48 10-10C22 6.48 17.52 2 12 2zM17.43 15.4c-.09-.15-.36-.24-.77-.42-.42-.18-2.52-1.24-2.91-1.38-.39-.14-.67-.21-.95.21-.28.42-1.09 1.38-1.34 1.66-.25.28-.5.31-.92.21-.42-.1-.71-.34-1.27-.64-.47-.25-1.07-.65-2.03-1.89-.75-.98-1.25-1.95-1.38-2.2-.14-.25-.02-.38.11-.5.1-.11.23-.26.35-.4.12-.14.16-.25.25-.42.09-.17.04-.32-.02-.45-.06-.13-.57-1.36-.78-1.87-.2-.5-.41-.42-.56-.42-.15 0-.33-.02-.51-.02-.18 0-.47.07-.72.35-.25.28-.95.93-.95 2.27 0 1.34.97 2.64 1.1 2.82.13.18 1.92 3.03 4.6 4.24 2.68 1.21 2.68.85 2.97.8.29-.05.95-.39 1.08-.77.13-.38.13-.7.09-.77z"/></svg>
-    </a>
-
-    <section id="carousel-header" class="min-h-screen flex items-center justify-center">
-        <div id="carousel-container" class="absolute inset-0"></div>
-        <div class="carousel-overlay"></div>
-        <div class="text-center max-w-4xl mx-auto px-6 z-10">
-            <h1 class="text-6xl md:text-8xl text-white mb-8 tracking-wide font-display">
-                Francisco<br>
-                <span class="text-accent-blue">Fernández</span>
-            </h1>
-            <p class="text-xl md:text-2xl text-white opacity-80 font-light mb-12 max-w-2xl mx-auto">
-                Galería Personal
-            </p>
-            <div class="divider-line bg-white opacity-70 mx-auto mb-12"></div>
-            <button onclick="document.getElementById('bio-section').scrollIntoView({behavior: 'smooth'})"
-                    class="text-white opacity-80 hover:opacity-100 hover:text-accent-blue transition-colors duration-300 text-sm uppercase tracking-wider font-medium">
-                Explorar Galería
-            </button>
+    <header class="bg-white border-b border-border-default sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <a href="#" class="font-display text-2xl font-bold tracking-tight text-text-main">
+                Fran<span class="text-accent-blue">Art</span>
+            </a>
+            <nav class="hidden md:flex space-x-8">
+                <a href="#" class="text-accent-blue font-medium border-b-2 border-accent-blue pb-1">Catálogo</a>
+                <a href="#" class="text-text-secondary hover:text-text-main text-sm font-medium transition-colors">Biografía</a>
+                <a href="#" class="text-text-secondary hover:text-text-main text-sm font-medium transition-colors">Contacto</a>
+            </nav>
         </div>
-    </section>
+    </header>
 
-    <section id="bio-section" class="py-24 bg-bg-surface">
-        <div class="max-w-6xl mx-auto px-6">
-            <div class="grid md:grid-cols-3 gap-16 items-start">
-                <div class="md:col-span-2 flex flex-col justify-start">
-                    <div class="divider-line bg-accent-blue mb-8 ml-0 mr-auto"></div>
-                    <h3 class="text-2xl font-medium text-text-main mb-6">Francisco Fernández</h3>
-                    <div id="bio-text-content">
-                        <p class="text-lg text-text-main leading-relaxed mb-4">
-                            Artista visual nacido en Trelew. Con +10 muestras individuales y +25 colectivas en museos y galerías.
-                        </p>
-                        <p class="text-base text-text-secondary leading-relaxed mb-6">
-                            Su obra tiende puentes entre lo inhóspito y lo íntimo, ofreciendo una mirada reflexiva sobre el territorio.
-                        </p>
-                    </div>
-                    <a href="biografia-completa.html"
-                        class="mt-4 text-accent-blue font-semibold hover:text-text-main transition-colors duration-300 text-sm self-start inline-flex items-center space-x-2 uppercase tracking-wider">
-                        <span>Leer Biografía</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                    </a>
-                </div>
-                <div class="md:col-span-1 md:order-last flex justify-center bio-image-container">
-                    <div class="w-64 h-64 md:w-80 md:h-80 rounded-sm overflow-hidden border border-border-default shadow-lg">
-                        <img src="./img/img_perfil.jpg" alt="Retrato de Francisco Fernández" class="bio-image-focus"/>
-                    </div>
-                </div>
+    <main id="gallery-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        
+        <div class="mb-8 md:mb-10 text-center md:text-left">
+            <h1 class="text-3xl md:text-5xl font-display font-bold text-text-main mb-3 md:mb-4">Catálogo de Obras</h1>
+            <p class="text-text-secondary max-w-2xl text-base md:text-lg mx-auto md:mx-0">Explora la colección completa. Haz clic en cualquier obra para ver detalles, aplicar zoom y consultar disponibilidad.</p>
+        </div>
+
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div class="w-full md:w-1/2 relative">
+                <input type="text" id="search" placeholder="Buscar por título, categoría o serie..." 
+                       class="w-full bg-white border border-border-default rounded-sm py-3 px-4 md:py-2 text-text-main focus:outline-none focus:border-accent-blue focus:ring-1 focus:ring-accent-blue transition-all shadow-sm">
+            </div>
+            
+            <div class="w-full md:w-auto flex gap-2 overflow-x-auto hide-scrollbar">
             </div>
         </div>
-    </section>
 
-    <section id="gallery-section" class="py-24 bg-bg-main">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl md:text-5xl font-display tracking-wide text-text-main mb-8">
-                    Catálogo de Obras
-                </h2>
-                <div class="divider-line bg-accent-blue mx-auto"></div>
+        <div id="gallery-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
             </div>
 
-            <div class="mb-12 flex flex-wrap gap-4 items-center justify-between bg-bg-surface p-4 rounded-sm max-w-5xl mx-auto border border-border-default">
-                <input id="search" type="search" placeholder="Buscar..." class="filter-input flex-1 min-w-0 md:min-w-[200px]" />
+        <div id="pagination-controls" class="hidden flex flex-col sm:flex-row justify-between items-center gap-4 py-8 md:py-10 mt-8 border-t border-border-default">
+            
+            <span id="page-info" class="text-text-main font-medium text-sm tracking-wide order-first sm:order-none mb-2 sm:mb-0">
+                Página 1 de 1
+            </span>
 
-                <div class="flex flex-wrap gap-3 justify-end">
-                    <select id="filter-category" class="filter-select w-full sm:w-auto"><option value="">Categoría</option></select>
-                    <select id="filter-series" class="filter-select w-full sm:w-auto"><option value="">Serie</option></select>
-                    <select id="filter-year" class="filter-select w-full sm:w-auto"><option value="">Año</option></select>
-                    <select id="filter-availability" class="filter-select w-full sm:w-auto">
-                        <option value="">Todas</option>
-                        <option value="true">Disponibles</option> 
-                        <option value="false">No disponibles</option> 
-                    </select>
-                </div>
-
-                <div id="admin-controls" class="hidden w-full flex flex-wrap items-center justify-between gap-2 border-t border-border-default pt-4 mt-4">
-                    <div class="flex flex-wrap gap-2">
-                        <a href="./admin.html" class="admin-button admin-button-primary">Panel Admin</a>
-                        <button id="edit-toggle" class="admin-button border border-gray-300 text-gray-700">Activar Edición</button>
-                    </div>
-                    <div>
-                        <button id="save-order-button" class="hidden admin-button admin-button-success" disabled>Guardar Orden</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="gallery-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                </div>
-
-            <div id="pagination-controls" class="hidden flex justify-center items-center space-x-4 py-10 mt-8 border-t border-border-default">
-                <button id="prev-page" class="admin-button border border-border-default text-text-main hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+            <div class="flex w-full sm:w-auto gap-4 justify-between sm:justify-center order-last sm:order-none">
+                <button id="prev-page" class="w-1/2 sm:w-auto bg-white border border-border-default text-text-main hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all py-3 px-4 sm:py-2 rounded-sm text-center flex justify-center items-center shadow-sm font-medium text-sm md:text-base">
                     ← Anterior
                 </button>
-                <span id="page-info" class="text-text-main font-medium text-sm tracking-wide">
-                    Página 1 de 1
-                </span>
-                <button id="next-page" class="admin-button border border-border-default text-text-main hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                
+                <button id="next-page" class="w-1/2 sm:w-auto bg-white border border-border-default text-text-main hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all py-3 px-4 sm:py-2 rounded-sm text-center flex justify-center items-center shadow-sm font-medium text-sm md:text-base">
                     Siguiente →
                 </button>
             </div>
         </div>
-    </section>
 
-    <footer id="main-footer" class="fixed bottom-0 left-0 right-0 footer-gradient p-3 z-40 translate-y-full transition-transform duration-500">
-        <div class="max-w-7xl mx-auto flex justify-between items-center text-sm text-text-secondary">
-            <div class="font-light">© 2026 Francisco Fernández</div>
-            <nav class="space-x-4">
-                <a href="#bio-section" class="hover:text-accent-blue transition-colors">Bio</a>
-                <a href="mailto:ffran.arte@gmail.com" class="hover:text-accent-blue transition-colors">Contacto</a>
-                <a href="https://www.instagram.com/fran.faf/?hl=es" target="_blank" class="hover:text-accent-blue transition-colors">Instagram</a>
-            </nav>
-        </div>
-    </footer>
+    </main>
 
-    <div id="modal" class="fixed inset-0 bg-black bg-opacity-70 z-[100] hidden flex items-center justify-center p-4" onclick="closeModal(event)">
-        <div id="modal-container" class="bg-bg-surface rounded-sm shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative" onclick="event.stopPropagation()">
-            <button onclick="closeModal()" class="absolute top-3 right-3 text-text-secondary hover:text-accent-blue text-3xl leading-none">&times;</button>
-            <div id="modal-content" class="p-6 md:p-8">
+    <div id="loading-overlay" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center transition-opacity duration-300">
+        <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+        <p class="mt-4 text-text-secondary font-medium tracking-wide">Cargando galería...</p>
+    </div>
+
+    <div id="modal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-0 md:p-4 backdrop-blur-sm transition-all" onclick="closeModal(event)">
+        
+        <button onclick="closeModal(event)" class="absolute top-4 right-4 md:top-6 md:right-6 z-[60] text-white hover:text-gray-300 bg-black/40 hover:bg-black/80 rounded-full p-2 md:p-3 transition-all">
+            <svg class="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" pointer-events="none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        
+        <div class="bg-white w-full h-full md:h-auto md:max-w-6xl md:rounded-lg shadow-2xl overflow-hidden relative flex flex-col" onclick="event.stopPropagation()">
+            <div id="modal-content" class="flex-grow h-full p-0">
                 </div>
         </div>
     </div>
+
     <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
-    <script type="module" src="./js/main.js?v=2" defer></script>
+    
+    <script type="module" src="./js/main.js" defer></script>
+
 </body>
 </html>

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo de Obras | Fran Art Gallery</title>
-    
+    <title>Catálogo de Obras | francisco fernández</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -33,7 +33,6 @@
         body { font-family: 'Inter', sans-serif; }
         .font-display { font-family: 'Playfair Display', serif; }
         
-        /* Spinner de carga inicial */
         .lds-ring {
             display: inline-block;
             position: relative;
@@ -60,7 +59,6 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Ocultar barra de scroll en contenedores horizontales */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -70,7 +68,7 @@
     <header class="bg-white border-b border-border-default sticky top-0 z-40 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <a href="#" class="font-display text-2xl font-bold tracking-tight text-text-main">
-                Fran<span class="text-accent-blue">Art</span>
+                francisco <span class="text-accent-blue">fernández</span>
             </a>
             <nav class="hidden md:flex space-x-8">
                 <a href="#" class="text-accent-blue font-medium border-b-2 border-accent-blue pb-1">Catálogo</a>
@@ -80,20 +78,29 @@
         </div>
     </header>
 
+    <div class="w-full relative bg-black h-[40vh] md:h-[60vh] overflow-hidden group">
+        <div id="carousel-track" class="w-full h-full flex transition-transform duration-700 ease-in-out">
+            </div>
+        
+        <button id="carousel-prev" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/80 text-white hover:text-black p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10 backdrop-blur-sm">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        </button>
+        <button id="carousel-next" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/80 text-white hover:text-black p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10 backdrop-blur-sm">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </button>
+    </div>
+
     <main id="gallery-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         
-        <div class="mb-8 md:mb-10 text-center md:text-left">
-            <h1 class="text-3xl md:text-5xl font-display font-bold text-text-main mb-3 md:mb-4">Catálogo de Obras</h1>
-            <p class="text-text-secondary max-w-2xl text-base md:text-lg mx-auto md:mx-0">Explora la colección completa. Haz clic en cualquier obra para ver detalles, aplicar zoom y consultar disponibilidad.</p>
-        </div>
-
-        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-            <div class="w-full md:w-1/2 relative">
-                <input type="text" id="search" placeholder="Buscar por título, categoría o serie..." 
-                       class="w-full bg-white border border-border-default rounded-sm py-3 px-4 md:py-2 text-text-main focus:outline-none focus:border-accent-blue focus:ring-1 focus:ring-accent-blue transition-all shadow-sm">
-            </div>
-            
-            <div class="w-full md:w-auto flex gap-2 overflow-x-auto hide-scrollbar">
+        <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
+            <div class="w-full md:w-1/2 text-left">
+                <h1 class="text-3xl md:text-5xl font-display font-bold text-text-main mb-3 md:mb-4">Catálogo de Obras</h1>
+                <p class="text-text-secondary text-sm md:text-base mb-4">Explora la colección completa. Haz clic en cualquier obra para ver detalles y aplicar zoom.</p>
+                
+                <div class="relative w-full">
+                    <input type="text" id="search" placeholder="Buscar por título, categoría o serie..." 
+                           class="w-full bg-white border border-border-default rounded-sm py-3 px-4 text-text-main focus:outline-none focus:border-accent-blue focus:ring-1 focus:ring-accent-blue transition-all shadow-sm">
+                </div>
             </div>
         </div>
 
@@ -101,16 +108,13 @@
             </div>
 
         <div id="pagination-controls" class="hidden flex flex-col sm:flex-row justify-between items-center gap-4 py-8 md:py-10 mt-8 border-t border-border-default">
-            
             <span id="page-info" class="text-text-main font-medium text-sm tracking-wide order-first sm:order-none mb-2 sm:mb-0">
                 Página 1 de 1
             </span>
-
             <div class="flex w-full sm:w-auto gap-4 justify-between sm:justify-center order-last sm:order-none">
                 <button id="prev-page" class="w-1/2 sm:w-auto bg-white border border-border-default text-text-main hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all py-3 px-4 sm:py-2 rounded-sm text-center flex justify-center items-center shadow-sm font-medium text-sm md:text-base">
                     ← Anterior
                 </button>
-                
                 <button id="next-page" class="w-1/2 sm:w-auto bg-white border border-border-default text-text-main hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all py-3 px-4 sm:py-2 rounded-sm text-center flex justify-center items-center shadow-sm font-medium text-sm md:text-base">
                     Siguiente →
                 </button>
@@ -125,20 +129,15 @@
     </div>
 
     <div id="modal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-0 md:p-4 backdrop-blur-sm transition-all" onclick="closeModal(event)">
-        
         <button onclick="closeModal(event)" class="absolute top-4 right-4 md:top-6 md:right-6 z-[60] text-white hover:text-gray-300 bg-black/40 hover:bg-black/80 rounded-full p-2 md:p-3 transition-all">
             <svg class="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" pointer-events="none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
-        
         <div class="bg-white w-full h-full md:h-auto md:max-w-6xl md:rounded-lg shadow-2xl overflow-hidden relative flex flex-col" onclick="event.stopPropagation()">
-            <div id="modal-content" class="flex-grow h-full p-0">
-                </div>
+            <div id="modal-content" class="flex-grow h-full p-0"></div>
         </div>
     </div>
 
     <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
-    
     <script type="module" src="./js/main.js" defer></script>
-
 </body>
 </html>

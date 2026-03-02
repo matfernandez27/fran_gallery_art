@@ -65,10 +65,10 @@
     <div class="w-full relative bg-gray-900 h-[45vh] overflow-hidden group border-b border-border-default">
         <div id="carousel-track" class="w-full h-full flex transition-transform duration-1000 ease-in-out">
             </div>
-        <button id="carousel-prev" class="absolute left-6 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/30 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10 backdrop-blur-sm">
+        <button id="carousel-prev" class="absolute left-6 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10 backdrop-blur-sm">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
         </button>
-        <button id="carousel-next" class="absolute right-6 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/30 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10 backdrop-blur-sm">
+        <button id="carousel-next" class="absolute right-6 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10 backdrop-blur-sm">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
         </button>
     </div>
@@ -86,7 +86,7 @@
                        class="w-full bg-white border border-[#94a3b8] rounded-[3px] py-2.5 px-4 text-text-main text-sm focus:outline-none focus:border-accent-blue transition-colors shadow-sm">
             </div>
             
-            <div class="w-full xl:w-auto flex flex-wrap gap-3">
+            <div class="w-full xl:w-auto flex flex-wrap gap-3 hidden sm:flex">
                 <select class="border border-border-default bg-white text-text-secondary text-sm py-2 px-4 rounded-[3px] focus:outline-none cursor-pointer hover:border-[#94a3b8] transition-colors">
                     <option>Categoría</option>
                 </select>
@@ -121,7 +121,7 @@
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid md:grid-cols-2 gap-16 items-center">
                 <div class="aspect-[4/5] w-full bg-gray-100 rounded-sm overflow-hidden shadow-sm">
-                    <img src="./img/francisco.jpg" alt="Francisco Fernández" onerror="this.src='https://via.placeholder.com/600x800?text=Foto+del+Artista'" class="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700 ease-out">
+                    <img src="./img/francisco.jpg" alt="Francisco Fernández" onerror="this.src='https://via.placeholder.com/600x800?text=Foto+del+Artista'" class="w-full h-full object-cover transition-all duration-700 ease-out">
                 </div>
                 <div>
                     <h2 class="text-3xl font-display text-text-main mb-8">Sobre mí</h2>
@@ -157,12 +157,9 @@
         <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
     </div>
 
-    <div id="modal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-0 md:p-6 backdrop-blur-sm transition-all" onclick="closeModal(event)">
-        <button onclick="closeModal(event)" class="absolute top-4 right-4 md:top-6 md:right-6 z-[60] text-white hover:text-gray-300 transition-colors p-2">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" pointer-events="none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
-        <div class="bg-white w-full h-full md:h-auto md:max-h-[95vh] md:max-w-7xl md:rounded-[3px] shadow-2xl overflow-hidden relative flex flex-col" onclick="event.stopPropagation()">
-            <div id="modal-content" class="flex-grow h-full p-0 overflow-hidden">
+    <div id="modal" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col md:items-center md:justify-center p-0 md:p-6 backdrop-blur-sm transition-all">
+        <div class="bg-white w-full h-full md:h-auto md:max-h-[95vh] md:max-w-7xl md:rounded-[3px] shadow-2xl flex flex-col relative overflow-hidden">
+            <div id="modal-content" class="flex-grow flex flex-col h-full overflow-hidden">
                 </div>
         </div>
     </div>

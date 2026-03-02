@@ -12,7 +12,7 @@
                 extend: {
                     colors: {
                         'bg-surface': '#ffffff',
-                        'border-default': '#cbd5e1', /* Un borde un poco más suave y elegante */
+                        'border-default': '#cbd5e1',
                         'text-main': '#111827',
                         'text-secondary': '#475569',
                         'accent-blue': '#2563eb',
@@ -34,7 +34,6 @@
         body { font-family: 'Inter', sans-serif; }
         .font-display { font-family: 'Playfair Display', serif; }
         
-        /* Spinner sutil */
         .lds-ring { display: inline-block; position: relative; width: 64px; height: 64px; }
         .lds-ring div { box-sizing: border-box; display: block; position: absolute; width: 48px; height: 48px; margin: 8px; border: 4px solid #2563eb; border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: #2563eb transparent transparent transparent; }
         .lds-ring div:nth-child(1) { animation-delay: -0.45s; }
@@ -63,7 +62,7 @@
         </div>
     </header>
 
-    <div class="w-full relative bg-gray-900 h-[45vh] overflow-hidden group">
+    <div class="w-full relative bg-gray-900 h-[45vh] overflow-hidden group border-b border-border-default">
         <div id="carousel-track" class="w-full h-full flex transition-transform duration-1000 ease-in-out">
             </div>
         <button id="carousel-prev" class="absolute left-6 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/30 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10 backdrop-blur-sm">
@@ -77,12 +76,11 @@
     <main id="gallery-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
         
         <div class="mb-12">
-            <h1 class="text-3xl md:text-4xl font-display text-text-main mb-4">Archivo y obras disponibles</h1>
+            <h1 class="text-3xl md:text-4xl font-display text-text-main mb-4 tracking-tight">Archivo y obras disponibles</h1>
             <p class="text-text-secondary text-base max-w-2xl font-light">Un recorrido por mi trabajo. Podés hacer clic en cada imagen para verla en detalle, conocer sus medidas o consultarme por ella.</p>
         </div>
 
         <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-10 gap-4">
-            
             <div class="w-full xl:w-1/2 relative">
                 <input type="text" id="search" placeholder="Buscar título de obra..." 
                        class="w-full bg-white border border-[#94a3b8] rounded-[3px] py-2.5 px-4 text-text-main text-sm focus:outline-none focus:border-accent-blue transition-colors shadow-sm">
@@ -96,41 +94,37 @@
                     <option>Serie</option>
                 </select>
                 <select class="border border-border-default bg-white text-text-secondary text-sm py-2 px-4 rounded-[3px] focus:outline-none cursor-pointer hover:border-[#94a3b8] transition-colors">
-                    <option>Año</option>
-                </select>
-                <select class="border border-border-default bg-white text-text-secondary text-sm py-2 px-4 rounded-[3px] focus:outline-none cursor-pointer hover:border-[#94a3b8] transition-colors">
                     <option>Todas</option>
                 </select>
             </div>
         </div>
 
         <div id="gallery-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
-            </div>
+        </div>
 
         <div id="pagination-controls" class="hidden flex flex-col sm:flex-row justify-between items-center py-12 mt-8 border-t border-border-default">
             <span id="page-info" class="text-text-secondary text-sm order-first sm:order-none mb-4 sm:mb-0">
                 Página 1 de 1
             </span>
             <div class="flex gap-4 w-full sm:w-auto">
-                <button id="prev-page" class="flex-1 sm:flex-none bg-white border border-border-default text-text-main hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all py-2 px-6 rounded-[3px] text-sm">
+                <button id="prev-page" class="flex-1 sm:flex-none bg-white border border-border-default text-text-main hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all py-2.5 px-6 rounded-[3px] text-sm">
                     ← Anterior
                 </button>
-                <button id="next-page" class="flex-1 sm:flex-none bg-white border border-border-default text-text-main hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all py-2 px-6 rounded-[3px] text-sm">
+                <button id="next-page" class="flex-1 sm:flex-none bg-white border border-border-default text-text-main hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all py-2.5 px-6 rounded-[3px] text-sm">
                     Siguiente →
                 </button>
             </div>
         </div>
     </main>
 
-    <section id="biografia" class="bg-white border-y border-border-default py-20">
+    <section id="biografia" class="bg-white border-y border-border-default py-24">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid md:grid-cols-2 gap-12 items-center">
+            <div class="grid md:grid-cols-2 gap-16 items-center">
                 <div class="aspect-[4/5] w-full bg-gray-100 rounded-sm overflow-hidden shadow-sm">
-                    <img src="./img/francisco.jpg" alt="Francisco Fernández" onerror="this.src='https://via.placeholder.com/600x800?text=Foto+del+Artista'" class="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700">
+                    <img src="./img/francisco.jpg" alt="Francisco Fernández" onerror="this.src='https://via.placeholder.com/600x800?text=Foto+del+Artista'" class="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700 ease-out">
                 </div>
-                
                 <div>
-                    <h2 class="text-3xl font-display text-text-main mb-6">Sobre mí</h2>
+                    <h2 class="text-3xl font-display text-text-main mb-8">Sobre mí</h2>
                     <div class="space-y-4 text-text-secondary leading-relaxed font-light text-base">
                         <p>Soy Francisco Fernández, artista visual radicado en la Patagonia. Mi trabajo nace de la observación constante: busco entender y traducir la relación entre los paisajes que habitamos, la estructura urbana y nuestra propia naturaleza humana.</p>
                         <p>A través de la pintura, el dibujo y el grabado, intento crear pausas visuales. Espacios donde el espectador pueda detenerse, encontrar sus propios significados y, tal vez, mirar lo cotidiano con una perspectiva distinta.</p>
@@ -141,10 +135,10 @@
         </div>
     </section>
 
-    <footer id="contacto" class="bg-[#111827] text-white py-20">
+    <footer id="contacto" class="bg-[#111827] text-white py-24">
         <div class="max-w-3xl mx-auto px-4 text-center">
             <h2 class="text-3xl font-display mb-6">Contacto</h2>
-            <p class="text-gray-400 mb-10 font-light text-base">
+            <p class="text-gray-400 mb-10 font-light text-base leading-relaxed max-w-xl mx-auto">
                 Si alguna obra te interesó, tenés alguna consulta técnica o simplemente querés pasar a conocer el taller, escribime. Siempre es un gusto charlar sobre arte.
             </p>
             <a href="https://wa.me/5492805032663?text=Hola Francisco! Estuve viendo tu galería web..." 
@@ -153,7 +147,7 @@
                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
                 Escribir por WhatsApp
             </a>
-            <p class="text-xs text-gray-500 mt-16 tracking-widest uppercase">
+            <p class="text-xs text-gray-500 mt-20 tracking-widest uppercase">
                 © 2026 Francisco Fernández. Todos los derechos reservados.
             </p>
         </div>
@@ -163,12 +157,13 @@
         <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
     </div>
 
-    <div id="modal" class="fixed inset-0 bg-black/75 z-50 hidden flex items-center justify-center p-0 md:p-6 backdrop-blur-sm transition-all" onclick="closeModal(event)">
+    <div id="modal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-0 md:p-6 backdrop-blur-sm transition-all" onclick="closeModal(event)">
         <button onclick="closeModal(event)" class="absolute top-4 right-4 md:top-6 md:right-6 z-[60] text-white hover:text-gray-300 transition-colors p-2">
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" pointer-events="none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
-        <div class="bg-white w-full h-full md:h-auto md:max-h-[90vh] md:max-w-6xl md:rounded-[3px] shadow-2xl overflow-hidden relative flex flex-col" onclick="event.stopPropagation()">
-            <div id="modal-content" class="flex-grow h-full p-0 overflow-y-auto"></div>
+        <div class="bg-white w-full h-full md:h-auto md:max-h-[95vh] md:max-w-7xl md:rounded-[3px] shadow-2xl overflow-hidden relative flex flex-col" onclick="event.stopPropagation()">
+            <div id="modal-content" class="flex-grow h-full p-0 overflow-hidden">
+                </div>
         </div>
     </div>
 

@@ -191,7 +191,7 @@ function renderGallery(works) {
                 <p class="text-xs text-text-secondary tracking-widest uppercase mt-1 mb-3">${obra.categoria || 'Obra'}</p>
                 <div class="flex justify-between items-center mt-auto pt-3 border-t border-gray-100">
                     <span class="text-xs tracking-wide ${obra.is_available ? 'text-whatsapp font-medium' : 'text-red-400'}">
-                        ${obra.is_available ? 'Disponible' : 'Privada'}
+                        ${obra.is_available ? 'Disponible' : 'Vendida'}
                     </span>
                     ${obra.show_price && obra.price ? `<span class="text-text-main font-medium text-sm tracking-wide">${formatPrice(obra.price, obra.currency)}</span>` : ''}
                 </div>
@@ -312,7 +312,7 @@ window.openModal = function(obra) {
                 <div class="mt-8 pt-6 border-t border-gray-100">
                     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-6 gap-2">
                         <span class="text-xs tracking-wide ${obra.is_available ? 'text-text-secondary' : 'text-red-400'}">
-                            ${obra.is_available ? 'Disponible para adquisición' : 'Colección Privada'}
+                            ${obra.is_available ? 'Disponible para adquisición' : 'Obra vendida'}
                         </span>
                         ${priceSection}
                     </div>

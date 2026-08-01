@@ -11,14 +11,21 @@ const PAGE_SIZE = 12;
 let currentPage = 1;
 let totalPages = 1;
 let isLoading = false;
+
+// Variables de Filtrado
 let currentSearchQuery = ""; 
+let currentCategoryFilter = "";
+let currentSeriesFilter = "";
 let searchDebounceTimer;     
-let searchResultsMemory = []; // Aquí vivirá todo el catálogo
+
+let masterWorksMemory = []; // Aquí vivirá TODO el catálogo de Firebase
+let searchResultsMemory = []; // Aquí viven las obras ya filtradas
 
 let currentSlide = 0;
 let totalSlides = 0;
 let carouselInterval;
 
+// Selectores
 const galleryContainer = document.getElementById("gallery-container");
 const loadingOverlay = document.getElementById("loading-overlay");
 const paginationControls = document.getElementById("pagination-controls");
@@ -27,6 +34,8 @@ const nextButton = document.getElementById("next-page");
 const pageInfo = document.getElementById("page-info");
 const searchInput = document.getElementById("search");
 const carouselTrack = document.getElementById("carousel-track");
+const filterCategory = document.getElementById("filter-category");
+const filterSeries = document.getElementById("filter-series");
 
 function formatPrice(price, currency) {
     if (!price) return '';
@@ -98,7 +107,38 @@ window.openModalById = function(id) {
 }
 
 // ========================================================
-// CARGA MAESTRA: 100% MEMORIA Y CERO OBRAS PERDIDAS
+// LLENAR LOS SELECTS DINÁMICAMENTE
+// ========================================================
+function populateFilters(works) {
+    if (!filterCategory || !filterSeries) return;
+    
+    const categories = new Set();
+    const series = new Set();
+
+    works.forEach(w => {
+        if (w.categoria && w.categoria.trim() !== '') categories.add(w.categoria.trim());
+        if (w.serie && w.serie.trim() !== '') series.add(w.serie.trim());
+    });
+
+    // Llenar categorías
+    categories.forEach(cat => {
+        const option = document.createElement("option");
+        option.value = cat;
+        option.textContent = cat;
+        filterCategory.appendChild(option);
+    });
+
+    // Llenar series
+    series.forEach(ser => {
+        const option = document.createElement("option");
+        option.value = ser;
+        option.textContent = ser;
+        filterSeries.appendChild(option);
+    });
+}
+
+// ========================================================
+// CARGA MAESTRA Y FILTRADO COMBINADO
 // ========================================================
 async function loadPage(pageNumber) {
     if (!db) { hideSpinner(); return; }
@@ -108,42 +148,54 @@ async function loadPage(pageNumber) {
     if (galleryContainer) galleryContainer.innerHTML = '<div class="col-span-full flex justify-center py-12"><div class="lds-ring"><div></div><div></div><div></div><div></div></div></div>';
 
     try {
-        // Solo vamos a la base de datos en la página 1 o si la memoria está vacía
-        if (pageNumber === 1 || searchResultsMemory.length === 0) {
+        // 1. Si no tenemos la data descargada, bajamos TODA la base
+        if (masterWorksMemory.length === 0) {
             const productsRef = collection(db, "productos"); 
-            // Traemos TODO el catálogo sin filtros para que no quede ni una obra afuera
             const querySnapshot = await getDocs(productsRef);
             
-            let allWorks = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            masterWorksMemory = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // Ordenamos con JavaScript de forma segura
-            allWorks.sort((a, b) => {
+            // Ordenamos por orden manual
+            masterWorksMemory.sort((a, b) => {
                 const oA = typeof a.orden === 'number' ? a.orden : 99999;
                 const oB = typeof b.orden === 'number' ? b.orden : 99999;
                 return oA - oB;
             });
 
-            // Si el usuario usó el buscador, filtramos aquí mismo
-            if (currentSearchQuery) {
-                const queryLower = currentSearchQuery.toLowerCase();
-                allWorks = allWorks.filter(obra => {
-                    return obra.titulo?.toLowerCase().includes(queryLower) || 
-                           obra.categoria?.toLowerCase().includes(queryLower) || 
-                           obra.serie?.toLowerCase().includes(queryLower);
-                });
-            }
-
-            searchResultsMemory = allWorks;
-            totalPages = Math.ceil(searchResultsMemory.length / PAGE_SIZE) || 1;
+            // Llenamos los menús desplegables solo la primera vez
+            populateFilters(masterWorksMemory);
         }
 
-        // Cortamos el pedacito exacto que corresponde a la página actual
+        // 2. Aplicamos TODOS los filtros al mismo tiempo sobre la memoria maestra
+        let filteredWorks = [...masterWorksMemory];
+
+        if (currentSearchQuery) {
+            const queryLower = currentSearchQuery.toLowerCase();
+            filteredWorks = filteredWorks.filter(obra => {
+                return obra.titulo?.toLowerCase().includes(queryLower) || 
+                       obra.categoria?.toLowerCase().includes(queryLower) || 
+                       obra.serie?.toLowerCase().includes(queryLower);
+            });
+        }
+
+        if (currentCategoryFilter) {
+            filteredWorks = filteredWorks.filter(obra => obra.categoria === currentCategoryFilter);
+        }
+
+        if (currentSeriesFilter) {
+            filteredWorks = filteredWorks.filter(obra => obra.serie === currentSeriesFilter);
+        }
+
+        // 3. Guardamos los resultados filtrados y paginamos
+        searchResultsMemory = filteredWorks;
+        totalPages = Math.ceil(searchResultsMemory.length / PAGE_SIZE) || 1;
+
         const startIndex = (pageNumber - 1) * PAGE_SIZE;
         const newWorks = searchResultsMemory.slice(startIndex, startIndex + PAGE_SIZE);
         currentPage = pageNumber;
 
         if (newWorks.length === 0) {
-            galleryContainer.innerHTML = '<p class="text-center col-span-full py-12 text-text-secondary font-light">No se encontraron obras en el archivo.</p>';
+            galleryContainer.innerHTML = '<p class="text-center col-span-full py-12 text-text-secondary font-light">No se encontraron obras con los filtros aplicados.</p>';
             if (paginationControls) paginationControls.classList.add("hidden");
         } else {
             galleryContainer.innerHTML = ""; 
@@ -191,7 +243,7 @@ function renderGallery(works) {
                 <p class="text-xs text-text-secondary tracking-widest uppercase mt-1 mb-3">${obra.categoria || 'Obra'}</p>
                 <div class="flex justify-between items-center mt-auto pt-3 border-t border-gray-100">
                     <span class="text-xs tracking-wide ${obra.is_available ? 'text-whatsapp font-medium' : 'text-red-400'}">
-                        ${obra.is_available ? 'Disponible' : 'Vendida'}
+                        ${obra.is_available ? 'Disponible' : 'Privada'}
                     </span>
                     ${obra.show_price && obra.price ? `<span class="text-text-main font-medium text-sm tracking-wide">${formatPrice(obra.price, obra.currency)}</span>` : ''}
                 </div>
@@ -312,7 +364,7 @@ window.openModal = function(obra) {
                 <div class="mt-8 pt-6 border-t border-gray-100">
                     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-6 gap-2">
                         <span class="text-xs tracking-wide ${obra.is_available ? 'text-text-secondary' : 'text-red-400'}">
-                            ${obra.is_available ? 'Disponible para adquisición' : 'Obra vendida'}
+                            ${obra.is_available ? 'Disponible para adquisición' : 'Colección Privada'}
                         </span>
                         ${priceSection}
                     </div>
@@ -377,6 +429,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initCarousel(); 
     loadPage(1);    
 
+    // Lógica de Listeners para los Filtros y Búsqueda
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             clearTimeout(searchDebounceTimer);
@@ -384,6 +437,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 currentSearchQuery = searchInput.value;
                 loadPage(1);
             }, 500);
+        });
+    }
+
+    if (filterCategory) {
+        filterCategory.addEventListener('change', (e) => {
+            currentCategoryFilter = e.target.value;
+            loadPage(1);
+        });
+    }
+
+    if (filterSeries) {
+        filterSeries.addEventListener('change', (e) => {
+            currentSeriesFilter = e.target.value;
+            loadPage(1);
         });
     }
 

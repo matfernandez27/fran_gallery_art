@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@openrouter/agent": "^0.8.0",
     "csv-parser": "^3.2.0",
     "firebase": "^12.9.0",
     "firebase-admin": "^13.6.1",

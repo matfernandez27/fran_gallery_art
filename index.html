@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://www.gstatic.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://storage.googleapis.com https://firebasestorage.googleapis.com; connect-src https://firestore.googleapis.com; base-uri 'none'; form-action 'self'; object-src 'none'">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Obras | Francisco Fernández — Artista visual</title>
     <meta name="description" content="Galería de obras de Francisco Fernández, artista visual de la Patagonia: pintura, dibujo y grabado. Mirá el archivo y consultá por las obras disponibles.">
     <meta name="theme-color" content="#faf9f7">
@@ -16,8 +18,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/tailwind.css">
     <link rel="stylesheet" href="./css/site.css">
 </head>
 <body class="bg-paper text-ink antialiased selection:bg-accent selection:text-white">
@@ -152,7 +153,7 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js" defer></script>
+    <script src="./vendor/panzoom.min.js" defer></script>
     <script type="module" src="./js/main.js"></script>
 </body>
 </html>

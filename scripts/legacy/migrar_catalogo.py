@@ -9,9 +9,11 @@ from firebase_admin import credentials, firestore, storage
 # ==========================================
 # 1. CONFIGURACIÓN DE CREDENCIALES
 # ==========================================
-# Reemplazá con tus datos de Supabase
-SUPABASE_URL = "https://railkoprsjevdyrxalfu.supabase.co"
-SUPABASE_KEY = "sb_publishable_n54sFapzE11uFsHrI87n_A_qx5_8bPH"
+# Datos de Supabase: se leen de variables de entorno (no los guardes en el código).
+#   export SUPABASE_URL="https://<tu-proyecto>.supabase.co"
+#   export SUPABASE_KEY="<tu clave>"
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 
 # Inicializar Supabase
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)

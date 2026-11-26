@@ -1,10 +1,18 @@
 {
-  "dependencies": {
-    "@openrouter/agent": "^0.8.0",
-    "csv-parser": "^3.2.0",
-    "firebase": "^12.9.0",
-    "firebase-admin": "^13.6.1",
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1"
+  "name": "fran-gallery-art",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Galería web de Francisco Fernández (sitio estático + Firebase)",
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i css/tailwind.input.css -o css/tailwind.css --minify",
+    "watch:css": "tailwindcss -c tailwind.config.js -i css/tailwind.input.css -o css/tailwind.css --watch",
+    "vendor": "mkdir -p vendor && cp node_modules/@panzoom/panzoom/dist/panzoom.min.js vendor/panzoom.min.js && cp node_modules/sortablejs/Sortable.min.js vendor/Sortable.min.js",
+    "serve": "python3 -m http.server 8000",
+    "test:rules": "echo \"Ver README: probar reglas con el emulador de Firebase\""
+  },
+  "devDependencies": {
+    "@panzoom/panzoom": "4.5.1",
+    "sortablejs": "1.15.2",
+    "tailwindcss": "^3.4.17"
   }
 }

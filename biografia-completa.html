@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; base-uri 'none'; form-action 'self'">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Biografía | Francisco Fernández — Artista visual patagónico</title>
     <meta name="description" content="Biografía de Francisco Fernández, artista visual nacido en Trelew, Chubut en 1991: grabado, dibujo, pintura y objetos escultóricos entre el paisaje patagónico y la experiencia urbana.">
     <meta name="theme-color" content="#faf9f7">
@@ -14,8 +16,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/tailwind.css">
     <link rel="stylesheet" href="./css/site.css">
 </head>
 <body class="bg-paper text-ink antialiased selection:bg-accent selection:text-white">
@@ -76,6 +77,6 @@
         <p class="text-xs text-muted tracking-widest uppercase">© <span id="year">2026</span> Francisco Fernández. Todos los derechos reservados.</p>
     </footer>
 
-    <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+    <script src="./js/year.js" defer></script>
 </body>
 </html>

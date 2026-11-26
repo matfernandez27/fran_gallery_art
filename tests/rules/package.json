@@ -1,0 +1,14 @@
+{
+  "name": "fran-gallery-rules-tests",
+  "private": true,
+  "type": "module",
+  "description": "Pruebas de las reglas de seguridad de Firestore y Storage (usan el emulador de Firebase, no tocan producción).",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore,storage --project demo-rules-test --config ../../firebase.json \"node rules.test.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "firebase": "^12.19.0",
+    "firebase-tools": "^15.37.0"
+  }
+}

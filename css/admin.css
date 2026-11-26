@@ -1,0 +1,14 @@
+/* Estilos propios del panel de administración. */
+    .field-label { display: block; font-size: 0.75rem; font-weight: 500; color: #4f5766; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .field { display: block; width: 100%; border-radius: 0.125rem; border: 1px solid #d3d0c8; padding: 0.625rem 0.75rem; font-size: 0.875rem; color: #14151a; background: #fff; }
+    .field:focus { border-color: #2563eb; outline: none; box-shadow: 0 0 0 1px #2563eb; }
+    .btn { padding: 0.55rem 1rem; border-radius: 0.125rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; border: 1px solid transparent; transition: background-color .2s, border-color .2s; cursor: pointer; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-primary { background: #14151a; color: #fff; } .btn-primary:hover:not(:disabled) { background: #000; }
+    .btn-secondary { background: #fff; color: #14151a; border-color: #d3d0c8; } .btn-secondary:hover:not(:disabled) { border-color: #14151a; }
+    .btn-danger { background: #fef2f2; color: #b91c1c; border-color: #fecaca; } .btn-danger:hover:not(:disabled) { background: #fee2e2; }
+    .btn-accent { background: #2563eb; color: #fff; } .btn-accent:hover:not(:disabled) { background: #1d4ed8; }
+    .sortable-ghost { opacity: .35; }
+    .drag-handle { cursor: grab; touch-action: none; }
+    .drag-handle:active { cursor: grabbing; }
+

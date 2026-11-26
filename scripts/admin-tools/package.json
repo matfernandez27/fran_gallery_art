@@ -1,0 +1,8 @@
+{
+  "name": "fran-gallery-admin-tools",
+  "private": true,
+  "description": "Herramientas de administración de cuentas (se ejecutan en tu computadora, nunca en el sitio).",
+  "dependencies": {
+    "firebase-admin": "^13.6.1"
+  }
+}

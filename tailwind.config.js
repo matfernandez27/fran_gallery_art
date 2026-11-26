@@ -1,5 +1,6 @@
-// Tokens de diseño compartidos por todas las páginas (se carga justo después de Tailwind CDN).
-tailwind.config = {
+/** Configuración de Tailwind (se compila con `npm run build:css`). */
+module.exports = {
+    content: ['./*.html', './js/**/*.js'],
     theme: {
         extend: {
             colors: {
@@ -10,7 +11,6 @@ tailwind.config = {
                 line: '#e4e1da',
                 accent: { DEFAULT: '#2563eb', dark: '#1d4ed8', soft: '#eff4ff' },
                 ok: '#15803d',
-                whatsapp: '#25D366',
             },
             fontFamily: {
                 display: ['"Playfair Display"', 'Georgia', 'serif'],

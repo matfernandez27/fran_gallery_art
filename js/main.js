@@ -156,7 +156,7 @@ function cardHTML(obra, index) {
     const price = obra.show_price && obra.price ? formatPrice(obra.price, obra.currency) : "";
     const photos = rest.length + (first ? 1 : 0);
     return `
-        <article class="fade-in" style="animation-delay:${Math.min(index, 11) * 35}ms">
+        <article class="fade-in">
             <button type="button" data-open="${esc(obra.id)}" class="group block w-full text-left" aria-label="Ver detalle de ${esc(title)}">
                 <div class="aspect-[4/5] overflow-hidden bg-line/60 relative mb-4">
                     <img src="${esc(first || PLACEHOLDER_IMG)}" data-fallbacks="${esc(JSON.stringify(rest))}"
@@ -189,6 +189,7 @@ function renderGallery() {
         return;
     }
     els.gallery.innerHTML = pageWorks.map(cardHTML).join("");
+    els.gallery.querySelectorAll("article").forEach((card, i) => { card.style.animationDelay = `${Math.min(i, 11) * 35}ms`; });
 }
 
 function renderPagination() {

@@ -1,0 +1,28 @@
+rules_version = '2';
+
+// Reglas de seguridad de Firebase Storage.
+//  - Las imágenes de "obras/" se pueden ver (las URLs públicas siguen funcionando) pero
+//    NO se puede listar el bucket.
+//  - Subir/reemplazar/borrar: solo administradores, solo imágenes y con tamaño máximo.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Permiso `admin: true` asignado con scripts/make-admin.js (el mismo que usa Firestore).
+    function isAdmin() {
+      return request.auth != null && request.auth.token.get('admin', false) == true;
+    }
+
+    match /obras/{fileName} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if isAdmin()
+                            && request.resource.size < 15 * 1024 * 1024
+                            && request.resource.contentType.matches('image/(webp|jpeg|png|gif|avif)');
+      allow delete: if isAdmin();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

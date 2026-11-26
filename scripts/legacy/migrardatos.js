@@ -1,3 +1,4 @@
+// OBSOLETO: script de una migración antigua desde CSV. El sitio usa la colección "productos" (no "obras"). No lo ejecutes sin revisarlo.
 const admin = require("firebase-admin");
 const fs = require("fs");
 const csv = require("csv-parser");

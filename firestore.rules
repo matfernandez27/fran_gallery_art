@@ -1,0 +1,53 @@
+rules_version = '2';
+
+// Reglas de seguridad de Firestore.
+//  - Lectura pública SOLO del catálogo (colección "productos").
+//  - Escritura únicamente para administradores: cuentas con el permiso (custom claim)
+//    `admin: true`, que se asigna con `node scripts/make-admin.js <email>` (ver README).
+//    Registrarse en el sitio NO da ningún permiso de escritura.
+//  - Todo lo demás está cerrado.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.get('admin', false) == true;
+    }
+
+    function optionalString(v, maxLen) {
+      return v == null || (v is string && v.size() <= maxLen);
+    }
+
+    // Forma permitida de una obra (incluye campos heredados de la migración).
+    function validWork(d) {
+      return d.keys().hasOnly([
+               'titulo', 'descripcion', 'tecnica', 'medidas', 'anio', 'categoria', 'serie',
+               'price', 'currency', 'is_available', 'show_price', 'orden', 'imagenes',
+               'createdAt', 'updatedAt', 'migrado_el'
+             ])
+          && d.titulo is string && d.titulo.size() > 0 && d.titulo.size() <= 120
+          && optionalString(d.get('descripcion', null), 5000)
+          && optionalString(d.get('tecnica', null), 200)
+          && optionalString(d.get('medidas', null), 100)
+          && optionalString(d.get('categoria', null), 60)
+          && optionalString(d.get('serie', null), 60)
+          && (d.get('anio', null) == null || (d.anio is int && d.anio >= 1900 && d.anio <= 2100))
+          && (d.get('price', null) == null || (d.price is number && d.price >= 0))
+          && d.get('currency', 'ARS') in ['ARS', 'USD']
+          && d.get('is_available', true) is bool
+          && d.get('show_price', false) is bool
+          && d.get('orden', 0) is number
+          && d.get('imagenes', []) is list
+          && d.get('imagenes', []).size() <= 40;
+    }
+
+    match /productos/{obraId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && validWork(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

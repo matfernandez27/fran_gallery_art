@@ -33,3 +33,12 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--paper); co
     html { scroll-behavior: auto; }
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* Las imágenes aparecen con un fundido suave cuando terminan de cargar */
+.img-fade { opacity: 0; transition: opacity 0.5s ease-out, transform 0.7s ease-out; }
+.img-fade.is-loaded { opacity: 1; }
+
+/* Modo administrador (barra y edición de orden en el index) */
+.admin-drag-card { cursor: grab; }
+.sortable-ghost { opacity: 0.35; }
+.sortable-chosen { cursor: grabbing; }

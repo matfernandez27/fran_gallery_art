@@ -1,6 +1,7 @@
 // js/main.js — Galería pública
-import { db } from "../src/firebaseConfig.js";
+import { db, auth } from "../src/firebaseConfig.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { SITE } from "./config.js";
 import {
     esc, norm, clean, capitalize, formatPrice, whatsappLink, imageUrls,
@@ -16,7 +17,12 @@ const state = {
     query: "",
     category: "",       // clave normalizada
     series: "",         // clave normalizada
+    onlyAvailable: false,
     loaded: false,
+    // Modo administrador (solo se activa si hay una sesión con permiso "admin")
+    isAdmin: false,
+    reorder: false,
+    hidePrices: localStorage.getItem("fran_hide_prices") === "1",
 };
 
 // ---------------------------------------------------------------- Elementos
@@ -28,19 +34,32 @@ const els = {
     next: $("next-page"),
     pageInfo: $("page-info"),
     search: $("search"),
-    category: $("filter-category"),
+    chips: $("category-chips"),
     series: $("filter-series"),
+    available: $("only-available"),
     clear: $("clear-filters"),
     count: $("results-count"),
+    filtersBlock: $("filters-block"),
     track: $("carousel-track"),
     carouselPrev: $("carousel-prev"),
     carouselNext: $("carousel-next"),
     dots: $("carousel-dots"),
     modal: $("modal"),
     modalContent: $("modal-content"),
+    toast: $("toast"),
+    toTop: $("to-top"),
 };
 
 const REDUCED_MOTION = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+// ---------------------------------------------------------------- Avisos breves
+let toastTimer;
+function showToast(message) {
+    els.toast.textContent = message;
+    els.toast.classList.remove("hidden");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => els.toast.classList.add("hidden"), 3200);
+}
 
 // ---------------------------------------------------------------- Carga de datos
 function skeletonCards(n = 8) {
@@ -73,9 +92,10 @@ async function loadWorks() {
         const snap = await withTimeout(getDocs(collection(db, SITE.collection)), 20000, "Firestore no respondió");
         state.works = sortWorks(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
         state.loaded = true;
+        readUrlState();
         populateFilters();
         initCarousel();
-        applyFilters(1);
+        applyFilters(state.page);
         syncModalWithHash();
     } catch (error) {
         console.error("Error al cargar la galería:", error);
@@ -83,24 +103,60 @@ async function loadWorks() {
     }
 }
 
+// ---------------------------------------------------------------- Estado en la URL (enlaces con filtros)
+function readUrlState() {
+    const p = new URLSearchParams(location.search);
+    state.query = p.get("q") || "";
+    state.category = norm(p.get("cat") || "");
+    state.series = norm(p.get("serie") || "");
+    state.onlyAvailable = p.get("disp") === "1";
+    state.page = Math.max(1, Number.parseInt(p.get("p"), 10) || 1);
+}
+
+function writeUrlState() {
+    const p = new URLSearchParams();
+    if (clean(state.query)) p.set("q", clean(state.query));
+    if (state.category) p.set("cat", state.category);
+    if (state.series) p.set("serie", state.series);
+    if (state.onlyAvailable) p.set("disp", "1");
+    if (state.page > 1) p.set("p", String(state.page));
+    const qs = p.toString();
+    history.replaceState(history.state, "", location.pathname + (qs ? `?${qs}` : "") + location.hash);
+}
+
 // ---------------------------------------------------------------- Filtros
 function uniqueOptions(field) {
     const map = new Map();
     for (const w of state.works) {
         const label = clean(w[field]);
-        if (label && !map.has(norm(label))) map.set(norm(label), capitalize(label));
+        if (!label) continue;
+        const key = norm(label);
+        const entry = map.get(key) || { label: capitalize(label), count: 0 };
+        entry.count++;
+        map.set(key, entry);
     }
-    return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1], "es"));
+    return [...map.entries()].sort((a, b) => a[1].label.localeCompare(b[1].label, "es"));
 }
 
-function fillSelect(select, field, allLabel) {
-    select.innerHTML = `<option value="">${esc(allLabel)}</option>` +
-        uniqueOptions(field).map(([key, label]) => `<option value="${esc(key)}">${esc(label)}</option>`).join("");
+function renderChips() {
+    const chip = "px-4 py-1.5 rounded-full border text-sm transition-colors border-line bg-white text-ink hover:border-muted aria-pressed:bg-ink aria-pressed:text-white aria-pressed:border-ink";
+    const options = uniqueOptions("categoria");
+    els.chips.classList.toggle("hidden", options.length < 2);
+    els.chips.innerHTML =
+        `<button type="button" data-cat="" aria-pressed="${state.category === ""}" class="${chip}">Todas <span class="opacity-60">${state.works.length}</span></button>` +
+        options.map(([key, o]) => `<button type="button" data-cat="${esc(key)}" aria-pressed="${state.category === key}" class="${chip}">${esc(o.label)} <span class="opacity-60">${o.count}</span></button>`).join("");
 }
 
 function populateFilters() {
-    fillSelect(els.category, "categoria", "Todas las categorías");
-    fillSelect(els.series, "serie", "Todas las series");
+    const seriesOptions = uniqueOptions("serie");
+    if (!seriesOptions.some(([k]) => k === state.series)) state.series = "";
+    if (!uniqueOptions("categoria").some(([k]) => k === state.category)) state.category = "";
+    els.series.innerHTML = `<option value="">Todas las series</option>` +
+        seriesOptions.map(([key, o]) => `<option value="${esc(key)}">${esc(o.label)}</option>`).join("");
+    els.series.value = state.series;
+    els.search.value = state.query;
+    els.available.checked = state.onlyAvailable;
+    renderChips();
 }
 
 function matchesQuery(obra, tokens) {
@@ -114,30 +170,34 @@ function applyFilters(page = 1) {
     state.filtered = state.works.filter((w) =>
         matchesQuery(w, tokens) &&
         (!state.category || norm(w.categoria) === state.category) &&
-        (!state.series || norm(w.serie) === state.series));
+        (!state.series || norm(w.serie) === state.series) &&
+        (!state.onlyAvailable || w.is_available !== false));
 
-    state.totalPages = Math.max(1, Math.ceil(state.filtered.length / SITE.pageSize));
+    state.totalPages = state.reorder ? 1 : Math.max(1, Math.ceil(state.filtered.length / SITE.pageSize));
     state.page = Math.min(Math.max(1, page), state.totalPages);
 
-    const active = Boolean(tokens.length || state.category || state.series);
+    const active = Boolean(tokens.length || state.category || state.series || state.onlyAvailable);
     els.clear.classList.toggle("hidden", !active);
+    renderChips();
     renderGallery();
     renderCount(active);
     renderPagination();
+    writeUrlState();
 }
 
 function renderCount(active) {
     const total = state.works.length;
     const n = state.filtered.length;
     if (!total) { els.count.textContent = ""; return; }
+    if (state.reorder) { els.count.textContent = "Arrastrá las obras para cambiar el orden. Las primeras aparecen antes en el sitio."; return; }
     els.count.textContent = active
         ? `${n} ${n === 1 ? "obra encontrada" : "obras encontradas"} de ${total}`
         : `${total} ${total === 1 ? "obra" : "obras"}`;
 }
 
 function clearFilters() {
-    state.query = ""; state.category = ""; state.series = "";
-    els.search.value = ""; els.category.value = ""; els.series.value = "";
+    state.query = ""; state.category = ""; state.series = ""; state.onlyAvailable = false;
+    els.search.value = ""; els.series.value = ""; els.available.checked = false;
     applyFilters(1);
 }
 
@@ -149,19 +209,34 @@ function statusBadge(obra) {
         : `<span class="inline-flex items-center gap-1.5 text-xs text-muted"><span class="w-1.5 h-1.5 rounded-full bg-muted/60"></span>Privada</span>`;
 }
 
+function visiblePrice(obra) {
+    return obra.show_price && obra.price && !state.hidePrices ? formatPrice(obra.price, obra.currency) : "";
+}
+
+/** Controles que solo ve el administrador sobre cada tarjeta. */
+function adminCardControls(obra) {
+    if (state.reorder) {
+        return `<span class="card-drag admin-drag-card absolute top-2 left-2 z-10 bg-ink/85 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 select-none" title="Arrastrar para ordenar">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h16"/></svg>Arrastrar</span>`;
+    }
+    return `<a href="./admin.html?edit=${encodeURIComponent(obra.id)}" class="absolute top-2 right-2 z-10 bg-white/95 text-ink text-xs font-medium px-3 py-1.5 rounded-full shadow hover:bg-white" aria-label="Editar ${esc(clean(obra.titulo))}">✎ Editar</a>`;
+}
+
 function cardHTML(obra, index) {
     const [first, ...rest] = imageUrls(obra);
     const title = clean(obra.titulo) || "Sin título";
     const subtitle = [capitalize(obra.categoria), obra.anio].filter(Boolean).join(" · ") || "Obra";
-    const price = obra.show_price && obra.price ? formatPrice(obra.price, obra.currency) : "";
+    const price = visiblePrice(obra);
     const photos = rest.length + (first ? 1 : 0);
+    const openAttr = state.reorder ? 'tabindex="-1"' : `data-open="${esc(obra.id)}"`;
     return `
-        <article class="fade-in">
-            <button type="button" data-open="${esc(obra.id)}" class="group block w-full text-left" aria-label="Ver detalle de ${esc(title)}">
+        <article class="fade-in relative" data-id="${esc(obra.id)}">
+            ${state.isAdmin ? adminCardControls(obra) : ""}
+            <button type="button" ${openAttr} class="group block w-full text-left ${state.reorder ? "cursor-default" : ""}" aria-label="Ver detalle de ${esc(title)}">
                 <div class="aspect-[4/5] overflow-hidden bg-line/60 relative mb-4">
                     <img src="${esc(first || PLACEHOLDER_IMG)}" data-fallbacks="${esc(JSON.stringify(rest))}"
                          alt="${esc(title)}" width="400" height="500" loading="${index < 4 ? "eager" : "lazy"}" decoding="async"
-                         class="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-700 ease-out">
+                         class="img-fade w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-700 ease-out">
                     ${photos > 1 ? `<span class="absolute bottom-2 right-2 bg-black/60 text-white text-[11px] px-2 py-0.5 rounded-full backdrop-blur-sm">${photos} fotos</span>` : ""}
                 </div>
                 <h3 class="font-display text-base sm:text-lg text-ink leading-snug truncate group-hover:text-accent transition-colors">${esc(title)}</h3>
@@ -176,8 +251,8 @@ function cardHTML(obra, index) {
 
 function renderGallery() {
     els.gallery.setAttribute("aria-busy", "false");
-    const start = (state.page - 1) * SITE.pageSize;
-    const pageWorks = state.filtered.slice(start, start + SITE.pageSize);
+    const start = state.reorder ? 0 : (state.page - 1) * SITE.pageSize;
+    const pageWorks = state.reorder ? state.filtered : state.filtered.slice(start, start + SITE.pageSize);
 
     if (!pageWorks.length) {
         els.gallery.innerHTML = `
@@ -190,10 +265,12 @@ function renderGallery() {
     }
     els.gallery.innerHTML = pageWorks.map(cardHTML).join("");
     els.gallery.querySelectorAll("article").forEach((card, i) => { card.style.animationDelay = `${Math.min(i, 11) * 35}ms`; });
+    // Las imágenes que ya estaban en caché no disparan "load" a tiempo
+    els.gallery.querySelectorAll("img.img-fade").forEach((img) => { if (img.complete) img.classList.add("is-loaded"); });
 }
 
 function renderPagination() {
-    const show = state.totalPages > 1;
+    const show = state.totalPages > 1 && !state.reorder;
     els.pagination.classList.toggle("hidden", !show);
     if (!show) return;
     els.pageInfo.textContent = `Página ${state.page} de ${state.totalPages}`;
@@ -226,10 +303,12 @@ function slideHTML(obra, i, total) {
 }
 
 function initCarousel() {
+    stopAutoplay();
     carousel.picks = state.works.filter((w) => imageUrls(w).length).slice(0, SITE.heroSlides);
     carousel.count = carousel.picks.length;
     const section = els.track.parentElement;
     if (!carousel.count) { section.classList.add("hidden"); return; }
+    section.classList.remove("hidden");
 
     els.track.innerHTML = carousel.picks.map((w, i) => slideHTML(w, i, carousel.count)).join("");
     els.dots.innerHTML = carousel.picks.map((w, i) =>
@@ -298,7 +377,7 @@ function setupCarouselEvents() {
 }
 
 // ---------------------------------------------------------------- Visor (modal)
-const viewer = { obra: null, images: [], index: 0, panzoom: null, rotation: 0, lastFocus: null };
+const viewer = { obra: null, list: [], images: [], index: 0, panzoom: null, rotation: 0, lastFocus: null, swipeStart: null };
 
 const ICON = {
     close: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>',
@@ -308,6 +387,7 @@ const ICON = {
     minus: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>',
     plus: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>',
     reset: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"/></svg>',
+    share: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.7 10.7l6.6-3.4M8.7 13.3l6.6 3.4M18 8a3 3 0 100-6 3 3 0 000 6zM6 15a3 3 0 100-6 3 3 0 000 6zm12 7a3 3 0 100-6 3 3 0 000 6z"/></svg>',
 };
 
 const toolBtn = "bg-white border border-line text-ink p-2 rounded-sm shadow-sm hover:bg-gray-50 transition-colors";
@@ -315,12 +395,18 @@ const navBtn = "absolute top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white bor
 
 function isModalOpen() { return !els.modal.classList.contains("hidden"); }
 
+function workUrl(obra) {
+    return `${location.origin}${location.pathname}#obra/${encodeURIComponent(obra.id)}`;
+}
+
 function modalHTML(obra) {
     const title = clean(obra.titulo) || "Sin título";
     const available = obra.is_available !== false;
-    const price = obra.show_price && obra.price ? formatPrice(obra.price, obra.currency) : "";
+    const price = visiblePrice(obra);
     const meta = [capitalize(obra.serie) || "Serie general", obra.anio || "s/f"].join(" — ");
-    const message = `Hola Francisco! Quería consultarte por la obra: ${title}`;
+    const message = `Hola Francisco! Quería consultarte por la obra: ${title}\n${workUrl(obra)}`;
+    const pos = viewer.list.findIndex((w) => w.id === obra.id);
+    const hasNav = viewer.list.length > 1 && pos >= 0;
     return `
         <div class="flex md:hidden justify-between items-center px-4 py-3 border-b border-line bg-white flex-shrink-0">
             <span class="font-display font-semibold text-ink truncate pr-4">${esc(title)}</span>
@@ -342,11 +428,12 @@ function modalHTML(obra) {
                     <button type="button" id="zoom-in" class="${toolBtn}" title="Acercar" aria-label="Acercar">${ICON.plus}</button>
                     <button type="button" id="zoom-reset" class="${toolBtn}" title="Restaurar vista" aria-label="Restaurar vista">${ICON.reset}</button>
                 </div>
+                <p id="zoom-hint" class="hidden md:block absolute bottom-3 left-3 text-[11px] text-muted bg-white/80 px-2 py-1 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity">Doble clic para acercar · ← → para cambiar de foto</p>
             </div>
 
             <div class="w-full md:w-[35%] flex flex-col p-6 md:p-10 bg-white overflow-y-auto min-h-0">
-                <div class="mb-6">
-                    <h2 id="modal-title" class="text-3xl font-display text-ink leading-tight mb-2 tracking-tight pr-8">${esc(title)}</h2>
+                <div class="mb-6 pr-8">
+                    <h2 id="modal-title" class="text-3xl font-display text-ink leading-tight mb-2 tracking-tight">${esc(title)}</h2>
                     <p class="text-muted text-sm tracking-wide">${esc(meta)}</p>
                 </div>
                 <dl class="space-y-2 text-sm text-muted">
@@ -365,10 +452,19 @@ function modalHTML(obra) {
                             <span class="text-sm ${available ? "text-ok" : "text-muted"}">${available ? "Disponible para adquisición" : "Colección privada"}</span>
                             ${price ? `<span class="text-xl text-ink font-medium">${esc(price)}</span>` : ""}
                         </div>
-                        <a href="${esc(whatsappLink(message))}" target="_blank" rel="noopener noreferrer"
-                           class="block text-center border-2 border-ink text-ink hover:bg-ink hover:text-white py-3 rounded-sm font-medium transition-colors text-sm tracking-wide">
-                            Consultar por WhatsApp
-                        </a>
+                        <div class="flex gap-2">
+                            <a href="${esc(whatsappLink(message))}" target="_blank" rel="noopener noreferrer"
+                               class="flex-1 block text-center border-2 border-ink text-ink hover:bg-ink hover:text-white py-3 rounded-sm font-medium transition-colors text-sm tracking-wide">
+                                Consultar por WhatsApp
+                            </a>
+                            <button type="button" data-share class="border-2 border-line text-ink hover:border-ink px-3.5 rounded-sm transition-colors" aria-label="Compartir esta obra" title="Compartir">${ICON.share}</button>
+                        </div>
+                        ${hasNav ? `
+                        <div class="flex items-center justify-between mt-6 text-sm text-muted">
+                            <button type="button" data-work-nav="-1" class="hover:text-ink transition-colors py-1">← Obra anterior</button>
+                            <span class="text-xs">${pos + 1} de ${viewer.list.length}</span>
+                            <button type="button" data-work-nav="1" class="hover:text-ink transition-colors py-1">Obra siguiente →</button>
+                        </div>` : ""}
                     </div>
                 </div>
             </div>
@@ -397,6 +493,7 @@ function showImage(i) {
     img.dataset.failed = "";
     img.src = n ? viewer.images[viewer.index] : PLACEHOLDER_IMG;
     viewer.panzoom?.reset({ animate: false });
+    if (n > 1) new Image().src = viewer.images[(viewer.index + 1) % n];   // precarga la siguiente
 
     const multiple = n > 1;
     $("img-prev")?.classList.toggle("hidden", !multiple);
@@ -427,10 +524,28 @@ function setupViewer() {
         $("zoom-in")?.addEventListener("click", () => pz.zoomIn());
         $("zoom-out")?.addEventListener("click", () => pz.zoomOut());
         $("zoom-reset")?.addEventListener("click", () => { pz.reset(); viewer.rotation = 0; $("zoom-image").style.transform = ""; });
+        // Doble clic / doble toque: acerca al punto tocado o vuelve al tamaño normal
+        container.addEventListener("dblclick", (e) => {
+            if (e.target.closest("button")) return;
+            if (pz.getScale() > 1.05) pz.reset();
+            else pz.zoomToPoint(2.5, { clientX: e.clientX, clientY: e.clientY });
+        });
     } else {
         // Sin la librería de zoom, se ocultan solo los botones de zoom (rotar y navegar siguen funcionando)
         ["zoom-in", "zoom-out", "zoom-reset"].forEach((id) => $(id)?.classList.add("hidden"));
     }
+
+    // Deslizar horizontalmente para pasar de foto (solo cuando no hay zoom)
+    container?.addEventListener("pointerdown", (e) => {
+        viewer.swipeStart = e.pointerType === "touch" && !e.target.closest("button") ? { x: e.clientX, y: e.clientY } : null;
+    });
+    container?.addEventListener("pointerup", (e) => {
+        const s = viewer.swipeStart;
+        viewer.swipeStart = null;
+        if (!s || (viewer.panzoom && viewer.panzoom.getScale() > 1.05)) return;
+        const dx = e.clientX - s.x, dy = e.clientY - s.y;
+        if (Math.abs(dx) > 55 && Math.abs(dy) < 70) showImage(viewer.index + (dx < 0 ? 1 : -1));
+    });
 
     $("zoom-rotate")?.addEventListener("click", () => {
         viewer.rotation = (viewer.rotation + 90) % 360;
@@ -453,22 +568,42 @@ function setupViewer() {
     }, true);
 }
 
-function openModal(obra, { fromHistory = false } = {}) {
+/** Dibuja una obra en el visor. mode: "push" (abre), "replace" (cambia de obra) o "history" (viene del historial). */
+function showWork(obra, mode = "push") {
     if (!obra) return;
-    if (!fromHistory) history.pushState({ obra: obra.id }, "", `#obra/${encodeURIComponent(obra.id)}`);
+    const hash = `#obra/${encodeURIComponent(obra.id)}`;
+    if (mode === "push") history.pushState({ obra: obra.id }, "", hash);
+    else if (mode === "replace") history.replaceState({ obra: obra.id }, "", hash);
 
+    viewer.panzoom?.destroy();
+    viewer.panzoom = null;
     viewer.obra = obra;
+    viewer.list = state.filtered.some((w) => w.id === obra.id) ? state.filtered : state.works;
     viewer.images = imageUrls(obra);
     viewer.index = 0;
-    viewer.lastFocus = document.activeElement;
+    document.title = `${clean(obra.titulo) || "Obra"} | Francisco Fernández`;
 
     els.modalContent.innerHTML = modalHTML(obra);
-    els.modal.classList.remove("hidden");
-    document.body.style.overflow = "hidden";
     setupViewer();
     showImage(0);
+    els.modalContent.querySelector(".overflow-y-auto")?.scrollTo({ top: 0 });
+}
+
+function openModal(obra, { fromHistory = false } = {}) {
+    if (!obra) return;
+    viewer.lastFocus = document.activeElement;
+    showWork(obra, fromHistory ? "history" : "push");
+    els.modal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
     // Foco en el botón de cerrar que esté visible (el de escritorio o el del encabezado móvil)
     [...els.modal.querySelectorAll("[data-close]")].find((b) => b.offsetParent !== null)?.focus({ preventScroll: true });
+}
+
+function navigateWork(step) {
+    const pos = viewer.list.findIndex((w) => w.id === viewer.obra?.id);
+    if (pos < 0) return;
+    const next = viewer.list[(pos + step + viewer.list.length) % viewer.list.length];
+    showWork(next, "replace");
 }
 
 function closeModal({ fromHistory = false } = {}) {
@@ -478,6 +613,7 @@ function closeModal({ fromHistory = false } = {}) {
     els.modal.classList.add("hidden");
     els.modalContent.innerHTML = "";
     document.body.style.overflow = "";
+    document.title = "Obras | Francisco Fernández — Artista visual";
     viewer.lastFocus?.focus?.({ preventScroll: true });
     viewer.obra = null;
 
@@ -485,6 +621,17 @@ function closeModal({ fromHistory = false } = {}) {
         if (history.state?.obra) history.back();
         else history.replaceState(null, "", location.pathname + location.search);
     }
+}
+
+async function shareWork() {
+    const obra = viewer.obra;
+    if (!obra) return;
+    const data = { title: clean(obra.titulo), text: `${clean(obra.titulo)} — Francisco Fernández`, url: workUrl(obra) };
+    if (navigator.share) {
+        try { await navigator.share(data); return; } catch (e) { if (e.name === "AbortError") return; }
+    }
+    try { await navigator.clipboard.writeText(data.url); showToast("Enlace copiado"); }
+    catch { showToast(data.url); }
 }
 
 function hashWorkId() {
@@ -546,11 +693,22 @@ function setupHeader() {
         }, { rootMargin: "-40% 0px -55% 0px" });
         sections.forEach((s) => observer.observe(s));
     }
+
+    // Botón "volver arriba"
+    window.addEventListener("scroll", () => {
+        const show = window.scrollY > 900;
+        els.toTop.classList.toggle("hidden", !show);
+        els.toTop.classList.toggle("flex", show);
+    }, { passive: true });
+    els.toTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: REDUCED_MOTION ? "auto" : "smooth" }));
 }
 
 function setupEvents() {
     installImageFallback(els.gallery);
     installImageFallback(els.track);
+    // Fundido de las imágenes al terminar de cargar (el evento "load" no burbujea: se usa la fase de captura)
+    els.gallery.addEventListener("load", (e) => { if (e.target.classList?.contains("img-fade")) e.target.classList.add("is-loaded"); }, true);
+    els.gallery.addEventListener("error", (e) => { if (e.target.classList?.contains("img-fade")) e.target.classList.add("is-loaded"); }, true);
 
     // Abrir una obra desde tarjetas o desde el carrusel
     document.addEventListener("click", (e) => {
@@ -559,9 +717,11 @@ function setupEvents() {
         if (e.target.closest("[data-clear]")) clearFilters();
     });
 
-    // Cerrar el visor: botón, clic en el fondo oscuro, Escape, botón "atrás" del celular
+    // Visor: cerrar (botón, fondo oscuro, Escape, "atrás" del celular), compartir y pasar de obra
     els.modal.addEventListener("click", (e) => {
         if (e.target === els.modal || e.target.closest("[data-close]")) closeModal();
+        else if (e.target.closest("[data-share]")) shareWork();
+        else if (e.target.closest("[data-work-nav]")) navigateWork(Number(e.target.closest("[data-work-nav]").dataset.workNav));
     });
     document.addEventListener("keydown", (e) => {
         if (!isModalOpen()) return;
@@ -578,8 +738,14 @@ function setupEvents() {
         clearTimeout(timer);
         timer = setTimeout(() => { state.query = els.search.value; if (state.loaded) applyFilters(1); }, 200);
     });
-    els.category.addEventListener("change", () => { state.category = els.category.value; applyFilters(1); });
+    els.chips.addEventListener("click", (e) => {
+        const chip = e.target.closest("[data-cat]");
+        if (!chip) return;
+        state.category = chip.dataset.cat;
+        applyFilters(1);
+    });
     els.series.addEventListener("change", () => { state.series = els.series.value; applyFilters(1); });
+    els.available.addEventListener("change", () => { state.onlyAvailable = els.available.checked; applyFilters(1); });
     els.clear.addEventListener("click", clearFilters);
 
     els.prev.addEventListener("click", () => state.page > 1 && goToPage(state.page - 1));
@@ -593,6 +759,31 @@ function setupEvents() {
     const year = $("year");
     if (year) year.textContent = new Date().getFullYear();
 }
+
+// ---------------------------------------------------------------- Modo administrador (menú oculto)
+// Solo existe para quien inició sesión en el panel con una cuenta administradora. Los visitantes nunca lo ven.
+let adminBarModule = null;
+const adminApi = {
+    state, els, SITE, sortWorks, showToast, clearFilters,
+    rerender: () => applyFilters(state.page),
+    reloadAll: () => { initCarousel(); applyFilters(state.page); },
+};
+
+onAuthStateChanged(auth, async (user) => {
+    let isAdmin = false;
+    if (user) {
+        try { isAdmin = (await user.getIdTokenResult()).claims.admin === true; } catch { isAdmin = false; }
+    }
+    if (isAdmin === state.isAdmin) return;
+    state.isAdmin = isAdmin;
+    try {
+        adminBarModule ??= await import("./admin-bar.js");
+        if (isAdmin) adminBarModule.mountAdminBar(adminApi); else adminBarModule.unmountAdminBar();
+    } catch (error) {
+        console.error("No se pudo cargar el menú de administrador", error);
+    }
+    if (state.loaded) applyFilters(state.page);
+});
 
 setupEvents();
 loadWorks();

@@ -8,31 +8,32 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 import {
     signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail,
-    setPersistence, browserSessionPersistence,
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { SITE } from "./config.js";
 import { esc, norm, clean, capitalize, imageUrls, installImageFallback, sortWorks, PLACEHOLDER_IMG } from "./utils.js";
 
 // ---------------------------------------------------------------- Constantes
 const PAGE_SIZE = 25;
-const MAX_IMAGE_SIDE = 2400;       // px (lado mayor) al optimizar imágenes
+const MAX_IMAGE_SIDE = 2400;       // px (lado mayor) al optimizar fotos
 const MAX_SOURCE_BYTES = 30 * 1024 * 1024;
 const IDLE_LOGOUT_MS = 30 * 60 * 1000;
 const LIMITS = { titulo: 120, descripcion: 5000, tecnica: 200, medidas: 100, categoria: 60, serie: 60 };
 
 // ---------------------------------------------------------------- Estado
 const state = {
-    all: [],                // todas las obras (ordenadas)
+    all: [],                // todas las obras (ordenadas como se ven en el sitio)
     page: 1,
     query: "",
     editing: null,          // obra en edición (o null si es nueva)
-    formImages: [],         // imágenes ya guardadas en la obra: { key, path, url, name, rotation, broken }
-    pendingFiles: [],       // archivos nuevos elegidos: { key, file, preview }
-    removed: [],            // imágenes quitadas (se borran del servidor al guardar)
+    // Fotos de la obra, en el orden en que se van a guardar (la primera es la portada).
+    // kind "saved": ya está en el servidor · kind "new": archivo recién elegido
+    photos: [],             // { key, kind, url, path, name, file, rotation, broken }
+    removed: [],            // fotos guardadas que se quitaron (se borran del servidor al guardar)
     formDirty: false,
     orderDirty: false,
-    brokenByWork: new Map(),// id -> cantidad de imágenes rotas (resultado de "Revisar imágenes")
+    brokenByWork: new Map(),// id -> cantidad de fotos rotas (resultado de "Revisar imágenes")
     saving: false,
+    editParam: new URLSearchParams(location.search).get("edit"),   // enlace "Editar" desde el index
 };
 let keySeq = 0;
 const newKey = () => `k${++keySeq}`;
@@ -46,7 +47,8 @@ const els = {
     saveOrder: $("save-order-button"), cancelOrder: $("cancel-order-button"),
     pagination: $("admin-pagination-controls"), prev: $("admin-prev-page"), next: $("admin-next-page"), pageInfo: $("admin-page-info"),
     formWrap: $("obra-form-container"), form: $("obra-form"), formTitle: $("form-title"), submit: $("submit-button"),
-    currentImages: $("current-images-list"), pendingImages: $("pending-images-list"), fileInput: $("imagenes"),
+    photos: $("photos-list"), fileInput: $("imagenes"), dropzone: $("dropzone"),
+    position: $("posicion"), positionMax: $("posicion-max"),
     brokenNote: $("broken-images-note"), checkImages: $("check-images-button"),
 };
 
@@ -75,6 +77,8 @@ function showList() {
     window.scrollTo({ top: 0 });
 }
 function showForm() {
+    els.header.classList.remove("hidden");
+    els.login.classList.add("hidden");
     els.works.classList.add("hidden");
     els.formWrap.classList.remove("hidden");
     window.scrollTo({ top: 0 });
@@ -114,7 +118,7 @@ async function handleResetPassword() {
     showAlert("Si el email corresponde a una cuenta, te enviamos un enlace para restablecer la contraseña.", "info", 8000);
 }
 
-// Cierre de sesión automático por inactividad
+// Cierre de sesión automático por inactividad (mientras el panel está abierto)
 let idleTimer;
 function resetIdleTimer() {
     clearTimeout(idleTimer);
@@ -140,6 +144,14 @@ async function onUser(user) {
     showList();
     resetIdleTimer();
     await loadWorks();
+    // Viene del botón "Editar" del index: abre directamente esa obra
+    if (state.editParam) {
+        const id = state.editParam;
+        state.editParam = null;
+        history.replaceState(null, "", location.pathname);
+        if (state.all.some((w) => w.id === id)) openEdit(id);
+        else showAlert("No se encontró esa obra (¿fue eliminada?).", "error");
+    }
 }
 
 // ---------------------------------------------------------------- Carga y listado
@@ -178,19 +190,21 @@ function rowHTML(obra) {
     const title = clean(obra.titulo) || "Sin título";
     const broken = state.brokenByWork.get(obra.id);
     const available = obra.is_available !== false;
+    const position = state.all.findIndex((w) => w.id === obra.id) + 1;
     return `
         <div class="work-row flex items-center gap-3 bg-white border border-line rounded-sm p-3" data-id="${esc(obra.id)}">
             <button type="button" class="drag-handle p-2 text-muted hover:text-ink flex-shrink-0 ${state.query ? "opacity-30 pointer-events-none" : ""}" aria-label="Arrastrar para reordenar" title="Arrastrar para reordenar">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h16"/></svg>
             </button>
+            <span class="text-xs text-muted w-7 text-right flex-shrink-0" title="Posición en el sitio">#${position}</span>
             <img src="${esc(first || PLACEHOLDER_IMG)}" data-fallbacks="${esc(JSON.stringify(rest))}" alt="" loading="lazy" width="64" height="64" class="w-16 h-16 object-cover rounded-sm bg-line flex-shrink-0">
             <div class="flex-grow min-w-0">
                 <h3 class="font-medium truncate">${esc(title)}</h3>
                 <p class="text-xs text-muted">${esc([capitalize(obra.categoria), obra.serie && capitalize(obra.serie), obra.anio].filter(Boolean).join(" · ") || "—")}</p>
                 <p class="text-xs mt-1 flex flex-wrap gap-x-3">
                     <span class="${available ? "text-ok" : "text-muted"}">${available ? "Disponible" : "Privada"}</span>
-                    <span class="text-muted">${imageUrls(obra).length} ${imageUrls(obra).length === 1 ? "imagen" : "imágenes"}</span>
-                    ${broken ? `<span class="text-red-700 font-medium">⚠ ${broken} ${broken === 1 ? "imagen rota" : "imágenes rotas"}</span>` : ""}
+                    <span class="text-muted">${imageUrls(obra).length} ${imageUrls(obra).length === 1 ? "foto" : "fotos"}</span>
+                    ${broken ? `<span class="text-red-700 font-medium">⚠ ${broken} ${broken === 1 ? "foto rota" : "fotos rotas"}</span>` : ""}
                 </p>
             </div>
             <div class="flex flex-col sm:flex-row gap-2 flex-shrink-0">
@@ -240,10 +254,10 @@ function goToPage(page) {
     window.scrollTo({ top: 0 });
 }
 
-// ---------------------------------------------------------------- Orden
+// ---------------------------------------------------------------- Orden de las obras
 async function commitOrder(idsInNewOrder) {
     const byId = new Map(state.all.map((w) => [w.id, w]));
-    const changes = idsInNewOrder.map((id, index) => ({ id, index })).filter(({ id, index }) => byId.get(id).orden !== index);
+    const changes = idsInNewOrder.map((id, index) => ({ id, index })).filter(({ id, index }) => byId.get(id)?.orden !== index);
     for (let i = 0; i < changes.length; i += 400) {
         const batch = writeBatch(db);
         changes.slice(i, i + 400).forEach(({ id, index }) => batch.update(doc(db, SITE.collection, id), { orden: index }));
@@ -285,71 +299,86 @@ async function moveToTop(id) {
     }
 }
 
-// ---------------------------------------------------------------- Formulario: imágenes
-const tileBtn = "absolute w-7 h-7 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center";
+// ---------------------------------------------------------------- Formulario: fotos
+const tileBtn = "absolute w-7 h-7 rounded-full bg-black/70 hover:bg-black text-white text-sm flex items-center justify-center";
 
-function renderFormImages() {
-    els.currentImages.innerHTML = state.formImages.length ? state.formImages.map((img, i) => `
-        <div class="img-tile relative w-24 h-24 border ${img.broken ? "border-red-500 ring-2 ring-red-200" : "border-line"} rounded-sm overflow-hidden bg-white" data-key="${esc(img.key)}">
-            <img src="${esc(img.url)}" alt="" class="w-full h-full object-cover" data-rotation="${img.rotation}">
-            ${i === 0 ? `<span class="absolute bottom-0 inset-x-0 bg-accent text-white text-[10px] text-center py-0.5">Portada</span>` : ""}
-            ${img.broken ? `<span class="absolute inset-0 bg-red-50/90 text-red-700 text-[11px] text-center flex items-center justify-center p-1">Ya no existe</span>` : ""}
-            ${img.rotation ? `<span class="absolute bottom-0 left-0 bg-amber-500 text-white text-[10px] px-1">${img.rotation}°</span>` : ""}
-            <button type="button" data-img-action="remove" class="${tileBtn} top-1 right-1" aria-label="Quitar imagen" title="Quitar">✕</button>
-            ${img.broken ? "" : `<button type="button" data-img-action="rotate" class="${tileBtn} top-1 left-1" aria-label="Rotar 90 grados" title="Rotar 90°">⟳</button>`}
-        </div>`).join("")
-        : `<p class="text-sm text-muted self-center">Esta obra todavía no tiene imágenes.</p>`;
-
-    // Aplicar la rotación de vista previa (por CSSOM: la CSP no permite style="" en el HTML)
-    els.currentImages.querySelectorAll("img[data-rotation]").forEach((el) => { el.style.transform = `rotate(${el.dataset.rotation}deg)`; });
-    els.brokenNote.classList.toggle("hidden", !state.formImages.some((i) => i.broken));
+function photoTileHTML(p, i, total) {
+    const isCover = i === 0;
+    return `
+        <div class="img-tile relative w-32 h-32 border ${p.broken ? "border-red-500 ring-2 ring-red-200" : isCover ? "border-accent ring-2 ring-accent/30" : "border-line"} rounded-sm overflow-hidden bg-white cursor-grab" data-key="${esc(p.key)}" data-kind="${p.kind}">
+            <img src="${esc(p.url)}" alt="Foto ${i + 1}" draggable="false" class="w-full h-full object-cover" data-rotation="${p.rotation}">
+            <span class="absolute top-1 left-1/2 -translate-x-1/2 bg-white/90 text-ink text-[10px] px-1.5 rounded-full">${i + 1}</span>
+            ${isCover ? `<span class="absolute bottom-0 inset-x-0 bg-accent text-white text-[11px] text-center py-0.5 font-medium">★ Portada</span>`
+                : `<span class="absolute bottom-0 inset-x-0 bg-black/40 text-white text-[10px] text-center py-0.5">${p.kind === "new" ? "Nueva" : "&nbsp;"}</span>`}
+            ${isCover && p.kind === "new" ? `<span class="absolute top-6 left-1 bg-accent/90 text-white text-[10px] px-1 rounded-sm">Nueva</span>` : ""}
+            ${p.broken ? `<span class="absolute inset-0 bg-red-50/90 text-red-700 text-[11px] text-center flex items-center justify-center p-1">Ya no existe</span>` : ""}
+            ${p.rotation ? `<span class="absolute top-6 right-1 bg-amber-500 text-white text-[10px] px-1 rounded-sm">${p.rotation}°</span>` : ""}
+            <button type="button" data-img-action="remove" class="${tileBtn} top-1 right-1" aria-label="Quitar foto ${i + 1}" title="Quitar">✕</button>
+            ${p.broken ? "" : `<button type="button" data-img-action="rotate" class="${tileBtn} top-1 left-1" aria-label="Rotar foto ${i + 1}" title="Rotar 90°">⟳</button>`}
+            ${i > 0 ? `<button type="button" data-img-action="left" class="${tileBtn} bottom-6 left-1" aria-label="Mover a la izquierda" title="Mover a la izquierda">◀</button>` : ""}
+            ${i < total - 1 ? `<button type="button" data-img-action="right" class="${tileBtn} bottom-6 right-1" aria-label="Mover a la derecha" title="Mover a la derecha">▶</button>` : ""}
+            ${!isCover && !p.broken ? `<button type="button" data-img-action="cover" class="${tileBtn} bottom-6 left-1/2 -translate-x-1/2" aria-label="Elegir como portada" title="Elegir como portada">★</button>` : ""}
+        </div>`;
 }
 
-function renderPending() {
-    els.pendingImages.innerHTML = state.pendingFiles.map((p) => `
-        <div class="relative w-24 h-24 border border-accent/40 rounded-sm overflow-hidden bg-white" data-key="${esc(p.key)}">
-            <img src="${esc(p.preview)}" alt="" class="w-full h-full object-cover">
-            <span class="absolute bottom-0 inset-x-0 bg-accent/90 text-white text-[10px] text-center py-0.5">Nueva</span>
-            <button type="button" data-pending-remove class="${tileBtn} top-1 right-1" aria-label="Quitar" title="Quitar">✕</button>
-        </div>`).join("");
+function renderPhotos() {
+    const n = state.photos.length;
+    els.photos.innerHTML = n ? state.photos.map((p, i) => photoTileHTML(p, i, n)).join("")
+        : `<p class="text-sm text-muted self-center">Esta obra todavía no tiene fotos. Agregalas abajo.</p>`;
+    // Rotación de la vista previa por CSSOM (la CSP no permite style="" en el HTML)
+    els.photos.querySelectorAll("img[data-rotation]").forEach((el) => { el.style.transform = `rotate(${el.dataset.rotation}deg)`; });
+    els.brokenNote.classList.toggle("hidden", !state.photos.some((p) => p.broken));
 }
 
-let imagesSortable;
-function setupImagesSortable() {
-    imagesSortable?.destroy();
-    imagesSortable = null;
+let photosSortable;
+function setupPhotosSortable() {
+    photosSortable?.destroy();
+    photosSortable = null;
     if (typeof Sortable === "undefined") return;
-    imagesSortable = Sortable.create(els.currentImages, {
-        animation: 150, ghostClass: "sortable-ghost", draggable: ".img-tile",
+    photosSortable = Sortable.create(els.photos, {
+        animation: 150, ghostClass: "sortable-ghost", draggable: ".img-tile", filter: "button",
+        preventOnFilter: false, delay: 120, delayOnTouchOnly: true,
         onEnd: () => {
-            const order = [...els.currentImages.querySelectorAll(".img-tile")].map((t) => t.dataset.key);
-            state.formImages.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
+            const order = [...els.photos.querySelectorAll(".img-tile")].map((t) => t.dataset.key);
+            state.photos.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
             state.formDirty = true;
-            renderFormImages();
+            renderPhotos();
         },
     });
 }
 
+function movePhoto(from, to) {
+    if (to < 0 || to >= state.photos.length) return;
+    const [p] = state.photos.splice(from, 1);
+    state.photos.splice(to, 0, p);
+    state.formDirty = true;
+    renderPhotos();
+}
+
+function removePhotoAt(idx) {
+    const [gone] = state.photos.splice(idx, 1);
+    if (gone.kind === "saved" && gone.path) state.removed.push(gone);
+    if (gone.kind === "new") URL.revokeObjectURL(gone.url);
+    state.formDirty = true;
+    renderPhotos();
+}
+
 function addFiles(fileList) {
-    const accepted = [];
+    let added = 0;
     for (const file of fileList) {
         if (!file.type.startsWith("image/")) { showAlert(`"${file.name}" no es una imagen.`, "error"); continue; }
         if (file.size > MAX_SOURCE_BYTES) { showAlert(`"${file.name}" pesa más de 30 MB.`, "error"); continue; }
-        accepted.push({ key: newKey(), file, preview: URL.createObjectURL(file) });
+        state.photos.push({ key: newKey(), kind: "new", url: URL.createObjectURL(file), path: "", name: file.name, file, rotation: 0, broken: false });
+        added++;
     }
-    state.pendingFiles.push(...accepted);
-    if (accepted.length) state.formDirty = true;
-    renderPending();
+    if (added) { state.formDirty = true; renderPhotos(); }
 }
 
-function clearPending() {
-    state.pendingFiles.forEach((p) => URL.revokeObjectURL(p.preview));
-    state.pendingFiles = [];
-    els.fileInput.value = "";
-    renderPending();
+function releaseNewPhotos() {
+    state.photos.filter((p) => p.kind === "new").forEach((p) => URL.revokeObjectURL(p.url));
 }
 
-// ---------------------------------------------------------------- Procesamiento de imágenes (en el navegador)
+// ---------------------------------------------------------------- Procesamiento de fotos (en el navegador)
 async function decode(blob) {
     try { return await createImageBitmap(blob, { imageOrientation: "from-image" }); }
     catch {
@@ -403,18 +432,26 @@ async function deleteStored(paths) {
 function resetForm() {
     els.form.reset();
     $("is_available").checked = true;
+    releaseNewPhotos();
     state.editing = null;
-    state.formImages = [];
+    state.photos = [];
     state.removed = [];
     state.formDirty = false;
-    clearPending();
-    renderFormImages();
+    els.fileInput.value = "";
+    renderPhotos();
+}
+
+function setPosition(value, max) {
+    els.position.max = String(max);
+    els.position.value = String(value);
+    els.positionMax.textContent = `de ${max}`;
 }
 
 function openNew() {
     resetForm();
     els.formTitle.textContent = "Agregar nueva obra";
-    setupImagesSortable();
+    setPosition(1, state.all.length + 1);          // por defecto, la obra nueva va primera
+    setupPhotosSortable();
     showForm();
     $("titulo").focus();
 }
@@ -432,17 +469,19 @@ function openEdit(id) {
     $("currency").value = obra.currency || "ARS";
     $("is_available").checked = obra.is_available !== false;
     $("show_price").checked = Boolean(obra.show_price);
-    state.formImages = (Array.isArray(obra.imagenes) ? obra.imagenes : [])
+    setPosition(state.all.findIndex((w) => w.id === id) + 1, state.all.length);
+    state.photos = (Array.isArray(obra.imagenes) ? obra.imagenes : [])
         .filter((i) => i && i.url)
-        .map((i) => ({ key: newKey(), path: i.path || "", url: i.url, name: i.name || "", rotation: 0, broken: false }));
-    renderFormImages();
-    setupImagesSortable();
+        .map((i) => ({ key: newKey(), kind: "saved", url: i.url, path: i.path || "", name: i.name || "", file: null, rotation: 0, broken: false }));
+    renderPhotos();
+    setupPhotosSortable();
     showForm();
 }
 
 function readForm() {
     const fd = new FormData(els.form);
     const text = (k) => clean(fd.get(k));
+    const max = Number(els.position.max) || state.all.length + 1;
     const data = {
         titulo: text("titulo"), descripcion: text("descripcion") || null, tecnica: text("tecnica"), medidas: text("medidas"),
         categoria: text("categoria"), serie: text("serie"), currency: fd.get("currency") === "USD" ? "USD" : "ARS",
@@ -450,18 +489,20 @@ function readForm() {
         anio: text("anio") === "" ? null : Number.parseInt(text("anio"), 10),
         price: text("price") === "" ? null : Number(text("price")),
     };
+    const rawPos = Number.parseInt(els.position.value, 10);
+    const position = Number.isInteger(rawPos) ? Math.min(Math.max(rawPos, 1), max) : (state.editing ? state.all.findIndex((w) => w.id === state.editing.id) + 1 : 1);
     const errors = [];
     if (!data.titulo) errors.push("El título es obligatorio.");
-    for (const [field, max] of Object.entries(LIMITS)) if (data[field] && data[field].length > max) errors.push(`"${field}" supera los ${max} caracteres.`);
+    for (const [field, lim] of Object.entries(LIMITS)) if (data[field] && data[field].length > lim) errors.push(`"${field}" supera los ${lim} caracteres.`);
     if (data.anio !== null && !(Number.isInteger(data.anio) && data.anio >= 1900 && data.anio <= 2100)) errors.push("El año debe estar entre 1900 y 2100.");
     if (data.price !== null && !(Number.isFinite(data.price) && data.price >= 0)) errors.push("El precio debe ser un número positivo.");
-    return { data, errors };
+    return { data, position, errors };
 }
 
 async function handleSubmit(event) {
     event.preventDefault();
     if (state.saving) return;
-    const { data, errors } = readForm();
+    const { data, position, errors } = readForm();
     if (errors.length) { showAlert(errors[0], "error"); return; }
 
     state.saving = true;
@@ -470,28 +511,30 @@ async function handleSubmit(event) {
     try {
         const isEdit = Boolean(state.editing);
         const docRef = isEdit ? doc(db, SITE.collection, state.editing.id) : doc(collection(db, SITE.collection));
-        const totalSteps = state.pendingFiles.length + state.formImages.filter((i) => i.rotation).length;
+        const totalSteps = state.photos.filter((p) => p.kind === "new" || (p.kind === "saved" && p.rotation && !p.broken)).length;
         let step = 0;
-        const progress = () => { els.submit.textContent = totalSteps ? `Subiendo imagen ${++step} de ${totalSteps}…` : "Guardando…"; };
+        const progress = () => { els.submit.textContent = `Subiendo foto ${++step} de ${totalSteps}…`; };
         els.submit.textContent = "Guardando…";
 
-        const toDelete = state.removed.map((i) => i.path);
+        const toDelete = state.removed.map((p) => p.path);
         const finalImages = [];
-        for (const img of state.formImages) {
-            if (img.broken) { toDelete.push(img.path); continue; }            // las rotas se descartan
-            if (!img.rotation) { finalImages.push({ path: img.path, url: img.url, name: img.name }); continue; }
-            progress();
-            const blob = await (await fetch(img.url)).blob();                 // descarga, rota y vuelve a subir
-            const up = await uploadBlob(await processImage(blob, img.rotation), docRef.id, uploaded.length, img.name);
-            uploaded.push(up.path);
-            finalImages.push(up);
-            toDelete.push(img.path);
-        }
-        for (const p of state.pendingFiles) {
-            progress();
-            const up = await uploadBlob(await processImage(p.file), docRef.id, uploaded.length, p.file.name);
-            uploaded.push(up.path);
-            finalImages.push(up);
+        // Se respeta exactamente el orden de la grilla: la primera foto es la portada
+        for (const p of state.photos) {
+            if (p.kind === "saved") {
+                if (p.broken) { toDelete.push(p.path); continue; }              // las rotas se descartan
+                if (!p.rotation) { finalImages.push({ path: p.path, url: p.url, name: p.name }); continue; }
+                progress();
+                const blob = await (await fetch(p.url)).blob();                  // descarga, rota y vuelve a subir
+                const up = await uploadBlob(await processImage(blob, p.rotation), docRef.id, uploaded.length, p.name);
+                uploaded.push(up.path);
+                finalImages.push(up);
+                toDelete.push(p.path);
+            } else {
+                progress();
+                const up = await uploadBlob(await processImage(p.file, p.rotation), docRef.id, uploaded.length, p.name);
+                uploaded.push(up.path);
+                finalImages.push(up);
+            }
         }
 
         const payload = { ...data, imagenes: finalImages, updatedAt: serverTimestamp() };
@@ -499,15 +542,26 @@ async function handleSubmit(event) {
             await updateDoc(docRef, payload);
         } else {
             const minOrden = state.all.reduce((m, w) => Math.min(m, Number.isFinite(w.orden) ? w.orden : 0), 0);
-            await setDoc(docRef, { ...payload, orden: minOrden - 1, createdAt: serverTimestamp() });   // las nuevas van primero
+            await setDoc(docRef, { ...payload, orden: minOrden - 1, createdAt: serverTimestamp() });   // las nuevas empiezan primeras
         }
         await deleteStored(toDelete);
 
-        showAlert(`Obra ${isEdit ? "actualizada" : "creada"}.`);
         state.formDirty = false;
         resetForm();
         state.brokenByWork.clear();
         await loadWorks();
+
+        // Posición elegida en el formulario (1 = primera)
+        const current = state.all.findIndex((w) => w.id === docRef.id) + 1;
+        let moved = false;
+        if (current && position !== current) {
+            const ids = state.all.map((w) => w.id).filter((id) => id !== docRef.id);
+            ids.splice(position - 1, 0, docRef.id);
+            await commitOrder(ids);
+            moved = true;
+            renderList();
+        }
+        showAlert(`Obra ${isEdit ? "actualizada" : "creada"}${moved ? ` y colocada en la posición ${position}` : ""}.`);
         showList();
     } catch (error) {
         console.error(error);
@@ -532,7 +586,7 @@ function cancelForm() {
 async function deleteWork(id) {
     const obra = state.all.find((w) => w.id === id);
     if (!obra) return;
-    if (!confirm(`¿Eliminar "${clean(obra.titulo) || "Sin título"}" y todas sus imágenes?\n\nEsta acción no se puede deshacer.`)) return;
+    if (!confirm(`¿Eliminar "${clean(obra.titulo) || "Sin título"}" y todas sus fotos?\n\nEsta acción no se puede deshacer.`)) return;
     try {
         await deleteDoc(doc(db, SITE.collection, id));
         await deleteStored((obra.imagenes || []).map((i) => i.path));
@@ -545,7 +599,7 @@ async function deleteWork(id) {
     }
 }
 
-// ---------------------------------------------------------------- Revisión de imágenes rotas
+// ---------------------------------------------------------------- Revisión de fotos rotas
 function probeImage(url) {
     return new Promise((resolve) => {
         const img = new Image();
@@ -559,7 +613,7 @@ function probeImage(url) {
 
 async function checkAllImages() {
     const jobs = state.all.flatMap((w) => imageUrls(w).map((url) => ({ id: w.id, url })));
-    if (!jobs.length) { showAlert("No hay imágenes para revisar.", "info"); return; }
+    if (!jobs.length) { showAlert("No hay fotos para revisar.", "info"); return; }
     els.checkImages.disabled = true;
     state.brokenByWork.clear();
     let done = 0, next = 0, broken = 0;
@@ -575,8 +629,8 @@ async function checkAllImages() {
     els.checkImages.textContent = "Revisar imágenes";
     renderList();
     showAlert(broken
-        ? `Se encontraron ${broken} imágenes rotas en ${state.brokenByWork.size} obras. Abrí cada obra marcada con ⚠ y usá "Quitar las rotas".`
-        : `Las ${jobs.length} imágenes cargan correctamente.`, broken ? "error" : "success", 9000);
+        ? `Se encontraron ${broken} fotos rotas en ${state.brokenByWork.size} obras. Abrí cada obra marcada con ⚠ y usá "Quitar las rotas".`
+        : `Las ${jobs.length} fotos cargan correctamente.`, broken ? "error" : "success", 9000);
 }
 
 // ---------------------------------------------------------------- Eventos
@@ -610,38 +664,39 @@ function setupEvents() {
     els.form.addEventListener("submit", handleSubmit);
     els.form.addEventListener("input", () => { state.formDirty = true; });
     $("cancel-edit-button").addEventListener("click", cancelForm);
-    els.fileInput.addEventListener("change", () => { addFiles([...els.fileInput.files]); els.fileInput.value = ""; });
+    $("pos-first").addEventListener("click", () => { els.position.value = "1"; state.formDirty = true; });
+    $("pos-last").addEventListener("click", () => { els.position.value = els.position.max; state.formDirty = true; });
 
-    els.currentImages.addEventListener("click", (e) => {
+    // Agregar fotos: selector de archivos o arrastrar y soltar
+    els.fileInput.addEventListener("change", () => { addFiles([...els.fileInput.files]); els.fileInput.value = ""; });
+    ["dragenter", "dragover"].forEach((ev) => els.dropzone.addEventListener(ev, (e) => { e.preventDefault(); els.dropzone.classList.add("border-accent", "bg-accent-soft"); }));
+    ["dragleave", "drop"].forEach((ev) => els.dropzone.addEventListener(ev, () => els.dropzone.classList.remove("border-accent", "bg-accent-soft")));
+    els.dropzone.addEventListener("drop", (e) => { e.preventDefault(); addFiles([...(e.dataTransfer?.files || [])]); });
+
+    // Acciones sobre cada foto: quitar, rotar, mover, elegir portada
+    els.photos.addEventListener("click", (e) => {
         const btn = e.target.closest("[data-img-action]");
         if (!btn) return;
-        const key = btn.closest(".img-tile").dataset.key;
-        const idx = state.formImages.findIndex((i) => i.key === key);
+        const idx = state.photos.findIndex((p) => p.key === btn.closest(".img-tile").dataset.key);
         if (idx < 0) return;
-        if (btn.dataset.imgAction === "remove") { const [gone] = state.formImages.splice(idx, 1); if (gone.path) state.removed.push(gone); }
-        else state.formImages[idx].rotation = (state.formImages[idx].rotation + 90) % 360;
-        state.formDirty = true;
-        renderFormImages();
+        const action = btn.dataset.imgAction;
+        if (action === "remove") removePhotoAt(idx);
+        else if (action === "left") movePhoto(idx, idx - 1);
+        else if (action === "right") movePhoto(idx, idx + 1);
+        else if (action === "cover") movePhoto(idx, 0);
+        else if (action === "rotate") { state.photos[idx].rotation = (state.photos[idx].rotation + 90) % 360; state.formDirty = true; renderPhotos(); }
     });
-    // Imágenes que ya no existen en el servidor: se marcan en rojo en lugar de mostrar un ícono roto
-    els.currentImages.addEventListener("error", (e) => {
+    // Fotos que ya no existen en el servidor: se marcan en rojo en lugar de mostrar un ícono roto
+    els.photos.addEventListener("error", (e) => {
         const tile = e.target.closest?.(".img-tile");
-        const img = tile && state.formImages.find((i) => i.key === tile.dataset.key);
-        if (img && !img.broken) { img.broken = true; renderFormImages(); }
+        const p = tile && state.photos.find((x) => x.key === tile.dataset.key);
+        if (p && p.kind === "saved" && !p.broken) { p.broken = true; renderPhotos(); }
     }, true);
     $("remove-broken-button").addEventListener("click", () => {
-        state.formImages.filter((i) => i.broken).forEach((i) => i.path && state.removed.push(i));
-        state.formImages = state.formImages.filter((i) => !i.broken);
+        state.photos.filter((p) => p.broken && p.path).forEach((p) => state.removed.push(p));
+        state.photos = state.photos.filter((p) => !p.broken);
         state.formDirty = true;
-        renderFormImages();
-    });
-    els.pendingImages.addEventListener("click", (e) => {
-        if (!e.target.closest("[data-pending-remove]")) return;
-        const key = e.target.closest("[data-key]").dataset.key;
-        const p = state.pendingFiles.find((x) => x.key === key);
-        if (p) URL.revokeObjectURL(p.preview);
-        state.pendingFiles = state.pendingFiles.filter((x) => x.key !== key);
-        renderPending();
+        renderPhotos();
     });
 
     window.addEventListener("beforeunload", (e) => {
@@ -650,7 +705,5 @@ function setupEvents() {
 }
 
 setupEvents();
-// La sesión dura mientras la pestaña esté abierta (más seguro en computadoras compartidas)
-setPersistence(auth, browserSessionPersistence)
-    .catch((e) => console.warn("No se pudo fijar la persistencia de sesión", e))
-    .finally(() => onAuthStateChanged(auth, onUser));
+// La sesión se mantiene en este navegador hasta que cierres sesión (así el menú del index sabe que sos vos)
+onAuthStateChanged(auth, onUser);

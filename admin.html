@@ -93,6 +93,16 @@
                     <label for="titulo" class="field-label">Título *</label>
                     <input type="text" id="titulo" name="titulo" required maxlength="120" class="field">
                 </div>
+                <div class="p-4 bg-paper border border-line rounded-sm">
+                    <label for="posicion" class="field-label">Posición en el sitio</label>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input type="number" id="posicion" min="1" step="1" class="field !w-24">
+                        <span id="posicion-max" class="text-sm text-muted"></span>
+                        <button type="button" id="pos-first" class="btn btn-secondary">Primera</button>
+                        <button type="button" id="pos-last" class="btn btn-secondary">Última</button>
+                    </div>
+                    <p class="text-xs text-muted mt-2">1 = es la primera obra que ven los visitantes. Al guardar, las demás se corren solas.</p>
+                </div>
                 <div>
                     <label for="descripcion" class="field-label">Descripción</label>
                     <textarea id="descripcion" name="descripcion" rows="4" maxlength="5000" class="field"></textarea>
@@ -143,20 +153,19 @@
                 </fieldset>
 
                 <fieldset class="border-t border-line pt-4">
-                    <legend class="text-base font-medium mb-1">Imágenes</legend>
-                    <p class="text-xs text-muted mb-3">La primera es la portada. Arrastrá para reordenar, rotá con ⟳ o quitá con ✕. Los cambios se aplican al guardar.</p>
-                    <div id="current-images-list" class="flex flex-wrap gap-3 p-3 border border-line rounded-sm bg-paper min-h-[96px]"></div>
+                    <legend class="text-base font-medium mb-1">Fotos de la obra</legend>
+                    <p class="text-xs text-muted mb-3">La <strong>primera foto es la portada</strong> (la que se ve en la galería). Arrastrá una foto para moverla, o usá ◀ ▶. Con ★ la hacés portada, ⟳ la rota y ✕ la quita. Los cambios se aplican al guardar.</p>
+                    <div id="photos-list" class="flex flex-wrap gap-3 p-3 border border-line rounded-sm bg-paper min-h-[120px]"></div>
                     <div id="broken-images-note" class="hidden mt-2 text-xs text-red-700 flex items-center gap-3">
-                        <span>Hay imágenes que ya no existen en el servidor (marcadas en rojo).</span>
+                        <span>Hay fotos que ya no existen en el servidor (marcadas en rojo).</span>
                         <button type="button" id="remove-broken-button" class="underline">Quitar las rotas</button>
                     </div>
-
-                    <div class="mt-5">
-                        <label for="imagenes" class="field-label">Agregar imágenes nuevas</label>
-                        <input type="file" id="imagenes" accept="image/*" multiple class="block w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-xs file:font-semibold file:uppercase file:tracking-wide file:bg-line file:text-ink hover:file:bg-gray-300 cursor-pointer">
-                        <p class="text-xs text-muted mt-1">Se optimizan automáticamente (máx. 2400 px, formato WebP) antes de subirlas.</p>
-                        <div id="pending-images-list" class="flex flex-wrap gap-3 mt-3"></div>
-                    </div>
+                    <label id="dropzone" for="imagenes" class="mt-4 flex flex-col items-center justify-center gap-1 border-2 border-dashed border-line rounded-sm p-6 text-center text-sm text-muted cursor-pointer hover:border-accent hover:text-ink transition-colors">
+                        <span class="font-medium text-ink">+ Agregar fotos</span>
+                        <span>Arrastralas acá o tocá para elegirlas (podés elegir varias)</span>
+                        <span class="text-xs">Se optimizan solas: máx. 2400 px, formato WebP</span>
+                    </label>
+                    <input type="file" id="imagenes" accept="image/*" multiple class="sr-only">
                 </fieldset>
 
                 <div class="flex gap-3 pt-5 border-t border-line">

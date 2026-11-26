@@ -59,7 +59,7 @@ Guardá el archivo como `firebase-key.json` en la raíz del proyecto (ya está e
 | CSP | Ninguna (y scripts de terceros sin versión fija) | CSP estricta: sin scripts/estilos inline ni `eval`; solo Google/Firebase |
 | Scripts de terceros | Tailwind (CDN sin versión), Panzoom, Sortable desde CDN | Tailwind compilado y librerías **dentro del repo** con versión fija |
 | Encabezados | Ninguno | HSTS, `nosniff`, `X-Frame-Options`, `Permissions-Policy`, COOP (en `firebase.json`) |
-| Sesión del panel | Persistente | Se cierra al cerrar la pestaña y a los 30 min sin actividad |
+| Sesión del panel | Sin controles | Se mantiene en ese navegador hasta "Cerrar sesión" (así aparece el menú oculto en el sitio); el panel la cierra solo a los 30 min sin actividad. **En una computadora compartida, cerrá sesión siempre.** |
 | Login | Mensajes distintos según el error | Mensaje genérico; recuperación de clave sin revelar si el email existe |
 | Archivos sensibles | CSV con todo el catálogo y scripts en la raíz publicada | Movidos a `scripts/` (excluido del hosting); sin claves en el código |
 | Dependencias | 6 dependencias, casi todas sin uso (react, openrouter…) | Solo herramientas de compilación; `npm audit`: 0 vulnerabilidades |

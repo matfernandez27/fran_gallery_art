@@ -46,11 +46,37 @@ npm run serve          # http://localhost:8000
 ## Panel de administración
 
 Entrá a `/admin.html` con una cuenta que tenga permiso de administrador (ver SECURITY.md).
+La sesión queda abierta en ese navegador hasta que toques *Cerrar sesión*.
 
-- **Reordenar:** arrastrá el ícono ≡ y tocá *Guardar orden*. *↑ Inicio* manda una obra al principio.
-- **Imágenes:** arrastrá para cambiar la portada, ⟳ rota, ✕ quita. Las nuevas se optimizan solas (WebP, máx. 2400 px).
-- **Revisar imágenes:** comprueba todas las imágenes y marca con ⚠ las obras que tienen archivos que ya no existen.
-- Las obras nuevas aparecen **primero** en el sitio.
+- **Orden de las obras:** el número `#N` de cada fila es su posición en el sitio. Se cambia de tres formas:
+  arrastrando el ícono ≡ (y *Guardar orden*), con *↑ Inicio*, o con el campo **Posición en el sitio** del formulario
+  (1 = primera; las demás se corren solas).
+- **Fotos de cada obra** (en el formulario): todas en una sola grilla. La **primera es la portada**.
+  Arrastrá una foto o usá ◀ ▶ para moverla, ★ para hacerla portada, ⟳ para rotarla, ✕ para quitarla.
+  Para agregar, arrastrá archivos a la zona punteada o tocala (varias a la vez). Las nuevas se optimizan solas
+  (WebP, máx. 2400 px). Nada se aplica hasta que guardás; *Cancelar* descarta todo.
+- **Obras nuevas:** aparecen **primeras** en el sitio (y en el carrusel). Después podés cambiarles la posición.
+- **Revisar imágenes:** comprueba todas las fotos y marca con ⚠ las obras con archivos que ya no existen.
+
+### Menú oculto del administrador en el sitio
+
+Si abrís el sitio con la sesión de administrador iniciada, arriba aparece una barra que **los visitantes no ven**:
+
+| Botón | Qué hace |
+|---|---|
+| **Panel** | Va al panel de administración |
+| **Editar orden** | Muestra todas las obras con un asa para arrastrarlas; *Guardar orden* (barra fija abajo) lo publica |
+| **Ocultar precios** | Modo presentación: oculta los precios solo en tu navegador (no cambia nada para los demás) |
+| **Cerrar sesión** | Cierra la sesión de administrador |
+
+Además, cada obra muestra un botón **✎ Editar** que abre directamente esa obra en el panel.
+
+## Experiencia del visitante
+
+Filtros por categoría (chips), serie y "solo obras disponibles", con enlaces compartibles (`?cat=pintura&disp=1`);
+visor con zoom (rueda, botones, doble clic/doble toque), cambio de foto con flechas o deslizando, navegación entre obras,
+botón de compartir (con enlace directo `#obra/<id>`), consulta por WhatsApp con el enlace de la obra incluido,
+menú móvil, botón "volver arriba" y carga con fundido suave.
 
 ## Despliegue (Firebase Hosting)
 

@@ -1,75 +1,35 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Página no encontrada</title>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style media="screen">
-      body { 
-        background: #F9FAFB; /* bg-main */
-        color: #5A6349; /* text-main */
-        font-family: 'Inter', Helvetica, Arial, sans-serif; 
-        margin: 0; padding: 0; 
-      }
-      #message { 
-        background: #FFFFFF; /* bg-surface */
-        max-width: 400px; 
-        margin: 100px auto 16px; 
-        padding: 32px 24px; 
-        border-radius: 8px; /* Más redondeado */
-        border: 1px solid #E5E7EB; /* border-default */
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-      }
-      #message h1 { 
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 3rem; /* Más grande */
-        font-weight: 400; 
-        color: #7BA4C0; /* accent-blue */
-        margin: 0 0 8px; 
-        letter-spacing: 1px;
-      }
-       #message h2 { 
-        font-size: 1.25rem; 
-        font-weight: 500; 
-        color: #5A6349; /* text-main */
-        margin: 0 0 16px;
-      }
-      #message p { 
-        line-height: 1.6; 
-        margin: 0 0 24px; 
-        font-size: 0.875rem; 
-        color: #6B7280; /* text-secondary */
-      }
-      #message a { 
-        display: inline-block; /* Inline block */
-        text-align: center; 
-        background: #5A6349; /* text-main (Kale) */
-        text-transform: uppercase; 
-        text-decoration: none; 
-        color: white; 
-        padding: 10px 20px; 
-        border-radius: 4px; 
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        transition: background-color 0.3s;
-      }
-       #message a:hover {
-           background-color: #4B533D; /* Kale más oscuro */
-       }
-      @media (max-width: 600px) {
-        body { border-top: 8px solid #7BA4C0; } /* accent-blue */
-        #message { margin-top: 40px; box-shadow: none; border: none; border-radius: 0;}
-      }
+    <meta name="robots" content="noindex">
+    <title>Página no encontrada | Francisco Fernández</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        /* Sin dependencias externas de estilos: esta página debe verse bien aunque falle todo lo demás. */
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+               background: #faf9f7; color: #14151a; font-family: 'Inter', system-ui, Arial, sans-serif; }
+        main { max-width: 420px; text-align: center; }
+        .code { font-family: 'Playfair Display', Georgia, serif; font-size: 5rem; line-height: 1; color: #2563eb; margin: 0 0 8px; }
+        h1 { font-family: 'Playfair Display', Georgia, serif; font-weight: 400; font-size: 1.75rem; margin: 0 0 12px; }
+        p { color: #4f5766; line-height: 1.6; margin: 0 0 28px; font-size: 0.95rem; }
+        a { display: inline-block; background: #14151a; color: #fff; text-decoration: none; padding: 12px 28px;
+            border-radius: 2px; font-size: 0.875rem; font-weight: 500; transition: background-color .2s; }
+        a:hover { background: #000; }
+        a:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
     </style>
-  </head>
-  <body>
-    <div id="message">
-      <h1>404</h1>
-      <h2>Página no encontrada</h2>
-      <p>El archivo especificado no se encontró en este sitio web. Por favor, revisa la URL o vuelve al inicio.</p>
-       <a href="./index.html">Volver a la Galería</a>
-    </div>
-  </body>
+</head>
+<body>
+    <main>
+        <p class="code" aria-hidden="true">404</p>
+        <h1>Página no encontrada</h1>
+        <p>La dirección que buscás no existe o fue movida. Podés volver a la galería y seguir recorriendo las obras.</p>
+        <a href="/index.html">Volver a la galería</a>
+    </main>
+</body>
 </html>

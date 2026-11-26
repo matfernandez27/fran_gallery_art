@@ -3,166 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Obras | francisco fernández</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'bg-surface': '#ffffff',
-                        'border-default': '#cbd5e1',
-                        'text-main': '#111827',
-                        'text-secondary': '#475569',
-                        'accent-blue': '#2563eb',
-                        'whatsapp': '#25D366'
-                    },
-                    fontFamily: {
-                        'display': ['"Playfair Display"', 'serif'],
-                        'sans': ['Inter', 'sans-serif']
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
-    
-    <style>
-        html { scroll-behavior: smooth; }
-        body { font-family: 'Inter', sans-serif; }
-        .font-display { font-family: 'Playfair Display', serif; }
-        
-        .lds-ring { display: inline-block; position: relative; width: 64px; height: 64px; }
-        .lds-ring div { box-sizing: border-box; display: block; position: absolute; width: 48px; height: 48px; margin: 8px; border: 4px solid #2563eb; border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: #2563eb transparent transparent transparent; }
-        .lds-ring div:nth-child(1) { animation-delay: -0.45s; }
-        .lds-ring div:nth-child(2) { animation-delay: -0.3s; }
-        .lds-ring div:nth-child(3) { animation-delay: -0.15s; }
-        @keyframes lds-ring { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
+    <title>Obras | Francisco Fernández — Artista visual</title>
+    <meta name="description" content="Galería de obras de Francisco Fernández, artista visual de la Patagonia: pintura, dibujo y grabado. Mirá el archivo y consultá por las obras disponibles.">
+    <meta name="theme-color" content="#faf9f7">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Francisco Fernández — Obras">
+    <meta property="og:description" content="Pintura, dibujo y grabado desde la Patagonia. Archivo y obras disponibles.">
+    <meta property="og:image" content="./img/francisco.jpg">
+    <meta property="og:locale" content="es_AR">
 
     <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/site.css">
 </head>
-<body class="bg-[#fafafa] text-text-main antialiased selection:bg-accent-blue selection:text-white">
+<body class="bg-paper text-ink antialiased selection:bg-accent selection:text-white">
 
-    <header class="bg-white/90 backdrop-blur-sm border-b border-border-default sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-            <a href="#" class="font-display text-2xl font-semibold tracking-tight text-text-main">
-                francisco <span class="text-accent-blue">fernández</span>
+    <a href="#gallery-section" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:bg-white focus:text-ink focus:px-4 focus:py-2 focus:rounded-sm focus:shadow-lg">Saltar al contenido</a>
+
+    <header id="site-header" class="bg-paper/90 backdrop-blur-md border-b border-line sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-20 flex items-center justify-between">
+            <a href="#top" class="font-display text-xl md:text-2xl font-semibold tracking-tight text-ink">
+                francisco <span class="text-accent">fernández</span>
             </a>
-            <nav class="hidden md:flex space-x-10">
-                <a href="#gallery-section" class="text-accent-blue font-medium border-b border-accent-blue pb-1">Obras</a>
-                <a href="#biografia" class="text-text-secondary hover:text-text-main text-sm font-medium transition-colors">Biografía</a>
-                <a href="#contacto" class="text-text-secondary hover:text-text-main text-sm font-medium transition-colors">Contacto</a>
+
+            <nav aria-label="Principal" class="hidden md:flex items-center gap-10 text-sm font-medium">
+                <a href="#gallery-section" data-nav="gallery-section" class="nav-link text-muted hover:text-ink transition-colors border-b border-transparent pb-1">Obras</a>
+                <a href="#biografia" data-nav="biografia" class="nav-link text-muted hover:text-ink transition-colors border-b border-transparent pb-1">Biografía</a>
+                <a href="#contacto" data-nav="contacto" class="nav-link text-muted hover:text-ink transition-colors border-b border-transparent pb-1">Contacto</a>
             </nav>
+
+            <button id="menu-toggle" type="button" class="md:hidden p-2 -mr-2 text-ink" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-menu">
+                <svg id="menu-icon-open" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h16"/></svg>
+                <svg id="menu-icon-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
         </div>
+
+        <nav id="mobile-menu" aria-label="Principal (móvil)" class="hidden md:hidden border-t border-line bg-paper">
+            <div class="px-4 py-3 flex flex-col text-base font-medium">
+                <a href="#gallery-section" class="py-3 border-b border-line/70 text-ink">Obras</a>
+                <a href="#biografia" class="py-3 border-b border-line/70 text-ink">Biografía</a>
+                <a href="#contacto" class="py-3 text-ink">Contacto</a>
+            </div>
+        </nav>
     </header>
 
-    <div class="w-full relative bg-gray-900 h-[45vh] overflow-hidden group border-b border-border-default">
-        <div id="carousel-track" class="w-full h-full flex transition-transform duration-1000 ease-in-out">
-            <!-- Slides JS -->
+    <!-- Carrusel destacado -->
+    <section id="top" aria-roledescription="carrusel" aria-label="Obras destacadas" class="w-full relative bg-ink h-[48vh] min-h-[300px] max-h-[560px] overflow-hidden group">
+        <div id="carousel-track" class="w-full h-full flex transition-transform duration-700 ease-in-out" aria-live="off">
+            <div class="w-full h-full flex-shrink-0 skeleton"></div>
         </div>
-        <button id="carousel-prev" class="absolute left-6 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10 backdrop-blur-sm">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        <button id="carousel-prev" type="button" aria-label="Obra anterior" class="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 bg-black/45 hover:bg-black/70 text-white p-3 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-10 backdrop-blur-sm hidden">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </button>
-        <button id="carousel-next" class="absolute right-6 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10 backdrop-blur-sm">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        <button id="carousel-next" type="button" aria-label="Obra siguiente" class="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 bg-black/45 hover:bg-black/70 text-white p-3 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-10 backdrop-blur-sm hidden">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
         </button>
-    </div>
+        <div id="carousel-dots" class="absolute bottom-4 right-4 md:right-8 flex gap-2 z-10" role="tablist" aria-label="Elegir obra destacada"></div>
+    </section>
 
-    <main id="gallery-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-        
-        <div class="mb-12">
-            <h1 class="text-3xl md:text-4xl font-display text-text-main mb-4 tracking-tight">Archivo y obras disponibles</h1>
-            <p class="text-text-secondary text-base max-w-2xl font-light">Un recorrido por mi trabajo. Podés hacer clic en cada imagen para verla en detalle, conocer sus medidas o consultarme por ella.</p>
+    <main id="gallery-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-20 scroll-mt-20">
+
+        <div class="mb-10 md:mb-12">
+            <h1 class="text-3xl md:text-4xl font-display text-ink mb-4 tracking-tight">Archivo y obras disponibles</h1>
+            <p class="text-muted text-base max-w-2xl font-light leading-relaxed">Un recorrido por mi trabajo. Podés hacer clic en cada imagen para verla en detalle, conocer sus medidas o consultarme por ella.</p>
         </div>
 
-        <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-10 gap-4">
+        <div class="flex flex-col xl:flex-row justify-between xl:items-center mb-4 gap-4">
             <div class="w-full xl:w-1/2 relative">
-                <input type="text" id="search" placeholder="Buscar título de obra..." 
-                       class="w-full bg-white border border-[#94a3b8] rounded-[3px] py-2.5 px-4 text-text-main text-sm focus:outline-none focus:border-accent-blue transition-colors shadow-sm">
+                <label for="search" class="sr-only">Buscar obras por título, categoría o serie</label>
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="search" id="search" placeholder="Buscar por título, categoría o serie…" autocomplete="off"
+                       class="w-full bg-white border border-line rounded-sm py-2.5 pl-10 pr-4 text-ink text-sm placeholder:text-muted/70 focus:outline-none focus:border-accent transition-colors shadow-sm">
             </div>
-            
-            <div class="w-full xl:w-auto flex flex-wrap gap-3 sm:flex">
-                <select id="filter-category" class="border border-border-default bg-white text-text-secondary text-sm py-2 px-4 rounded-[3px] focus:outline-none cursor-pointer hover:border-[#94a3b8] transition-colors">
-                    <option value="">Categorías (Todas)</option>
+
+            <div class="w-full xl:w-auto flex flex-wrap gap-3">
+                <label for="filter-category" class="sr-only">Filtrar por categoría</label>
+                <select id="filter-category" class="w-[calc(50%-0.375rem)] sm:w-auto border border-line bg-white text-ink text-sm py-2.5 px-3 sm:px-4 rounded-sm focus:outline-none focus:border-accent cursor-pointer hover:border-muted/50 transition-colors">
+                    <option value="">Todas las categorías</option>
                 </select>
-                <select id="filter-series" class="border border-border-default bg-white text-text-secondary text-sm py-2 px-4 rounded-[3px] focus:outline-none cursor-pointer hover:border-[#94a3b8] transition-colors">
-                    <option value="">Series (Todas)</option>
+                <label for="filter-series" class="sr-only">Filtrar por serie</label>
+                <select id="filter-series" class="w-[calc(50%-0.375rem)] sm:w-auto border border-line bg-white text-ink text-sm py-2.5 px-3 sm:px-4 rounded-sm focus:outline-none focus:border-accent cursor-pointer hover:border-muted/50 transition-colors">
+                    <option value="">Todas las series</option>
                 </select>
+                <button id="clear-filters" type="button" class="hidden text-sm text-accent hover:text-accent-dark underline underline-offset-4 px-1">Limpiar filtros</button>
             </div>
         </div>
 
-        <div id="gallery-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
-        </div>
+        <p id="results-count" class="text-xs text-muted tracking-wide mb-8 min-h-[1rem]" role="status" aria-live="polite"></p>
 
-        <div id="pagination-controls" class="hidden flex flex-col sm:flex-row justify-between items-center py-12 mt-8 border-t border-border-default">
-            <span id="page-info" class="text-text-secondary text-sm order-first sm:order-none mb-4 sm:mb-0">
-                Página 1 de 1
-            </span>
-            <div class="flex gap-4 w-full sm:w-auto">
-                <button id="prev-page" class="flex-1 sm:flex-none bg-white border border-border-default text-text-main hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all py-2.5 px-6 rounded-[3px] text-sm">
-                    ← Anterior
-                </button>
-                <button id="next-page" class="flex-1 sm:flex-none bg-white border border-border-default text-text-main hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all py-2.5 px-6 rounded-[3px] text-sm">
-                    Siguiente →
-                </button>
+        <div id="gallery-container" aria-busy="true" class="grid grid-cols-2 lg:grid-cols-4 gap-x-4 sm:gap-x-8 gap-y-10 md:gap-y-12"></div>
+        <noscript><p class="py-12 text-center text-muted">Para ver la galería necesitás activar JavaScript en tu navegador.</p></noscript>
+
+        <nav id="pagination-controls" aria-label="Paginación" class="hidden flex flex-col sm:flex-row justify-between items-center py-10 mt-10 border-t border-line">
+            <span id="page-info" class="text-muted text-sm order-first sm:order-none mb-4 sm:mb-0" aria-live="polite">Página 1 de 1</span>
+            <div class="flex gap-3 w-full sm:w-auto">
+                <button id="prev-page" type="button" class="flex-1 sm:flex-none bg-white border border-line text-ink hover:border-muted disabled:opacity-35 disabled:cursor-not-allowed transition-colors py-2.5 px-6 rounded-sm text-sm">← Anterior</button>
+                <button id="next-page" type="button" class="flex-1 sm:flex-none bg-white border border-line text-ink hover:border-muted disabled:opacity-35 disabled:cursor-not-allowed transition-colors py-2.5 px-6 rounded-sm text-sm">Siguiente →</button>
             </div>
-        </div>
+        </nav>
     </main>
 
-    <section id="biografia" class="bg-white border-y border-border-default py-24">
+    <section id="biografia" class="bg-white border-y border-line py-20 md:py-24 scroll-mt-16">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid md:grid-cols-2 gap-16 items-center">
-                <div class="aspect-[4/5] w-full bg-gray-100 rounded-sm overflow-hidden shadow-sm">
-                    <img src="./img/francisco.jpg" alt="Francisco Fernández" onerror="this.src='https://via.placeholder.com/600x800?text=Foto+del+Artista'" class="w-full h-full object-cover transition-all duration-700 ease-out">
+            <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+                <div class="aspect-[4/5] w-full max-w-md mx-auto md:max-w-none bg-line/50 rounded-sm overflow-hidden shadow-sm">
+                    <img src="./img/francisco.jpg" alt="Retrato de Francisco Fernández" width="771" height="1073" loading="lazy" decoding="async" class="w-full h-full object-cover">
                 </div>
                 <div>
-                    <h2 class="text-3xl font-display text-text-main mb-8">Sobre mí</h2>
-                    <div class="space-y-4 text-text-secondary leading-relaxed font-light text-base">
+                    <h2 class="text-3xl font-display text-ink mb-8">Sobre mí</h2>
+                    <div class="space-y-4 text-muted leading-relaxed font-light text-base">
                         <p>Soy Francisco Fernández, artista visual radicado en la Patagonia. Mi trabajo nace de la observación constante: busco entender y traducir la relación entre los paisajes que habitamos, la estructura urbana y nuestra propia naturaleza humana.</p>
                         <p>A través de la pintura, el dibujo y el grabado, intento crear pausas visuales. Espacios donde el espectador pueda detenerse, encontrar sus propios significados y, tal vez, mirar lo cotidiano con una perspectiva distinta.</p>
                         <p>Cada serie es un proceso sincero de búsqueda y experimentación material desde mi taller.</p>
                     </div>
+                    <a href="./biografia-completa.html" class="inline-flex items-center gap-2 mt-8 text-sm font-medium text-accent hover:text-accent-dark underline-offset-4 hover:underline">
+                        Leer la biografía completa <span aria-hidden="true">→</span>
+                    </a>
                 </div>
             </div>
         </div>
     </section>
 
-    <footer id="contacto" class="bg-[#111827] text-white py-24">
+    <footer id="contacto" class="bg-ink text-white py-20 md:py-24 scroll-mt-16">
         <div class="max-w-3xl mx-auto px-4 text-center">
             <h2 class="text-3xl font-display mb-6">Contacto</h2>
-            <p class="text-gray-400 mb-10 font-light text-base leading-relaxed max-w-xl mx-auto">
+            <p class="text-gray-300 mb-10 font-light text-base leading-relaxed max-w-xl mx-auto">
                 Si alguna obra te interesó, tenés alguna consulta técnica o simplemente querés pasar a conocer el taller, escribime. Siempre es un gusto charlar sobre arte.
             </p>
-            <a href="https://wa.me/5492805032663?text=Hola Francisco! Estuve viendo tu galería web..." 
-               target="_blank" 
-               class="inline-flex items-center gap-3 bg-white text-black px-8 py-3.5 rounded-[3px] font-medium hover:bg-gray-200 transition-colors text-sm">
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
+            <a id="whatsapp-contact" href="#" target="_blank" rel="noopener noreferrer"
+               class="inline-flex items-center gap-3 bg-white text-ink px-8 py-3.5 rounded-sm font-medium hover:bg-gray-200 transition-colors text-sm">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
                 Escribir por WhatsApp
             </a>
-            <p class="text-xs text-gray-500 mt-20 tracking-widest uppercase">
-                © 2026 Francisco Fernández. Todos los derechos reservados.
+            <p class="text-xs text-gray-400 mt-20 tracking-widest uppercase">
+                © <span id="year">2026</span> Francisco Fernández. Todos los derechos reservados.
             </p>
         </div>
     </footer>
 
-    <div id="loading-overlay" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center transition-opacity duration-300">
-        <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
-    </div>
-
-    <div id="modal" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col md:items-center md:justify-center p-0 md:p-6 backdrop-blur-sm transition-all">
-        <div class="bg-white w-full h-full md:h-auto md:max-h-[95vh] md:max-w-7xl md:rounded-[3px] shadow-2xl flex flex-col relative overflow-hidden">
-            <div id="modal-content" class="flex-grow flex flex-col h-full overflow-hidden">
-            </div>
+    <!-- Visor de obra -->
+    <div id="modal" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col md:items-center md:justify-center p-0 md:p-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="bg-white w-full h-full md:h-auto md:max-h-[94vh] md:max-w-7xl md:rounded-sm shadow-2xl flex flex-col relative overflow-hidden">
+            <div id="modal-content" class="flex-grow flex flex-col h-full overflow-hidden"></div>
         </div>
     </div>
 
-    <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
-    <script type="module" src="./js/main.js" defer></script>
+    <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js" defer></script>
+    <script type="module" src="./js/main.js"></script>
 </body>
 </html>
